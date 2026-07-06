@@ -1,0 +1,14 @@
+name: serum_business
+description: "Business logic, data sources, and models for the Serum LIS app. Pure Dart package with no Flutter dependency."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  http: ^1.6.0
+  http_parser: ^4.1.2
+  intl: ^0.20.3
+  meta: ^1.12.0
+  hive_ce: ^2.19.3
