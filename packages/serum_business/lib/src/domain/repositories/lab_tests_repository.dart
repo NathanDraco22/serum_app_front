@@ -29,6 +29,15 @@ class LabTestsRepository with ReactiveRepository<LabTestInDb> {
     return _labTests;
   }
 
+  Future<List<LabTestInDb>> searchLabTestsByText(String textQuery) async {
+    final results = await labTestsDataSource.searchLabTestsByText(textQuery);
+    final response = ListResponse<LabTestInDb>.fromJson(
+      results,
+      LabTestInDb.fromJson,
+    );
+    return response.data;
+  }
+
   Future<LabTestInDb?> getLabTestById(String labTestId) async {
     final result = await labTestsDataSource.getLabTestById(labTestId);
     if (result == null) return null;

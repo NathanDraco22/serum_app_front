@@ -47,4 +47,11 @@ class ExamsDataSource with HttpService {
     final res = await deleteQuery(uri, headers: headers);
     return res;
   }
+
+  Future<Map<String, dynamic>> searchExamsByText(String textQuery) async {
+    final uri = HttpTools.generateUri("$_endpoint/search/$textQuery");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await getQuery(uri, headers: headers);
+    return res;
+  }
 }
