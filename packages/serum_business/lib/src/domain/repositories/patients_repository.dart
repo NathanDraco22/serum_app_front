@@ -32,6 +32,15 @@ class PatientsRepository with ReactiveRepository<PatientInDb> {
     return _patients;
   }
 
+  Future<List<PatientInDb>> searchPatientsByText(String textQuery) async {
+    final results = await patientsDataSource.searchPatientsByText(textQuery);
+    final response = ListResponse<PatientInDb>.fromJson(
+      results,
+      PatientInDb.fromJson,
+    );
+    return response.data;
+  }
+
   Future<PatientInDb?> getPatientById(String patientId) async {
     final result = await patientsDataSource.getPatientById(patientId);
     if (result == null) return null;

@@ -5,6 +5,7 @@ class BasePatient {
   final String phone;
   final String address;
   final String? email;
+  final String? cardId;
 
   BasePatient({
     required this.name,
@@ -13,6 +14,7 @@ class BasePatient {
     required this.phone,
     required this.address,
     this.email,
+    this.cardId,
   });
 }
 
@@ -24,6 +26,7 @@ class CreatePatient extends BasePatient {
     required super.phone,
     required super.address,
     super.email,
+    super.cardId,
   });
 
   Map<String, dynamic> toJson() {
@@ -34,6 +37,7 @@ class CreatePatient extends BasePatient {
       'phone': phone,
       'address': address,
       'email': email,
+      'cardId': cardId,
     };
   }
 }
@@ -45,6 +49,7 @@ class UpdatePatient {
   final String? phone;
   final String? address;
   final String? email;
+  final String? cardId;
 
   UpdatePatient({
     this.name,
@@ -53,6 +58,7 @@ class UpdatePatient {
     this.phone,
     this.address,
     this.email,
+    this.cardId,
   });
 
   Map<String, dynamic> toJson() {
@@ -63,6 +69,7 @@ class UpdatePatient {
       if (phone != null) 'phone': phone,
       if (address != null) 'address': address,
       if (email != null) 'email': email,
+      if (cardId != null) 'cardId': cardId,
     };
   }
 }
@@ -81,6 +88,7 @@ class PatientInDb extends BasePatient {
     required super.phone,
     required super.address,
     super.email,
+    super.cardId,
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
@@ -95,6 +103,7 @@ class PatientInDb extends BasePatient {
       phone: json['phone'] as String,
       address: json['address'] as String,
       email: json['email'] as String?,
+      cardId: json['cardId'] as String?,
       createdAt: json['createdAt'] as int,
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,
