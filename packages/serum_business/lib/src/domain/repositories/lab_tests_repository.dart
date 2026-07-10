@@ -30,6 +30,7 @@ class LabTestsRepository with ReactiveRepository<LabTestInDb> {
   }
 
   Future<List<LabTestInDb>> searchLabTestsByText(String textQuery) async {
+    if (textQuery.trim().isEmpty) return [];
     final results = await labTestsDataSource.searchLabTestsByText(textQuery);
     final response = ListResponse<LabTestInDb>.fromJson(
       results,

@@ -33,6 +33,7 @@ class DoctorsRepository with ReactiveRepository<DoctorInDb> {
   }
 
   Future<List<DoctorInDb>> searchDoctorsByText(String textQuery) async {
+    if (textQuery.trim().isEmpty) return [];
     final results = await doctorsDataSource.searchDoctorsByText(textQuery);
     final response = ListResponse<DoctorInDb>.fromJson(
       results,
