@@ -63,4 +63,15 @@ class OrdersRepository with ReactiveRepository<OrderInDb> {
     notifyItemDeleted(deletedOrder);
     return deletedOrder;
   }
+
+  Future<OrderInDb> payOrder(String orderId, OrderPayRequest payRequest) async {
+    final result = await ordersDataSource.payOrder(orderId, payRequest.toJson());
+    final paidOrder = OrderInDb.fromJson(result);
+    final index = _orders.indexWhere((o) => o.id == orderId);
+    if (index != -1) {
+      _orders[index] = paidOrder;
+      notifyItemUpdated(paidOrder);
+    }
+    return paidOrder;
+  }
 }

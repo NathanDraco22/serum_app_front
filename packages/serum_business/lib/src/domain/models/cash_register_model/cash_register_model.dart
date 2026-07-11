@@ -80,6 +80,108 @@ class UpdateCashRegister {
   }
 }
 
+class OpenCashRegisterRequest {
+  final int initialCash;
+  final int initialCard;
+  final int initialTransfer;
+  final UserInfo openedBy;
+
+  OpenCashRegisterRequest({
+    required this.initialCash,
+    required this.initialCard,
+    required this.initialTransfer,
+    required this.openedBy,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'initialCash': initialCash,
+      'initialCard': initialCard,
+      'initialTransfer': initialTransfer,
+      'openedBy': openedBy.toJson(),
+    };
+  }
+}
+
+class CloseCashRegisterRequest {
+  final UserInfo performedBy;
+
+  CloseCashRegisterRequest({required this.performedBy});
+
+  Map<String, dynamic> toJson() {
+    return {'performedBy': performedBy.toJson()};
+  }
+}
+
+class IncomeRegisterRequest {
+  final int amount;
+  final String paymentMethod;
+  final String concept;
+  final UserInfo performedBy;
+
+  IncomeRegisterRequest({
+    required this.amount,
+    required this.paymentMethod,
+    required this.concept,
+    required this.performedBy,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'amount': amount,
+      'paymentMethod': paymentMethod,
+      'concept': concept,
+      'performedBy': performedBy.toJson(),
+    };
+  }
+}
+
+class WithdrawalRegisterRequest {
+  final int amount;
+  final String paymentMethod;
+  final String concept;
+  final UserInfo performedBy;
+
+  WithdrawalRegisterRequest({
+    required this.amount,
+    required this.paymentMethod,
+    required this.concept,
+    required this.performedBy,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'amount': amount,
+      'paymentMethod': paymentMethod,
+      'concept': concept,
+      'performedBy': performedBy.toJson(),
+    };
+  }
+}
+
+class PaymentRegisterRequest {
+  final int amount;
+  final String paymentMethod;
+  final String orderId;
+  final UserInfo performedBy;
+
+  PaymentRegisterRequest({
+    required this.amount,
+    required this.paymentMethod,
+    required this.orderId,
+    required this.performedBy,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'amount': amount,
+      'paymentMethod': paymentMethod,
+      'orderId': orderId,
+      'performedBy': performedBy.toJson(),
+    };
+  }
+}
+
 class CashRegisterInDb extends BaseCashRegister {
   final String id;
   final int createdAt;

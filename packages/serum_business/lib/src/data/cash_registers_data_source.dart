@@ -47,4 +47,54 @@ class CashRegistersDataSource with HttpService {
     final res = await deleteQuery(uri, headers: headers);
     return res;
   }
+
+  Future<Map<String, dynamic>> openCashRegister(
+    String cashRegisterId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$cashRegisterId/open");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
+
+  Future<Map<String, dynamic>> closeCashRegister(
+    String cashRegisterId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$cashRegisterId/close");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
+
+  Future<Map<String, dynamic>> registerIncome(
+    String cashRegisterId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$cashRegisterId/income");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
+
+  Future<Map<String, dynamic>> registerWithdrawal(
+    String cashRegisterId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$cashRegisterId/withdrawal");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
+
+  Future<Map<String, dynamic>> registerPayment(
+    String cashRegisterId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$cashRegisterId/payment");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
 }

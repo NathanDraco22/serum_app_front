@@ -1,4 +1,5 @@
 import 'package:serum_business/src/domain/models/shared/order_test_result.dart';
+import 'package:serum_business/src/domain/models/shared/user_info.dart';
 
 class BaseOrder {
   final String patientId;
@@ -73,6 +74,29 @@ class UpdateOrder {
       if (status != null) 'status': status,
       if (results != null)
         'results': results!.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+class OrderPayRequest {
+  final int amount;
+  final String registerId;
+  final String paymentMethod;
+  final UserInfo performedBy;
+
+  OrderPayRequest({
+    required this.amount,
+    required this.registerId,
+    required this.paymentMethod,
+    required this.performedBy,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'amount': amount,
+      'registerId': registerId,
+      'paymentMethod': paymentMethod,
+      'performedBy': performedBy.toJson(),
     };
   }
 }
