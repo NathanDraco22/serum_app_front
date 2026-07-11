@@ -23,6 +23,10 @@ final class OrderDeleted extends WriteOrderSuccess {
   OrderDeleted(super.item);
 }
 
+final class OrderPaid extends WriteOrderSuccess {
+  OrderPaid(super.item);
+}
+
 final class WriteOrderError extends WriteOrderState {
   final String message;
   WriteOrderError(this.message);

@@ -46,4 +46,14 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
       emit(WriteOrderError(e.toString()));
     }
   }
+
+  Future<void> payOrder(String orderId, OrderPayRequest request) async {
+    emit(WritingOrder());
+    try {
+      final item = await ordersRepository.payOrder(orderId, request);
+      emit(OrderPaid(item));
+    } catch (e) {
+      emit(WriteOrderError(e.toString()));
+    }
+  }
 }

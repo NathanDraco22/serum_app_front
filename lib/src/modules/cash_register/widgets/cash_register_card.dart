@@ -3,14 +3,16 @@ import 'package:serum_business/serum_business.dart';
 
 class CashRegisterCard extends StatelessWidget {
   final CashRegisterInDb register;
-  final VoidCallback onToggleOpen;
+  final VoidCallback onOpen;
+  final VoidCallback onClose;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const CashRegisterCard({
     super.key,
     required this.register,
-    required this.onToggleOpen,
+    required this.onOpen,
+    required this.onClose,
     required this.onEdit,
     required this.onDelete,
   });
@@ -74,9 +76,9 @@ class CashRegisterCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 OutlinedButton(
-                  onPressed: onToggleOpen,
+                  onPressed: isOpen ? onClose : onOpen,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isOpen ? theme.colorScheme.error : theme.colorScheme.primary,
+                    foregroundColor: isOpen ? theme.colorScheme.error : Colors.green,
                   ),
                   child: Text(isOpen ? 'Cerrar Caja' : 'Abrir Caja'),
                 ),

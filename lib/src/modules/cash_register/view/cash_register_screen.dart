@@ -6,6 +6,8 @@ import '../../../cubits/cash_register_cubit/read_cash_registers_cubit.dart';
 import '../../../cubits/cash_register_cubit/write_cash_registers_cubit.dart';
 import '../widgets/cash_register_card.dart';
 import '../widgets/cash_register_form_dialog.dart';
+import '../widgets/cash_register_open_dialog.dart';
+import '../widgets/cash_register_close_dialog.dart';
 
 class CashRegistersScreen extends StatelessWidget {
   const CashRegistersScreen({super.key});
@@ -65,13 +67,35 @@ class _BodyState extends State<_Body> {
     });
   }
 
-  void _toggleRegisterOpen(BuildContext context, CashRegisterInDb register) {
-    final cubit = context.read<WriteCashRegisterCubit>();
-    final update = UpdateCashRegister(
-      isOpen: !register.isOpen,
-    );
-    cubit.update(register.id, update).then((_) {
-      if (context.mounted) context.read<ReadCashRegisterCubit>().getAll();
+  void _openCashRegister(BuildContext context, CashRegisterInDb register) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: BlocProvider.of<WriteCashRegisterCubit>(context),
+          child: CashRegisterOpenDialog(register: register),
+        );
+      },
+    ).then((value) {
+      if (value == true && context.mounted) {
+        context.read<ReadCashRegisterCubit>().getAll();
+      }
+    });
+  }
+
+  void _closeCashRegister(BuildContext context, CashRegisterInDb register) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: BlocProvider.of<WriteCashRegisterCubit>(context),
+          child: CashRegisterCloseDialog(register: register),
+        );
+      },
+    ).then((value) {
+      if (value == true && context.mounted) {
+        context.read<ReadCashRegisterCubit>().getAll();
+      }
     });
   }
 
@@ -92,6 +116,26 @@ class _BodyState extends State<_Body> {
         } else if (state is CashRegisterDeleted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Caja registradora eliminada con éxito')),
+          );
+        } else if (state is CashRegisterOpened) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Caja abierta con éxito')),
+          );
+        } else if (state is CashRegisterClosed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Caja cerrada con éxito')),
+          );
+        } else if (state is CashRegisterIncomeRegistered) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ingreso registrado con éxito')),
+          );
+        } else if (state is CashRegisterWithdrawalRegistered) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Retiro registrado con éxito')),
+          );
+        } else if (state is CashRegisterPaymentRegistered) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pago registrado con éxito')),
           );
         } else if (state is WriteCashRegisterError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -167,7 +211,8 @@ class _BodyState extends State<_Body> {
                       final reg = registers[index];
                       return CashRegisterCard(
                         register: reg,
-                        onToggleOpen: () => _toggleRegisterOpen(context, reg),
+                        onOpen: () => _openCashRegister(context, reg),
+                        onClose: () => _closeCashRegister(context, reg),
                         onEdit: () => _openCashRegisterForm(context, reg),
                         onDelete: () {
                           showDialog(

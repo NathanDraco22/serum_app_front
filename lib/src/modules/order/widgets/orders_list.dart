@@ -8,11 +8,13 @@ import '../../../cubits/order_cubit/write_orders_cubit.dart';
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
   final Function(OrderInDb) onEditResults;
+  final Function(OrderInDb) onPayOrder;
 
   const OrdersList({
     super.key,
     required this.orders,
     required this.onEditResults,
+    required this.onPayOrder,
   });
 
   String _formatDate(int timestamp) {
@@ -40,6 +42,9 @@ class OrdersList extends StatelessWidget {
         final order = orders[index];
         final patientName = patientNames[order.patientId] ?? 'Cargando paciente...';
         final isCompleted = order.status == 'completed';
+        final isPaid = order.status == 'paid';
+        final isPartiallyPaid = order.status == 'partiallyPaid';
+        final showPayButton = order.status == 'pending' || order.status == 'partiallyPaid';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -100,16 +105,31 @@ class OrdersList extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isCompleted ? Colors.green.shade50 : Colors.amber.shade50,
+                              color: isCompleted || isPaid
+                                  ? Colors.green.shade50
+                                  : isPartiallyPaid
+                                      ? Colors.blue.shade50
+                                      : Colors.amber.shade50,
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: isCompleted ? Colors.green.shade200 : Colors.amber.shade200),
+                              border: Border.all(
+                                color: isCompleted || isPaid
+                                    ? Colors.green.shade200
+                                    : isPartiallyPaid
+                                        ? Colors.blue.shade200
+                                        : Colors.amber.shade200,
+                              ),
                             ),
                             child: Text(
                               order.status.toUpperCase(),
                               style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCompleted ? Colors.green.shade800 : Colors.amber.shade800),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isCompleted || isPaid
+                                    ? Colors.green.shade800
+                                    : isPartiallyPaid
+                                        ? Colors.blue.shade800
+                                        : Colors.amber.shade800,
+                              ),
                             ),
                           ),
                         ],
@@ -126,6 +146,18 @@ class OrdersList extends StatelessWidget {
                     foregroundColor: isCompleted ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onPrimary,
                   ),
                 ),
+                if (showPayButton) ...[
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => onPayOrder(order),
+                    icon: const Icon(Icons.payments, size: 16),
+                    label: const Text('Pagar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete),

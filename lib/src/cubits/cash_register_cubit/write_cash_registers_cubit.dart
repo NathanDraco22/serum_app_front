@@ -46,4 +46,54 @@ class WriteCashRegisterCubit extends Cubit<WriteCashRegisterState> {
       emit(WriteCashRegisterError(e.toString()));
     }
   }
+
+  Future<void> openCashRegister(String cashRegisterId, OpenCashRegisterRequest request) async {
+    emit(WritingCashRegister());
+    try {
+      final item = await cashRegistersRepository.openCashRegister(cashRegisterId, request);
+      emit(CashRegisterOpened(item));
+    } catch (e) {
+      emit(WriteCashRegisterError(e.toString()));
+    }
+  }
+
+  Future<void> closeCashRegister(String cashRegisterId, CloseCashRegisterRequest request) async {
+    emit(WritingCashRegister());
+    try {
+      final item = await cashRegistersRepository.closeCashRegister(cashRegisterId, request);
+      emit(CashRegisterClosed(item));
+    } catch (e) {
+      emit(WriteCashRegisterError(e.toString()));
+    }
+  }
+
+  Future<void> registerIncome(String cashRegisterId, IncomeRegisterRequest request) async {
+    emit(WritingCashRegister());
+    try {
+      final transaction = await cashRegistersRepository.registerIncome(cashRegisterId, request);
+      emit(CashRegisterIncomeRegistered(transaction));
+    } catch (e) {
+      emit(WriteCashRegisterError(e.toString()));
+    }
+  }
+
+  Future<void> registerWithdrawal(String cashRegisterId, WithdrawalRegisterRequest request) async {
+    emit(WritingCashRegister());
+    try {
+      final transaction = await cashRegistersRepository.registerWithdrawal(cashRegisterId, request);
+      emit(CashRegisterWithdrawalRegistered(transaction));
+    } catch (e) {
+      emit(WriteCashRegisterError(e.toString()));
+    }
+  }
+
+  Future<void> registerPayment(String cashRegisterId, PaymentRegisterRequest request) async {
+    emit(WritingCashRegister());
+    try {
+      final transaction = await cashRegistersRepository.registerPayment(cashRegisterId, request);
+      emit(CashRegisterPaymentRegistered(transaction));
+    } catch (e) {
+      emit(WriteCashRegisterError(e.toString()));
+    }
+  }
 }

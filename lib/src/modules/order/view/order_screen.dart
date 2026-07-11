@@ -9,6 +9,7 @@ import '../../../cubits/exam_cubit/read_exams_cubit.dart';
 import '../widgets/orders_list.dart';
 import '../widgets/order_form_dialog.dart';
 import '../widgets/order_results_dialog.dart';
+import '../widgets/order_pay_dialog.dart';
 
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
@@ -98,6 +99,22 @@ class _BodyState extends State<_Body> {
     });
   }
 
+  void _openPayDialog(BuildContext context, OrderInDb order) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return BlocProvider.value(
+          value: BlocProvider.of<WriteOrderCubit>(context),
+          child: OrderPayDialog(order: order),
+        );
+      },
+    ).then((value) {
+      if (value == true && context.mounted) {
+        context.read<ReadOrderCubit>().getAll();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -115,6 +132,10 @@ class _BodyState extends State<_Body> {
         } else if (state is OrderDeleted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Orden eliminada con éxito')),
+          );
+        } else if (state is OrderPaid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pago registrado con éxito')),
           );
         } else if (state is WriteOrderError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -186,6 +207,7 @@ class _BodyState extends State<_Body> {
                   return OrdersList(
                     orders: orders,
                     onEditResults: (order) => _openResultsForm(context, order),
+                    onPayOrder: (order) => _openPayDialog(context, order),
                   );
                 } else if (readState is ReadOrderError) {
                   return Center(
