@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class HomeMenusScreen extends StatelessWidget {
   const HomeMenusScreen({super.key, required this.navigationShell});
@@ -45,6 +48,9 @@ class _SideNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentIndex = navigationShell.currentIndex;
+    final sessionState = context.watch<AppSessionCubit>().state;
+    final user = sessionState.currentUser;
+    final cashRegister = sessionState.activeCashRegister;
 
     return Container(
       width: 260,
@@ -106,36 +112,108 @@ class _SideNav extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          // Footer / Session Info
+          // Footer / Active Cash Register & Session Info
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  foregroundColor: theme.colorScheme.onPrimaryContainer,
-                  radius: 16,
-                  child: const Text('AD'),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // Active Cash Register info
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withAlpha(50),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.colorScheme.primaryContainer,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        'Administrador',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Icon(
+                        Icons.point_of_sale,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              cashRegister?.name ?? 'Sin caja seleccionada',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Caja Activa',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        'Sesión Activa',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.swap_horiz, size: 18),
+                        tooltip: 'Cambiar Caja',
+                        onPressed: () {
+                          context.read<AppSessionCubit>().clearCashRegister();
+                        },
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 12),
+
+                // User Info & Logout
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      foregroundColor: theme.colorScheme.onPrimaryContainer,
+                      radius: 16,
+                      child: Text(
+                        (user?.name.isNotEmpty == true)
+                            ? user!.name.substring(0, 1).toUpperCase()
+                            : 'U',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.name ?? user?.username ?? 'Usuario',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            user?.role.toUpperCase() ?? 'SESIÓN ACTIVA',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout, size: 18),
+                      tooltip: 'Cerrar Sesión',
+                      onPressed: () {
+                        context.read<AppSessionCubit>().logout();
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../src/cubits/app_session_cubit/app_session_cubit.dart';
+import '../src/modules/auth/view/login_screen.dart';
+import '../src/modules/cash_register_selection/view/select_cash_register_screen.dart';
 import '../src/modules/home_menu/home_menus_view.dart';
 import '../src/modules/dashboard/view/dashboard_screen.dart';
 import '../src/modules/patient/view/patient_screen.dart';
@@ -12,10 +16,27 @@ import '../src/modules/quotation/view/quotation_screen.dart';
 import '../src/modules/cash_register/view/cash_register_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
 
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 class AppRouter {
   AppRouter._();
 
   // Constantes de rutas
+  static const String login = '/login';
+  static const String selectCashRegister = '/select-cash-register';
   static const String dashboard = '/';
   static const String patients = '/patients';
   static const String doctors = '/doctors';
@@ -38,107 +59,142 @@ class AppRouter {
   static final _cashRegistersNavKey = GlobalKey<NavigatorState>(debugLabel: 'cashRegisters');
   static final _cashTransactionsNavKey = GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
 
-  static final GoRouter router = GoRouter(
-    navigatorKey: _rootNavigatorKey,
-    initialLocation: dashboard,
-    routes: [
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) {
-          return HomeMenusScreen(navigationShell: navigationShell);
-        },
-        branches: [
-          // Branch 0: Inicio / Dashboard
-          StatefulShellBranch(
-            navigatorKey: _dashboardNavKey,
-            routes: [
-              GoRoute(
-                path: dashboard,
-                builder: (context, state) => const DashboardScreen(),
-              ),
-            ],
-          ),
-          // Branch 1: Pacientes
-          StatefulShellBranch(
-            navigatorKey: _patientsNavKey,
-            routes: [
-              GoRoute(
-                path: patients,
-                builder: (context, state) => const PatientsScreen(),
-              ),
-            ],
-          ),
-          // Branch 2: Médicos
-          StatefulShellBranch(
-            navigatorKey: _doctorsNavKey,
-            routes: [
-              GoRoute(
-                path: doctors,
-                builder: (context, state) => const DoctorsScreen(),
-              ),
-            ],
-          ),
-          // Branch 3: Exámenes
-          StatefulShellBranch(
-            navigatorKey: _examsNavKey,
-            routes: [
-              GoRoute(
-                path: exams,
-                builder: (context, state) => const ExamsScreen(),
-              ),
-            ],
-          ),
-          // Branch 4: Pruebas de Laboratorio
-          StatefulShellBranch(
-            navigatorKey: _labTestsNavKey,
-            routes: [
-              GoRoute(
-                path: labTests,
-                builder: (context, state) => const LabTestsScreen(),
-              ),
-            ],
-          ),
-          // Branch 5: Órdenes Clínicas
-          StatefulShellBranch(
-            navigatorKey: _ordersNavKey,
-            routes: [
-              GoRoute(
-                path: orders,
-                builder: (context, state) => const OrdersScreen(),
-              ),
-            ],
-          ),
-          // Branch 6: Cotizaciones
-          StatefulShellBranch(
-            navigatorKey: _quotationsNavKey,
-            routes: [
-              GoRoute(
-                path: quotations,
-                builder: (context, state) => const QuotationsScreen(),
-              ),
-            ],
-          ),
-          // Branch 7: Cajas Registradoras
-          StatefulShellBranch(
-            navigatorKey: _cashRegistersNavKey,
-            routes: [
-              GoRoute(
-                path: cashRegisters,
-                builder: (context, state) => const CashRegistersScreen(),
-              ),
-            ],
-          ),
-          // Branch 8: Transacciones de Caja
-          StatefulShellBranch(
-            navigatorKey: _cashTransactionsNavKey,
-            routes: [
-              GoRoute(
-                path: cashTransactions,
-                builder: (context, state) => const CashTransactionsScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ],
-  );
+  static GoRouter createRouter(AppSessionCubit sessionCubit) {
+    return GoRouter(
+      navigatorKey: _rootNavigatorKey,
+      initialLocation: dashboard,
+      refreshListenable: GoRouterRefreshStream(sessionCubit.stream),
+      redirect: (context, state) {
+        final sessionState = sessionCubit.state;
+        final isAuthenticated = sessionState.isAuthenticated;
+        final hasCashRegister = sessionState.hasCashRegister;
+        final isLoggingIn = state.matchedLocation == login;
+        final isSelectingCash = state.matchedLocation == selectCashRegister;
+
+        // 1. No autenticado -> Redirigir a /login
+        if (!isAuthenticated) {
+          return isLoggingIn ? null : login;
+        }
+
+        // 2. Autenticado pero sin caja seleccionada -> Redirigir a /select-cash-register
+        if (!hasCashRegister) {
+          return isSelectingCash ? null : selectCashRegister;
+        }
+
+        // 3. Autenticado con caja seleccionada -> Si intenta estar en /login o /select-cash-register, redirigir a /
+        if (isLoggingIn || isSelectingCash) {
+          return dashboard;
+        }
+
+        return null;
+      },
+      routes: [
+        GoRoute(
+          path: login,
+          builder: (context, state) => const LoginScreen(),
+        ),
+        GoRoute(
+          path: selectCashRegister,
+          builder: (context, state) => const SelectCashRegisterScreen(),
+        ),
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) {
+            return HomeMenusScreen(navigationShell: navigationShell);
+          },
+          branches: [
+            // Branch 0: Inicio / Dashboard
+            StatefulShellBranch(
+              navigatorKey: _dashboardNavKey,
+              routes: [
+                GoRoute(
+                  path: dashboard,
+                  builder: (context, state) => const DashboardScreen(),
+                ),
+              ],
+            ),
+            // Branch 1: Pacientes
+            StatefulShellBranch(
+              navigatorKey: _patientsNavKey,
+              routes: [
+                GoRoute(
+                  path: patients,
+                  builder: (context, state) => const PatientsScreen(),
+                ),
+              ],
+            ),
+            // Branch 2: Médicos
+            StatefulShellBranch(
+              navigatorKey: _doctorsNavKey,
+              routes: [
+                GoRoute(
+                  path: doctors,
+                  builder: (context, state) => const DoctorsScreen(),
+                ),
+              ],
+            ),
+            // Branch 3: Exámenes
+            StatefulShellBranch(
+              navigatorKey: _examsNavKey,
+              routes: [
+                GoRoute(
+                  path: exams,
+                  builder: (context, state) => const ExamsScreen(),
+                ),
+              ],
+            ),
+            // Branch 4: Pruebas de Laboratorio
+            StatefulShellBranch(
+              navigatorKey: _labTestsNavKey,
+              routes: [
+                GoRoute(
+                  path: labTests,
+                  builder: (context, state) => const LabTestsScreen(),
+                ),
+              ],
+            ),
+            // Branch 5: Órdenes Clínicas
+            StatefulShellBranch(
+              navigatorKey: _ordersNavKey,
+              routes: [
+                GoRoute(
+                  path: orders,
+                  builder: (context, state) => const OrdersScreen(),
+                ),
+              ],
+            ),
+            // Branch 6: Cotizaciones
+            StatefulShellBranch(
+              navigatorKey: _quotationsNavKey,
+              routes: [
+                GoRoute(
+                  path: quotations,
+                  builder: (context, state) => const QuotationsScreen(),
+                ),
+              ],
+            ),
+            // Branch 7: Cajas Registradoras
+            StatefulShellBranch(
+              navigatorKey: _cashRegistersNavKey,
+              routes: [
+                GoRoute(
+                  path: cashRegisters,
+                  builder: (context, state) => const CashRegistersScreen(),
+                ),
+              ],
+            ),
+            // Branch 8: Transacciones de Caja
+            StatefulShellBranch(
+              navigatorKey: _cashTransactionsNavKey,
+              routes: [
+                GoRoute(
+                  path: cashTransactions,
+                  builder: (context, state) => const CashTransactionsScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
