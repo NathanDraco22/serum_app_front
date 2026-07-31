@@ -10,3 +10,4 @@ export 'orders_repository.dart';
 export 'patients_repository.dart';
 export 'quotations_repository.dart';
 export 'users_repository.dart';
+export 'auth_repository.dart';

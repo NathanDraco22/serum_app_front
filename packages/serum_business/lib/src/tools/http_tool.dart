@@ -29,7 +29,7 @@ class HttpTools {
     final token = config.authToken;
     return {
       "Authorization": "Bearer $token",
-      "X-Agent": "Neptuno",
+      "X-Agent": "Serum",
     };
   }
 }

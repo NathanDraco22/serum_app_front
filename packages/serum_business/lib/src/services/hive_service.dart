@@ -5,7 +5,12 @@ mixin class HiveService {
     if (Hive.isBoxOpen(boxName)) {
       return Hive.box(boxName);
     }
-    return await Hive.openBox(boxName);
+    try {
+      return await Hive.openBox(boxName);
+    } catch (_) {
+      Hive.init('./storage');
+      return await Hive.openBox(boxName);
+    }
   }
 
   Future<void> closeBox(String boxName) async {

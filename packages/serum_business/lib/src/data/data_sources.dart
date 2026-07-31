@@ -10,3 +10,4 @@ export 'orders_data_source.dart';
 export 'patients_data_source.dart';
 export 'quotations_data_source.dart';
 export 'users_data_source.dart';
+export 'auths_data_source.dart';

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
+import '../src/modules/splash/view/splash_screen.dart';
 import '../src/modules/auth/view/login_screen.dart';
 import '../src/modules/cash_register_selection/view/select_cash_register_screen.dart';
 import '../src/modules/home_menu/home_menus_view.dart';
@@ -35,6 +36,7 @@ class AppRouter {
   AppRouter._();
 
   // Constantes de rutas
+  static const String splash = '/splash';
   static const String login = '/login';
   static const String selectCashRegister = '/select-cash-register';
   static const String dashboard = '/';
@@ -62,33 +64,49 @@ class AppRouter {
   static GoRouter createRouter(AppSessionCubit sessionCubit) {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,
-      initialLocation: dashboard,
+      initialLocation: splash,
       refreshListenable: GoRouterRefreshStream(sessionCubit.stream),
       redirect: (context, state) {
         final sessionState = sessionCubit.state;
+
+        final isInitial =
+
+            sessionState.status == AppSessionStatus.initial ||
+            sessionState.status == AppSessionStatus.authenticating;
         final isAuthenticated = sessionState.isAuthenticated;
         final hasCashRegister = sessionState.hasCashRegister;
+
+        final isSplashing = state.matchedLocation == splash;
         final isLoggingIn = state.matchedLocation == login;
         final isSelectingCash = state.matchedLocation == selectCashRegister;
 
-        // 1. No autenticado -> Redirigir a /login
+        // 1. Inicialización en progreso -> Redirigir a /splash
+        if (isInitial) {
+          return isSplashing ? null : splash;
+        }
+
+        // 2. No autenticado -> Redirigir a /login
         if (!isAuthenticated) {
           return isLoggingIn ? null : login;
         }
 
-        // 2. Autenticado pero sin caja seleccionada -> Redirigir a /select-cash-register
+        // 3. Autenticado pero sin caja seleccionada -> Redirigir a /select-cash-register
         if (!hasCashRegister) {
           return isSelectingCash ? null : selectCashRegister;
         }
 
-        // 3. Autenticado con caja seleccionada -> Si intenta estar en /login o /select-cash-register, redirigir a /
-        if (isLoggingIn || isSelectingCash) {
+        // 4. Autenticado con caja seleccionada -> Redirigir a / si intenta estar en /splash, /login o /select-cash-register
+        if (isSplashing || isLoggingIn || isSelectingCash) {
           return dashboard;
         }
 
         return null;
       },
       routes: [
+        GoRoute(
+          path: splash,
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: login,
           builder: (context, state) => const LoginScreen(),

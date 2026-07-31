@@ -3,25 +3,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
-import 'config/app_theme.dart';
 import 'config/app_router.dart';
+import 'config/app_theme.dart';
+import 'config/service_locator.dart';
 import 'src/cubits/app_session_cubit/app_session_cubit.dart';
 
 class AppClientConfig implements SerumClientConfig {
   static const _baseUrl = String.fromEnvironment("SERVER_URL");
+  String _token = '';
 
   @override
-  String get baseUrl {
-    return _baseUrl;
+  String get baseUrl => _baseUrl;
+
+  @override
+  String get authToken => _token;
+
+  @override
+  set authToken(String token) {
+    _token = token;
   }
-
-  @override
-  String get authToken => '';
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SerumClient.initialize(AppClientConfig());
+  await setupServiceLocator();
   runApp(const MyApp());
 }
 
@@ -39,20 +45,18 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _sessionCubit = AppSessionCubit();
+    _sessionCubit = sl<AppSessionCubit>();
     _router = AppRouter.createRouter(_sessionCubit);
   }
 
-  @override
-  void dispose() {
-    _sessionCubit.close();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<AuthRepository>.value(
+          value: sl<AuthRepository>(),
+        ),
         RepositoryProvider<PatientsRepository>(
           create: (_) => PatientsRepository(PatientsDataSource()),
         ),
