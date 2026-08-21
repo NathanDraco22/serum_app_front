@@ -1,96 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:serum_business/serum_business.dart';
+import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
 import 'config/service_locator.dart';
+import 'material_app_builder.dart';
+import 'provider_container.dart';
 import 'src/cubits/app_session_cubit/app_session_cubit.dart';
 
-class AppClientConfig implements SerumClientConfig {
-  static const _baseUrl = String.fromEnvironment("SERVER_URL");
-  String _token = '';
-
-  @override
-  String get baseUrl => _baseUrl;
-
-  @override
-  String get authToken => _token;
-
-  @override
-  set authToken(String token) {
-    _token = token;
-  }
-}
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SerumClient.initialize(AppClientConfig());
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  await Hive.initFlutter();
   await setupServiceLocator();
+
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return const ProviderContainer(
+      child: AppRoot(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  late final AppSessionCubit _sessionCubit;
+class AppRoot extends StatefulWidget {
+  const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
-    _sessionCubit = sl<AppSessionCubit>();
-    _router = AppRouter.createRouter(_sessionCubit);
+    _router = AppRouter.createRouter(sl<AppSessionCubit>());
   }
-
 
   @override
   Widget build(BuildContext context) {
-    return MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider<AuthRepository>.value(
-          value: sl<AuthRepository>(),
-        ),
-        RepositoryProvider<PatientsRepository>(
-          create: (_) => PatientsRepository(PatientsDataSource()),
-        ),
-        RepositoryProvider<DoctorsRepository>(
-          create: (_) => DoctorsRepository(DoctorsDataSource()),
-        ),
-        RepositoryProvider<ExamsRepository>(
-          create: (_) => ExamsRepository(ExamsDataSource()),
-        ),
-        RepositoryProvider<LabTestsRepository>(
-          create: (_) => LabTestsRepository(LabTestsDataSource()),
-        ),
-        RepositoryProvider<OrdersRepository>(
-          create: (_) => OrdersRepository(OrdersDataSource()),
-        ),
-        RepositoryProvider<QuotationsRepository>(
-          create: (_) => QuotationsRepository(QuotationsDataSource()),
-        ),
-        RepositoryProvider<CashRegistersRepository>(
-          create: (_) => CashRegistersRepository(CashRegistersDataSource()),
-        ),
-        RepositoryProvider<CashTransactionsRepository>(
-          create: (_) => CashTransactionsRepository(CashTransactionsDataSource()),
-        ),
-      ],
-      child: BlocProvider<AppSessionCubit>.value(
-        value: _sessionCubit,
-        child: MaterialApp.router(
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          title: 'Serum LIS',
-          routerConfig: _router,
-        ),
-      ),
+    context.watch<AppSessionCubit>();
+    return MaterialApp.router(
+      title: 'Serum LIS',
+      routerConfig: _router,
+      builder: materialAppBuilder,
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.light,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
     );
   }
 }

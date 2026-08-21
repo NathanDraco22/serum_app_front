@@ -5,7 +5,7 @@ import 'package:serum_business/serum_business.dart';
 import '../../../cubits/quotation_cubit/read_quotations_cubit.dart';
 import '../../../cubits/quotation_cubit/write_quotations_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
-import '../../../cubits/exam_cubit/read_exams_cubit.dart';
+import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/quotations_list.dart';
 import '../widgets/quotation_form_dialog.dart';
 
@@ -31,9 +31,9 @@ class QuotationsScreen extends StatelessWidget {
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
           )..getAll(),
         ),
-        BlocProvider<ReadExamCubit>(
-          create: (context) => ReadExamCubit(
-            examsRepository: RepositoryProvider.of<ExamsRepository>(context),
+        BlocProvider<ReadLabTestCubit>(
+          create: (context) => ReadLabTestCubit(
+            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
           )..getAll(),
         ),
       ],
@@ -69,7 +69,7 @@ class _BodyState extends State<_Body> {
           providers: [
             BlocProvider.value(value: BlocProvider.of<WriteQuotationCubit>(context)),
             BlocProvider.value(value: BlocProvider.of<ReadPatientCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadExamCubit>(context)),
+            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
           ],
           child: const QuotationFormDialog(),
         );
@@ -101,7 +101,10 @@ class _BodyState extends State<_Body> {
           );
         } else if (state is WriteQuotationError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${state.message}'), backgroundColor: theme.colorScheme.error),
+            SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: theme.colorScheme.error,
+            ),
           );
         }
       },

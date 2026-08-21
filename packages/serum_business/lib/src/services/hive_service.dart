@@ -1,16 +1,22 @@
 import 'package:hive_ce/hive.dart';
 
 mixin class HiveService {
-  Future<Box> getBox(String boxName) async {
+  Future<Box<T>> getBox<T>(String boxName) async {
     if (Hive.isBoxOpen(boxName)) {
-      return Hive.box(boxName);
+      return Hive.box<T>(boxName);
     }
-    try {
-      return await Hive.openBox(boxName);
-    } catch (_) {
-      Hive.init('./storage');
-      return await Hive.openBox(boxName);
+    return await Hive.openBox<T>(boxName);
+  }
+
+  Future<Box<T>> getEncryptedBox<T>(
+    String boxName,
+    List<int> encryptionKey,
+  ) async {
+    if (Hive.isBoxOpen(boxName)) {
+      return Hive.box<T>(boxName);
     }
+    final cipher = HiveAesCipher(encryptionKey);
+    return await Hive.openBox<T>(boxName, encryptionCipher: cipher);
   }
 
   Future<void> closeBox(String boxName) async {

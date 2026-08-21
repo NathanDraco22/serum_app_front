@@ -5,7 +5,8 @@ import 'package:serum_business/serum_business.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
-import '../../../cubits/exam_cubit/read_exams_cubit.dart';
+import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
+import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/orders_list.dart';
 import '../widgets/order_form_dialog.dart';
 import '../widgets/order_results_dialog.dart';
@@ -33,9 +34,14 @@ class OrdersScreen extends StatelessWidget {
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
           )..getAll(),
         ),
-        BlocProvider<ReadExamCubit>(
-          create: (context) => ReadExamCubit(
-            examsRepository: RepositoryProvider.of<ExamsRepository>(context),
+        BlocProvider<ReadDoctorCubit>(
+          create: (context) => ReadDoctorCubit(
+            doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
+          )..getAll(),
+        ),
+        BlocProvider<ReadLabTestCubit>(
+          create: (context) => ReadLabTestCubit(
+            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
           )..getAll(),
         ),
       ],
@@ -71,7 +77,8 @@ class _BodyState extends State<_Body> {
           providers: [
             BlocProvider.value(value: BlocProvider.of<WriteOrderCubit>(context)),
             BlocProvider.value(value: BlocProvider.of<ReadPatientCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadExamCubit>(context)),
+            BlocProvider.value(value: BlocProvider.of<ReadDoctorCubit>(context)),
+            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
           ],
           child: const OrderFormDialog(),
         );

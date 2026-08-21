@@ -18,12 +18,18 @@ class QuotationsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (quotations.isEmpty) {
+      return const Center(child: Text('No se encontraron cotizaciones'));
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(24),
       itemCount: quotations.length,
       itemBuilder: (context, index) {
         final quotation = quotations[index];
         final isConverted = quotation.status == 'converted';
+        final totalFormatted = (quotation.totalAmount / 100.0).toStringAsFixed(2);
+        final itemsSummary = quotation.exams.map((e) => e.name).join(", ");
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -38,8 +44,12 @@ class QuotationsList extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isConverted ? Colors.green.shade100 : theme.colorScheme.secondaryContainer,
-                  foregroundColor: isConverted ? Colors.green.shade800 : theme.colorScheme.onSecondaryContainer,
+                  backgroundColor: isConverted
+                      ? Colors.green.shade100
+                      : theme.colorScheme.secondaryContainer,
+                  foregroundColor: isConverted
+                      ? Colors.green.shade800
+                      : theme.colorScheme.onSecondaryContainer,
                   child: Icon(isConverted ? Icons.check_circle : Icons.description),
                 ),
                 const SizedBox(width: 16),
@@ -48,7 +58,7 @@ class QuotationsList extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Cliente/Paciente: ${quotation.clientName}',
+                        'Cliente / Paciente: ${quotation.clientName}',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.onSurface,
@@ -56,7 +66,7 @@ class QuotationsList extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Exámenes: ${quotation.exams.map((e) => e.examName).join(", ")}',
+                        'Análisis: $itemsSummary',
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
@@ -68,17 +78,33 @@ class QuotationsList extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.calendar_today, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                               const SizedBox(width: 4),
-                              Text(_formatDate(quotation.createdAt), style: theme.textTheme.bodySmall),
+                              Text(
+                                _formatDate(quotation.createdAt),
+                                style: theme.textTheme.bodySmall,
+                              ),
                             ],
                           ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.payments, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                              Icon(
+                                Icons.payments,
+                                size: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                               const SizedBox(width: 4),
-                              Text('\$${quotation.totalAmount}', style: theme.textTheme.bodySmall),
+                              Text(
+                                '\$$totalFormatted USD',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                           Container(
@@ -86,7 +112,9 @@ class QuotationsList extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: isConverted ? Colors.green.shade50 : Colors.amber.shade50,
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: isConverted ? Colors.green.shade200 : Colors.amber.shade200),
+                              border: Border.all(
+                                color: isConverted ? Colors.green.shade200 : Colors.amber.shade200,
+                              ),
                             ),
                             child: Text(
                               quotation.status.toUpperCase(),

@@ -10,7 +10,6 @@ import '../src/modules/home_menu/home_menus_view.dart';
 import '../src/modules/dashboard/view/dashboard_screen.dart';
 import '../src/modules/patient/view/patient_screen.dart';
 import '../src/modules/doctor/view/doctor_screen.dart';
-import '../src/modules/exam/view/exam_screen.dart';
 import '../src/modules/lab_test/view/lab_test_screen.dart';
 import '../src/modules/order/view/order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
@@ -42,7 +41,6 @@ class AppRouter {
   static const String dashboard = '/';
   static const String patients = '/patients';
   static const String doctors = '/doctors';
-  static const String exams = '/exams';
   static const String labTests = '/lab-tests';
   static const String orders = '/orders';
   static const String quotations = '/quotations';
@@ -54,7 +52,6 @@ class AppRouter {
   static final _dashboardNavKey = GlobalKey<NavigatorState>(debugLabel: 'dashboard');
   static final _patientsNavKey = GlobalKey<NavigatorState>(debugLabel: 'patients');
   static final _doctorsNavKey = GlobalKey<NavigatorState>(debugLabel: 'doctors');
-  static final _examsNavKey = GlobalKey<NavigatorState>(debugLabel: 'exams');
   static final _labTestsNavKey = GlobalKey<NavigatorState>(debugLabel: 'labTests');
   static final _ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
   static final _quotationsNavKey = GlobalKey<NavigatorState>(debugLabel: 'quotations');
@@ -70,7 +67,6 @@ class AppRouter {
         final sessionState = sessionCubit.state;
 
         final isInitial =
-
             sessionState.status == AppSessionStatus.initial ||
             sessionState.status == AppSessionStatus.authenticating;
         final isAuthenticated = sessionState.isAuthenticated;
@@ -150,17 +146,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 3: Exámenes
-            StatefulShellBranch(
-              navigatorKey: _examsNavKey,
-              routes: [
-                GoRoute(
-                  path: exams,
-                  builder: (context, state) => const ExamsScreen(),
-                ),
-              ],
-            ),
-            // Branch 4: Pruebas de Laboratorio
+            // Branch 3: Pruebas y Packs de Laboratorio
             StatefulShellBranch(
               navigatorKey: _labTestsNavKey,
               routes: [
@@ -170,7 +156,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 5: Órdenes Clínicas
+            // Branch 4: Órdenes Clínicas
             StatefulShellBranch(
               navigatorKey: _ordersNavKey,
               routes: [
@@ -180,7 +166,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 6: Cotizaciones
+            // Branch 5: Cotizaciones
             StatefulShellBranch(
               navigatorKey: _quotationsNavKey,
               routes: [
@@ -190,7 +176,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 7: Cajas Registradoras
+            // Branch 6: Cajas Registradoras
             StatefulShellBranch(
               navigatorKey: _cashRegistersNavKey,
               routes: [
@@ -200,7 +186,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 8: Transacciones de Caja
+            // Branch 7: Transacciones de Caja
             StatefulShellBranch(
               navigatorKey: _cashTransactionsNavKey,
               routes: [

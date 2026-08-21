@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
-import '../../../cubits/exam_cubit/read_exams_cubit.dart';
+import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/quotation_cubit/write_quotations_cubit.dart';
 
 class QuotationFormDialog extends StatefulWidget {
@@ -44,16 +44,16 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
     final theme = Theme.of(context);
 
     final patientsState = context.watch<ReadPatientCubit>().state;
-    final examsState = context.watch<ReadExamCubit>().state;
+    final labTestsState = context.watch<ReadLabTestCubit>().state;
 
     List<PatientInDb> patients = [];
     if (patientsState is ReadPatientSuccess) {
       patients = patientsState.items;
     }
 
-    List<ExamInDb> exams = [];
-    if (examsState is ReadExamSuccess) {
-      exams = examsState.items;
+    List<LabTestInDb> labTests = [];
+    if (labTestsState is ReadLabTestSuccess) {
+      labTests = labTestsState.items;
     }
 
     int totalAmount = _selectedExams.fold(0, (sum, item) => sum + item.quotedPrice);
@@ -61,8 +61,8 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
     return AlertDialog(
       title: const Text('Nueva Cotización'),
       content: SizedBox(
-        width: 600,
-        height: 400,
+        width: 650,
+        height: 450,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -74,9 +74,14 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                 child: Column(
                   children: [
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Paciente Registrado (Opcional)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Paciente Registrado (Opcional)',
+                      ),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Cliente General (No registrado)')),
+                        const DropdownMenuItem(
+                          value: null,
+                          child: Text('Cliente General (No registrado)'),
+                        ),
                         ...patients.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
                       ],
                       onChanged: (val) {
@@ -95,8 +100,17 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Exámenes a Cotizar:', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-                        Text('Total: \$$totalAmount', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
+                        Text(
+                          'Análisis / Packs Cotizados:',
+                          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'Total: \$${(totalAmount / 100).toStringAsFixed(2)}',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
                       ],
                     ),
                     Expanded(
@@ -106,7 +120,8 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                           final item = _selectedExams[index];
                           return ListTile(
                             dense: true,
-                            title: Text(item.examName),
+                            title: Text(item.name),
+                            subtitle: Text('\$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete),
                               onPressed: () => setState(() => _selectedExams.removeAt(index)),
@@ -121,34 +136,45 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
               ),
             ),
             const VerticalDivider(),
-            // Right Column: Available Exams
+            // Right Column: Available Lab Tests / Packs
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Column(
                 children: [
-                  Text('Catálogo de Exámenes', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Catálogo de Pruebas y Packs',
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: exams.length,
+                      itemCount: labTests.length,
                       itemBuilder: (context, index) {
-                        final exam = exams[index];
+                        final test = labTests[index];
                         return ListTile(
                           dense: true,
-                          title: Text(exam.name),
-                          subtitle: Text('\$${exam.salePrice}'),
+                          leading: Icon(
+                            test.isPack ? Icons.inventory_2 : Icons.science,
+                            size: 20,
+                            color: test.isPack
+                                ? theme.colorScheme.tertiary
+                                : theme.colorScheme.primary,
+                          ),
+                          title: Text(test.name),
+                          subtitle: Text('\$${(test.salePrice / 100).toStringAsFixed(2)}'),
                           trailing: IconButton(
                             icon: const Icon(Icons.add_circle),
                             onPressed: () {
-                              if (_selectedExams.any((e) => e.examId == exam.id)) {
+                              if (_selectedExams.any((e) => e.labTestId == test.id)) {
                                 return;
                               }
                               setState(() {
                                 _selectedExams.add(
                                   QuotedExam(
-                                    examId: exam.id,
-                                    examName: exam.name,
-                                    quotedPrice: exam.salePrice,
+                                    labTestId: test.id,
+                                    name: test.name,
+                                    quotedPrice: test.salePrice,
+                                    isPack: test.isPack,
                                   ),
                                 );
                               });

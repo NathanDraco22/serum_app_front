@@ -7,6 +7,7 @@ import '../../../cubits/lab_test_cubit/search_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../widgets/lab_tests_list.dart';
 import '../widgets/lab_test_form_dialog.dart';
+import '../widgets/lab_test_detail_dialog.dart';
 
 class LabTestsScreen extends StatelessWidget {
   const LabTestsScreen({super.key});
@@ -56,6 +57,8 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   final TextEditingController _searchController = TextEditingController();
+  String _filterType = 'all'; // 'all', 'individual', 'pack'
+  String _selectedCategory = 'Todas';
 
   @override
   void dispose() {
@@ -65,18 +68,22 @@ class _BodyState extends State<_Body> {
 
   void _onSearchChanged(BuildContext context, String query) {
     if (query.trim().isEmpty) {
-      context.read<SearchLabTestCubit>().search('');
+      context.read<SearchLabTestCubit>().clear();
     } else {
-      context.read<SearchLabTestCubit>().search(query);
+      context.read<SearchLabTestCubit>().search(query.trim());
     }
   }
 
   void _openLabTestForm(BuildContext context, [LabTestInDb? labTest]) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
-        return BlocProvider.value(
-          value: BlocProvider.of<WriteLabTestCubit>(context),
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: BlocProvider.of<WriteLabTestCubit>(context)),
+            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
+          ],
           child: LabTestFormDialog(labTest: labTest),
         );
       },
@@ -85,6 +92,39 @@ class _BodyState extends State<_Body> {
         context.read<ReadLabTestCubit>().getAll();
       }
     });
+  }
+
+  void _openLabTestDetail(BuildContext context, LabTestInDb labTest, List<LabTestInDb> allTests) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return LabTestDetailDialog(
+          labTest: labTest,
+          allLabTests: allTests,
+        );
+      },
+    );
+  }
+
+  List<String> _extractCategories(List<LabTestInDb> tests) {
+    final categories = <String>{'Todas'};
+    for (final t in tests) {
+      if (t.commercialCategory.trim().isNotEmpty) {
+        categories.add(t.commercialCategory.trim());
+      }
+    }
+    return categories.toList();
+  }
+
+  List<LabTestInDb> _applyFilters(List<LabTestInDb> baseList) {
+    return baseList.where((t) {
+      if (_filterType == 'individual' && t.isPack) return false;
+      if (_filterType == 'pack' && !t.isPack) return false;
+      if (_selectedCategory != 'Todas' && t.commercialCategory.trim() != _selectedCategory) {
+        return false;
+      }
+      return true;
+    }).toList();
   }
 
   @override
@@ -111,120 +151,242 @@ class _BodyState extends State<_Body> {
           );
         }
       },
-      child: Column(
-        children: [
-          // Header Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLowest,
-              border: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
+      child: BlocBuilder<ReadLabTestCubit, ReadLabTestState>(
+        builder: (context, readState) {
+          final allTests = (readState is ReadLabTestSuccess)
+              ? readState.items
+              : (readState is ReadLabTestRefreshing)
+                  ? readState.items
+                  : <LabTestInDb>[];
+
+          final totalCount = allTests.length;
+          final packCount = allTests.where((t) => t.isPack).length;
+          final individualCount = totalCount - packCount;
+          final categories = _extractCategories(allTests);
+
+          return Column(
+            children: [
+              // Header Bar con KPIs y Acciones Principales
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            child: Row(
-              children: [
-                Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Pruebas de Laboratorio',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                    Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Catálogo de Pruebas de Laboratorio',
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Gestión de análisis clínicos individuales y perfiles comerciales (Packs)',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        // KPIs rápidos
+                        _KpiBadge(
+                          label: 'Total',
+                          count: totalCount,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        _KpiBadge(
+                          label: 'Individuales',
+                          count: individualCount,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 8),
+                        _KpiBadge(
+                          label: 'Packs',
+                          count: packCount,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton.icon(
+                          onPressed: () => _openLabTestForm(context),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Nueva Prueba / Pack'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Catálogo general de parámetros y pruebas del sistema LIS',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    const SizedBox(height: 16),
+
+                    // Barra de Filtros: Buscador + SegmentedButton + Chips de Categoría
+                    Row(
+                      children: [
+                        // Search Input
+                        SizedBox(
+                          width: 320,
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (val) => _onSearchChanged(context, val),
+                            decoration: InputDecoration(
+                              hintText: 'Buscar por nombre, clave o categoría...',
+                              prefixIcon: const Icon(Icons.search, size: 20),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 18),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _onSearchChanged(context, '');
+                                        setState(() {});
+                                      },
+                                    )
+                                  : null,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Filtro de Tipo (Segmented)
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment(value: 'all', label: Text('Todos')),
+                            ButtonSegment(value: 'individual', label: Text('Individuales')),
+                            ButtonSegment(value: 'pack', label: Text('Packs / Perfiles')),
+                          ],
+                          selected: {_filterType},
+                          onSelectionChanged: (val) {
+                            setState(() => _filterType = val.first);
+                          },
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 10),
+
+                    // Chips de Categorías Comerciales
+                    if (categories.length > 1)
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: categories.map((cat) {
+                            final isSelected = _selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: FilterChip(
+                                label: Text(cat, style: const TextStyle(fontSize: 12)),
+                                selected: isSelected,
+                                onSelected: (_) {
+                                  setState(() => _selectedCategory = cat);
+                                },
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                   ],
                 ),
-                const Spacer(),
-                // Search Input
-                SizedBox(
-                  width: 300,
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (val) => _onSearchChanged(context, val),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar prueba...',
-                      prefixIcon: const Icon(Icons.search),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
-                  onPressed: () => _openLabTestForm(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Nueva Prueba'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Lab Tests List Container
-          Expanded(
-            child: BlocBuilder<SearchLabTestCubit, SearchLabTestState>(
-              builder: (context, searchState) {
-                if (searchState is SearchLabTestSuccess && _searchController.text.trim().isNotEmpty) {
-                  return LabTestsList(
-                    labTests: searchState.items,
-                    onEdit: (labTest) => _openLabTestForm(context, labTest),
-                  );
-                }
+              ),
 
-                // Default fallback to read all lab tests
-                return BlocBuilder<ReadLabTestCubit, ReadLabTestState>(
-                  builder: (context, readState) {
-                    if (readState is ReadLabTestLoading) {
+              // Lab Tests List Container
+              Expanded(
+                child: BlocBuilder<SearchLabTestCubit, SearchLabTestState>(
+                  builder: (context, searchState) {
+                    if (searchState is SearchLabTestLoading) {
                       return const Center(child: CircularProgressIndicator());
-                    } else if (readState is ReadLabTestSuccess) {
-                      return LabTestsList(
-                        labTests: readState.items,
-                        onEdit: (labTest) => _openLabTestForm(context, labTest),
-                      );
-                    } else if (readState is ReadLabTestError) {
-                      return Center(
-                        child: Text(
-                          'Error al cargar pruebas: ${readState.message}',
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                      );
                     }
-                    return const Center(child: Text('Cargando catálogo...'));
+
+                    List<LabTestInDb> testsToDisplay;
+                    if (searchState is SearchLabTestSuccess && _searchController.text.trim().isNotEmpty) {
+                      testsToDisplay = _applyFilters(searchState.items);
+                    } else {
+                      if (readState is ReadLabTestLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (readState is ReadLabTestError) {
+                        return Center(
+                          child: Text(
+                            'Error al cargar pruebas: ${readState.message}',
+                            style: TextStyle(color: theme.colorScheme.error),
+                          ),
+                        );
+                      }
+                      testsToDisplay = _applyFilters(allTests);
+                    }
+
+                    return LabTestsList(
+                      labTests: testsToDisplay,
+                      allLabTests: allTests,
+                      onEdit: (labTest) => _openLabTestForm(context, labTest),
+                      onDetail: (labTest) => _openLabTestDetail(context, labTest, allTests),
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _KpiBadge extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+
+  const _KpiBadge({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600),
+          ),
+          Text(
+            '$count',
+            style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),

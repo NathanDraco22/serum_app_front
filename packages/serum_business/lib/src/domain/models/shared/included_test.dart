@@ -7,26 +7,36 @@ class IncludedTest {
   final String dataType;
   final String unitOfMeasure;
   final List<ReferenceValue> referenceValues;
+  final List<String> qualitativeOptions;
+  final String? expectedQualitativeValue;
 
   IncludedTest({
     required this.labTestId,
     required this.parameterName,
-    required this.medicalClassification,
+    this.medicalClassification = '',
     required this.dataType,
-    required this.unitOfMeasure,
-    required this.referenceValues,
+    this.unitOfMeasure = '',
+    this.referenceValues = const [],
+    this.qualitativeOptions = const [],
+    this.expectedQualitativeValue,
   });
 
   factory IncludedTest.fromJson(Map<String, dynamic> json) {
     return IncludedTest(
-      labTestId: json['labTestId'] as String,
-      parameterName: json['parameterName'] as String,
-      medicalClassification: json['medicalClassification'] as String,
-      dataType: json['dataType'] as String,
-      unitOfMeasure: json['unitOfMeasure'] as String,
-      referenceValues: (json['referenceValues'] as List<dynamic>)
-          .map((e) => ReferenceValue.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      labTestId: json['labTestId'] as String? ?? '',
+      parameterName: json['parameterName'] as String? ?? json['testName'] as String? ?? '',
+      medicalClassification: json['medicalClassification'] as String? ?? '',
+      dataType: json['dataType'] as String? ?? 'numeric',
+      unitOfMeasure: json['unitOfMeasure'] as String? ?? '',
+      referenceValues: (json['referenceValues'] as List<dynamic>?)
+              ?.map((e) => ReferenceValue.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      qualitativeOptions: (json['qualitativeOptions'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      expectedQualitativeValue: json['expectedQualitativeValue'] as String?,
     );
   }
 
@@ -38,6 +48,8 @@ class IncludedTest {
       'dataType': dataType,
       'unitOfMeasure': unitOfMeasure,
       'referenceValues': referenceValues.map((e) => e.toJson()).toList(),
+      'qualitativeOptions': qualitativeOptions,
+      'expectedQualitativeValue': expectedQualitativeValue,
     };
   }
 }

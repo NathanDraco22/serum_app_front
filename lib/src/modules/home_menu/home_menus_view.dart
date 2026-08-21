@@ -36,7 +36,6 @@ class _SideNav extends StatelessWidget {
     _NavItemData(icon: Icons.dashboard, label: 'Inicio'),
     _NavItemData(icon: Icons.people, label: 'Pacientes'),
     _NavItemData(icon: Icons.badge, label: 'Médicos'),
-    _NavItemData(icon: Icons.assignment_outlined, label: 'Exámenes'),
     _NavItemData(icon: Icons.science, label: 'Pruebas de Lab.'),
     _NavItemData(icon: Icons.receipt_long, label: 'Órdenes Clínicas'),
     _NavItemData(icon: Icons.request_quote, label: 'Cotizaciones'),
