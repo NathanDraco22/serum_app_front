@@ -19,9 +19,6 @@ final class CashRegisterUpdated extends WriteCashRegisterSuccess {
   CashRegisterUpdated(super.item);
 }
 
-final class CashRegisterDeleted extends WriteCashRegisterSuccess {
-  CashRegisterDeleted(super.item);
-}
 
 final class CashRegisterOpened extends WriteCashRegisterSuccess {
   CashRegisterOpened(super.item);

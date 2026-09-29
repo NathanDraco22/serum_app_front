@@ -35,7 +35,7 @@ class OrderCartSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalCents = selectedItems.fold(0, (sum, i) => sum + i.salePrice);
-    final totalFormatted = (totalCents / 100.0).toStringAsFixed(2);
+    final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
     // Calculate total individual clinical tests that will result from packs + items
     int totalParameters = 0;
@@ -144,7 +144,7 @@ class OrderCartSection extends StatelessWidget {
                       separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = selectedItems[index];
-                        final priceStr = (item.salePrice / 100.0).toStringAsFixed(2);
+                        final priceStr = NumberFormatter.convertToMoneyLike(item.salePrice);
 
                         return ListTile(
                           dense: true,
@@ -182,7 +182,7 @@ class OrderCartSection extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                '\$$priceStr',
+                                priceStr,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -243,7 +243,7 @@ class OrderCartSection extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '\$$totalFormatted USD',
+                        totalFormatted,
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: theme.colorScheme.primary,

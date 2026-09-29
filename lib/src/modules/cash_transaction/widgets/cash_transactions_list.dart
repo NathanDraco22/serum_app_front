@@ -80,7 +80,7 @@ class CashTransactionsList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isEnflow ? "+" : "-"}\$${tx.amount}',
+                  '${isEnflow ? "+" : "-"}${NumberFormatter.convertToMoneyLike(tx.amount)}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -89,7 +89,7 @@ class CashTransactionsList extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Saldo: \$${tx.resultingBalance}',
+                  'Saldo: ${NumberFormatter.convertToMoneyLike(tx.resultingBalance)}',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

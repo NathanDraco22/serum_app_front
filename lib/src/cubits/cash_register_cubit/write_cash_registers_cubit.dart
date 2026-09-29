@@ -33,19 +33,6 @@ class WriteCashRegisterCubit extends Cubit<WriteCashRegisterState> {
     }
   }
 
-  Future<void> delete(String cashRegisterId) async {
-    emit(WritingCashRegister());
-    try {
-      final item = await cashRegistersRepository.deleteCashRegisterById(cashRegisterId);
-      if (item != null) {
-        emit(CashRegisterDeleted(item));
-      } else {
-        emit(WriteCashRegisterError('Not found'));
-      }
-    } catch (e) {
-      emit(WriteCashRegisterError(e.toString()));
-    }
-  }
 
   Future<void> openCashRegister(String cashRegisterId, OpenCashRegisterRequest request) async {
     emit(WritingCashRegister());

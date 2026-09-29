@@ -42,9 +42,13 @@ class OrdersList extends StatelessWidget {
         final order = orders[index];
         final patientName = patientNames[order.patientId] ?? 'Cargando paciente...';
         final isCompleted = order.status == 'completed';
-        final isPaid = order.status == 'paid';
-        final isPartiallyPaid = order.status == 'partiallyPaid';
-        final showPayButton = order.status == 'pending' || order.status == 'partiallyPaid';
+        final totalPrice =
+            order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
+        final isFullyPaid = totalPrice > 0
+            ? (order.paidAmount >= totalPrice)
+            : (order.status == 'paid');
+        final isPartiallyPaid = order.paidAmount > 0 && !isFullyPaid;
+        final showPayButton = !isFullyPaid && order.status != 'cancelled';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -59,9 +63,17 @@ class OrdersList extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isCompleted ? Colors.green.shade100 : theme.colorScheme.primaryContainer,
-                  foregroundColor: isCompleted ? Colors.green.shade800 : theme.colorScheme.onPrimaryContainer,
-                  child: Icon(isCompleted ? Icons.check_circle : Icons.pending_actions),
+                  backgroundColor: isCompleted
+                      ? (isFullyPaid ? Colors.green.shade100 : Colors.blue.shade100)
+                      : theme.colorScheme.primaryContainer,
+                  foregroundColor: isCompleted
+                      ? (isFullyPaid ? Colors.green.shade800 : Colors.blue.shade800)
+                      : theme.colorScheme.onPrimaryContainer,
+                  child: Icon(
+                    isCompleted
+                        ? (isFullyPaid ? Icons.check_circle : Icons.assignment_turned_in)
+                        : Icons.pending_actions,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -80,10 +92,10 @@ class OrdersList extends StatelessWidget {
                         'Examen: ${order.examName}',
                         style: theme.textTheme.bodyMedium,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Wrap(
-                        spacing: 16,
-                        runSpacing: 4,
+                        spacing: 12,
+                        runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Row(
@@ -99,37 +111,91 @@ class OrdersList extends StatelessWidget {
                             children: [
                               Icon(Icons.payments, size: 12, color: theme.colorScheme.onSurfaceVariant),
                               const SizedBox(width: 4),
-                              Text('\$${order.salePriceApplied}', style: theme.textTheme.bodySmall),
+                              Text(NumberFormatter.convertToMoneyLike(totalPrice), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
+                          // Badge Clínico
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: isCompleted || isPaid
+                              color: isCompleted ? Colors.purple.shade50 : Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: isCompleted ? Colors.purple.shade200 : Colors.orange.shade200,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isCompleted ? Icons.check_circle_outline : Icons.hourglass_top,
+                                  size: 11,
+                                  color: isCompleted ? Colors.purple.shade800 : Colors.orange.shade900,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isCompleted ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isCompleted ? Colors.purple.shade800 : Colors.orange.shade900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Badge Financiero
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isFullyPaid
                                   ? Colors.green.shade50
                                   : isPartiallyPaid
                                       ? Colors.blue.shade50
                                       : Colors.amber.shade50,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: isCompleted || isPaid
+                                color: isFullyPaid
                                     ? Colors.green.shade200
                                     : isPartiallyPaid
                                         ? Colors.blue.shade200
                                         : Colors.amber.shade200,
                               ),
                             ),
-                            child: Text(
-                              order.status.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: isCompleted || isPaid
-                                    ? Colors.green.shade800
-                                    : isPartiallyPaid
-                                        ? Colors.blue.shade800
-                                        : Colors.amber.shade800,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isFullyPaid
+                                      ? Icons.check
+                                      : isPartiallyPaid
+                                          ? Icons.pie_chart_outline
+                                          : Icons.attach_money,
+                                  size: 11,
+                                  color: isFullyPaid
+                                      ? Colors.green.shade800
+                                      : isPartiallyPaid
+                                          ? Colors.blue.shade800
+                                          : Colors.amber.shade900,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isFullyPaid
+                                      ? 'PAGADA'
+                                      : isPartiallyPaid
+                                          ? 'ABONO: ${NumberFormatter.convertToMoneyLike(order.paidAmount)} / ${NumberFormatter.convertToMoneyLike(totalPrice)}'
+                                          : 'PENDIENTE DE PAGO',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: isFullyPaid
+                                        ? Colors.green.shade800
+                                        : isPartiallyPaid
+                                            ? Colors.blue.shade800
+                                            : Colors.amber.shade900,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

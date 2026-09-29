@@ -6,7 +6,6 @@ class CashRegisterCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onClose;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   const CashRegisterCard({
     super.key,
@@ -14,7 +13,6 @@ class CashRegisterCard extends StatelessWidget {
     required this.onOpen,
     required this.onClose,
     required this.onEdit,
-    required this.onDelete,
   });
 
   @override
@@ -84,7 +82,6 @@ class CashRegisterCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 IconButton(icon: const Icon(Icons.edit), onPressed: onEdit, color: theme.colorScheme.primary),
-                IconButton(icon: const Icon(Icons.delete), onPressed: onDelete, color: theme.colorScheme.error),
               ],
             ),
             const Divider(height: 24),
@@ -129,7 +126,7 @@ class _BalanceIndicator extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '\$$amount',
+          NumberFormatter.convertToMoneyLike(amount),
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
             color: isTotal ? theme.colorScheme.primary : theme.colorScheme.onSurface,

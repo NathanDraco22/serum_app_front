@@ -242,7 +242,7 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
   }
 
   Widget _buildTestCard(ThemeData theme, LabTestInDb test, bool isSelected) {
-    final priceStr = (test.salePrice / 100.0).toStringAsFixed(2);
+    final priceStr = NumberFormatter.convertToMoneyLike(test.salePrice);
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -319,7 +319,7 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '\$$priceStr USD',
+                  priceStr,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,

@@ -28,7 +28,7 @@ class QuotationsList extends StatelessWidget {
       itemBuilder: (context, index) {
         final quotation = quotations[index];
         final isConverted = quotation.status == 'converted';
-        final totalFormatted = (quotation.totalAmount / 100.0).toStringAsFixed(2);
+        final totalFormatted = NumberFormatter.convertToMoneyLike(quotation.totalAmount);
         final itemsSummary = quotation.exams.map((e) => e.name).join(", ");
 
         return Card(
@@ -100,7 +100,7 @@ class QuotationsList extends StatelessWidget {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '\$$totalFormatted USD',
+                                totalFormatted,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),

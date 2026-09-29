@@ -1,5 +1,5 @@
 const maxPhoneScreenWidth = 600;
 
-const defaultCoinSymbol = 'C\$';
+const defaultCoinSymbol = '\$';
 
 const paginationItems = 50;

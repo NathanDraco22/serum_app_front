@@ -215,10 +215,10 @@ class _Body extends StatelessWidget {
   Widget _buildDefaultDemoOption(BuildContext context) {
     final currentBranch = context.read<AppSessionCubit>().currentBranch;
     final defaultRegister = CashRegisterInDb(
-      id: 'cr_001',
+      id: kOriginCashId,
       name: currentBranch != null
           ? 'Caja Principal - ${currentBranch.name}'
-          : 'Caja Principal #001',
+          : 'Caja Principal',
       branchId: currentBranch?.id ?? kOriginBranchId,
       isOpen: true,
       totalBalance: 5000,

@@ -113,10 +113,6 @@ class _BodyState extends State<_Body> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Estado de caja actualizado con éxito')),
           );
-        } else if (state is CashRegisterDeleted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Caja registradora eliminada con éxito')),
-          );
         } else if (state is CashRegisterOpened) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Caja abierta con éxito')),
@@ -214,33 +210,6 @@ class _BodyState extends State<_Body> {
                         onOpen: () => _openCashRegister(context, reg),
                         onClose: () => _closeCashRegister(context, reg),
                         onEdit: () => _openCashRegisterForm(context, reg),
-                        onDelete: () {
-                          showDialog(
-                            context: context,
-                            builder: (dialogCtx) => AlertDialog(
-                              title: const Text('Eliminar Caja'),
-                              content: Text('¿Está seguro de eliminar la caja ${reg.name}?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogCtx),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    context.read<WriteCashRegisterCubit>().delete(reg.id).then((_) {
-                                      if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                                      if (context.mounted) context.read<ReadCashRegisterCubit>().getAll();
-                                    });
-                                  },
-                                  child: Text(
-                                    'Eliminar',
-                                    style: TextStyle(color: theme.colorScheme.error),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
                       );
                     },
                   );
