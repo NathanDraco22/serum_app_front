@@ -1,3 +1,9 @@
+# AGENTS.md — Frontend (Flutter / Dart)
+
+> [!IMPORTANT]
+> **CONSULTA PREVIA OBLIGATORIA DEL PROJECT INDEX**:
+> Antes de analizar, planificar o realizar cambios en `serum_app_front` o `serum_business`, **DEBES consultar el mapa maestro en [`wiki/project_index.md`](wiki/project_index.md)** y las especificaciones detalladas en [`wiki/modulos/`](wiki/modulos/INDEX.md).
+
 #### 🎯 Frontend Commands (Dart / Flutter)
 *   `onion dart <entity>`: Generates the client data layer: Models, DataSource, and Repository. (Symmetric equivalent to backend `crud`).
 *   `onion dart-cubit <entity>`: Generates BLoC state management classes (`Read` and `Write` Cubits) with their state hierarchies.
