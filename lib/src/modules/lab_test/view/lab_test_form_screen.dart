@@ -130,10 +130,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                   ? _expectedQualitativeValue.trim()
                   : null,
         );
-        cubit.create(newTest).then((_) {
-          if (!mounted) return;
-          Navigator.of(context).pop(true);
-        });
+        cubit.create(newTest);
       } else {
         final updateTest = UpdateLabTest(
           name: _name.trim(),
@@ -151,10 +148,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                   ? _expectedQualitativeValue.trim()
                   : null,
         );
-        cubit.update(widget.labTest!.id, updateTest).then((_) {
-          if (!mounted) return;
-          Navigator.of(context).pop(true);
-        });
+        cubit.update(widget.labTest!.id, updateTest);
       }
     }
   }
@@ -183,7 +177,20 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
         ? readState.items.where((t) => !t.isPack && t.id != widget.labTest?.id).toList()
         : <LabTestInDb>[];
 
-    return Scaffold(
+    return BlocListener<WriteLabTestCubit, WriteLabTestState>(
+      listener: (context, state) {
+        if (state is LabTestCreated || state is LabTestUpdated) {
+          Navigator.of(context).pop(true);
+        } else if (state is WriteLabTestError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al guardar: ${state.message}'),
+              backgroundColor: theme.colorScheme.error,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -826,6 +833,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

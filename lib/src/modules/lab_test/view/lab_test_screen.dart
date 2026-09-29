@@ -89,6 +89,12 @@ class _BodyState extends State<_Body> {
     )
         .then((value) {
       if (value == true && context.mounted) {
+        _searchController.clear();
+        context.read<SearchLabTestCubit>().clear();
+        setState(() {
+          _selectedCategory = 'Todas';
+          _filterType = 'all';
+        });
         context.read<ReadLabTestCubit>().getAll();
       }
     });
@@ -278,6 +284,7 @@ class _BodyState extends State<_Body> {
                         SizedBox(
                           width: 230,
                           child: DropdownButtonFormField<String>(
+                            key: ValueKey(_filterType),
                             initialValue: _filterType,
                             isDense: true,
                             decoration: InputDecoration(

@@ -32,7 +32,9 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     }
     try {
       final items = await labTestsRepository.getAllLabTests();
-      emit(ReadLabTestSuccess(items));
+      final sortedItems = List<LabTestInDb>.from(items)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      emit(ReadLabTestSuccess(sortedItems));
     } catch (e) {
       emit(ReadLabTestError(e.toString()));
     }
