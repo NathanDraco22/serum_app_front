@@ -12,6 +12,7 @@ import '../src/modules/patient/view/patient_screen.dart';
 import '../src/modules/doctor/view/doctor_screen.dart';
 import '../src/modules/lab_test/view/lab_test_screen.dart';
 import '../src/modules/order/view/order_screen.dart';
+import '../src/modules/order/view/create_order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
 import '../src/modules/cash_register/view/cash_register_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
@@ -43,6 +44,7 @@ class AppRouter {
   static const String doctors = '/doctors';
   static const String labTests = '/lab-tests';
   static const String orders = '/orders';
+  static const String createOrder = '/orders/new';
   static const String quotations = '/quotations';
   static const String cashRegisters = '/cash-registers';
   static const String cashTransactions = '/cash-transactions';
@@ -110,6 +112,11 @@ class AppRouter {
         GoRoute(
           path: selectCashRegister,
           builder: (context, state) => const SelectCashRegisterScreen(),
+        ),
+        GoRoute(
+          path: createOrder,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const CreateOrderScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {

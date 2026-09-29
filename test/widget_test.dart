@@ -1,30 +1,48 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:serum_app_front/main.dart';
+import 'package:serum_app_front/src/widgets/common/search_field_debounced.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('SearchFieldDebounced emits query after debounce duration and clears correctly',
+      (WidgetTester tester) async {
+    String lastQuery = '';
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SearchFieldDebounced(
+            duration: const Duration(milliseconds: 200),
+            onSearch: (query) {
+              lastQuery = query;
+            },
+          ),
+        ),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Initial state: empty
+    expect(find.byType(TextField), findsOneWidget);
+    expect(lastQuery, isEmpty);
+
+    // Enter text
+    await tester.enterText(find.byType(TextField), 'Glucosa');
+    await tester.pump(const Duration(milliseconds: 50));
+    // Still not called because debounce is 200ms
+    expect(lastQuery, isEmpty);
+
+    // Advance beyond debounce duration
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(lastQuery, 'Glucosa');
+
+    // Suffix clear button should now be visible
+    expect(find.byIcon(Icons.clear), findsOneWidget);
+
+    // Tap clear button
+    await tester.tap(find.byIcon(Icons.clear));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Query should be empty and text field cleared
+    expect(lastQuery, '');
+    expect(find.text('Glucosa'), findsNothing);
   });
 }

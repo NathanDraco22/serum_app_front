@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../../config/app_router.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/orders_list.dart';
-import '../widgets/order_form_dialog.dart';
 import '../widgets/order_results_dialog.dart';
 import '../widgets/order_pay_dialog.dart';
 
@@ -70,20 +71,7 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   void _openOrderForm(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider.value(value: BlocProvider.of<WriteOrderCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadPatientCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadDoctorCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
-          ],
-          child: const OrderFormDialog(),
-        );
-      },
-    ).then((value) {
+    context.push<bool>(AppRouter.createOrder).then((value) {
       if (value == true && context.mounted) {
         context.read<ReadOrderCubit>().getAll();
       }

@@ -195,17 +195,19 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 📦 3.9 Módulo `order` (Órdenes Clínicas, Pagos y Resultados)
 * **Ubicación**: `lib/src/modules/order/`
-* **Vistas**: `view/order_screen.dart`
-* **Widgets**: `widgets/orders_list.dart`, `widgets/order_form_dialog.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`
-* **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
+* **Vistas**: `view/order_screen.dart`, `view/create_order_screen.dart`
+* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`
+* **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `ReadLabTestCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
 * **Funciones Clave**:
-  1. **Captura con Snapshot Inmutable**: Al crear una orden, congela una copia idéntica del paciente, precios de venta y parámetros de referencia vigentes en ese instante, protegiendo los registros históricos.
-  2. **Monitoreo de Estados**: Tarjetas de orden con insignias dinámicas según estado de flujo (`pending`, `sample_taken`, `in_process`, `completed`, `delivered`) y estado de pago (`unpaid`, `partially_paid`, `paid`).
-  3. **Módulo de Cobro Integrado (`OrderPayDialog`)**:
+  1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
+  2. **Selectores Especializados (Pickers) para Paciente y Médico**: Diálogos con búsqueda debounced (`SearchFieldDebounced`) preparados para miles de registros, con tarjetas interactivas de asignación (`OrderPatientCard`, `OrderDoctorCard`).
+  3. **Captura con Snapshot Inmutable**: Al crear una orden, congela una copia idéntica del paciente, precios de venta y parámetros de referencia vigentes en ese instante, protegiendo los registros históricos.
+  4. **Monitoreo de Estados**: Tarjetas de orden con insignias dinámicas según estado de flujo (`pending`, `sample_taken`, `in_process`, `completed`, `delivered`) y estado de pago (`unpaid`, `partially_paid`, `paid`).
+  5. **Módulo de Cobro Integrado (`OrderPayDialog`)**:
      - Permite abonar o liquidar el saldo de la orden.
      - Permite seleccionar el método de pago (`cash`, `card`, `transfer`).
      - Afecta de inmediato la caja registradora activa y genera un movimiento en el Kardex.
-  4. **Captura y Validación de Resultados Clínicos (`OrderResultsDialog`)**:
+  6. **Captura y Validación de Resultados Clínicos (`OrderResultsDialog`)**:
      - Despliega formulario adaptativo según el tipo de dato de cada prueba (campo numérico, selector cualitativo o área de texto).
      - Compara automáticamente los valores numéricos contra los rangos de referencia y alerta visualmente si un resultado está fuera de límites.
      - Permite marcar la orden como completada para su entrega al paciente.

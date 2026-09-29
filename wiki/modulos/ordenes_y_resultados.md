@@ -12,15 +12,21 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
 ---
 
 ## 1. Estructura de Pantalla y Diálogos
-- **Pantalla**: `OrderScreen` (`view/order_screen.dart`).
+- **Pantallas**:
+  - `OrderScreen` (`view/order_screen.dart`): Tablero principal de seguimiento y listado de órdenes clínicas.
+  - `CreateOrderScreen` (`view/create_order_screen.dart`): Pantalla completa (`/orders/new`) para crear órdenes con layout de dos columnas (catálogo interactivo de pruebas/perfiles a la izquierda y carrito/resumen de orden a la derecha).
 - **Widgets Clave**:
+  - `OrderCatalogSection` (`widgets/order_catalog_section.dart`): Columna izquierda con buscador debounced, filtros por categoría/tipo y grid interactivo.
+  - `OrderCartSection` (`widgets/order_cart_section.dart`): Columna derecha con resumen, totales y listado de análisis seleccionados.
+  - `OrderPatientCard` y `OrderDoctorCard` (`widgets/`): Tarjetas interactivas para asignar paciente y médico.
+  - `PatientSelectionDialog` y `DoctorSelectionDialog` (`lib/src/widgets/dialogs/selectors/`): Modales dedicados (Pickers) con búsqueda reactiva debounced para miles de registros.
   - `OrdersList` (`widgets/orders_list.dart`): Listado de órdenes activas con badges de estado clínico y financiero.
-  - `OrderFormDialog` (`widgets/order_form_dialog.dart`): Formulario para alta de órdenes clínicas.
   - `OrderPayDialog` (`widgets/order_pay_dialog.dart`): Modal de procesamiento de pago directo a caja activa.
   - `OrderResultsDialog` (`widgets/order_results_dialog.dart`): Interfaz para captura, validación y entrega de resultados médicos.
 - **Cubits**:
   - `ReadOrderCubit`: Gestión de la lista de órdenes y estados en caché.
   - `WriteOrderCubit`: Creación, abonos y captura de resultados.
+  - `ReadLabTestCubit`: Carga del catálogo de análisis y perfiles.
   - `SearchOrdersCubit`: Búsqueda de órdenes por folio o nombre de paciente.
   - `CashRegisterCubit`: Sincronización de saldos tras cobros.
 
