@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Paleta de colores basada en el diseño "Clinical Precision".
 class ColorPalette {
@@ -62,6 +63,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData.light(useMaterial3: true).textTheme,
+      ),
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: ColorPalette.primary,
@@ -104,6 +108,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData.dark(useMaterial3: true).textTheme,
+      ),
       colorScheme: ColorScheme.fromSeed(
         seedColor: ColorPalette.primary,
         brightness: Brightness.dark,

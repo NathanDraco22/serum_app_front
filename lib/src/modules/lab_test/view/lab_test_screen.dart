@@ -6,7 +6,7 @@ import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/search_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../widgets/lab_tests_list.dart';
-import '../widgets/lab_test_form_dialog.dart';
+import 'lab_test_form_screen.dart';
 import '../widgets/lab_test_detail_dialog.dart';
 
 class LabTestsScreen extends StatelessWidget {
@@ -75,19 +75,19 @@ class _BodyState extends State<_Body> {
   }
 
   void _openLabTestForm(BuildContext context, [LabTestInDb? labTest]) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return MultiBlocProvider(
+    Navigator.of(context, rootNavigator: true)
+        .push<bool>(
+      MaterialPageRoute(
+        builder: (_) => MultiBlocProvider(
           providers: [
             BlocProvider.value(value: BlocProvider.of<WriteLabTestCubit>(context)),
             BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
           ],
-          child: LabTestFormDialog(labTest: labTest),
-        );
-      },
-    ).then((value) {
+          child: LabTestFormScreen(labTest: labTest),
+        ),
+      ),
+    )
+        .then((value) {
       if (value == true && context.mounted) {
         context.read<ReadLabTestCubit>().getAll();
       }
@@ -274,17 +274,36 @@ class _BodyState extends State<_Body> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        // Filtro de Tipo (Segmented)
-                        SegmentedButton<String>(
-                          segments: const [
-                            ButtonSegment(value: 'all', label: Text('Todos')),
-                            ButtonSegment(value: 'individual', label: Text('Individuales')),
-                            ButtonSegment(value: 'pack', label: Text('Packs / Perfiles')),
-                          ],
-                          selected: {_filterType},
-                          onSelectionChanged: (val) {
-                            setState(() => _filterType = val.first);
-                          },
+                        // Filtro de Tipo (Dropdown)
+                        SizedBox(
+                          width: 230,
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _filterType,
+                            isDense: true,
+                            decoration: InputDecoration(
+                              labelText: 'Tipo de análisis',
+                              prefixIcon: const Icon(Icons.filter_list, size: 20),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: 'all', child: Text('Todos los análisis')),
+                              DropdownMenuItem(value: 'individual', child: Text('Pruebas Individuales')),
+                              DropdownMenuItem(value: 'pack', child: Text('Packs / Perfiles')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _filterType = val);
+                              }
+                            },
+                          ),
                         ),
                       ],
                     ),

@@ -168,8 +168,8 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 🧪 3.7 Módulo `lab_test` (Catálogo Unificado de Pruebas y Packs)
 * **Ubicación**: `lib/src/modules/lab_test/`
-* **Vistas**: `view/lab_test_screen.dart`
-* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_form_dialog.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/pack_test_selector.dart`
+* **Vistas**: `view/lab_test_screen.dart`, `view/lab_test_form_screen.dart`
+* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/pack_test_selector.dart`
 * **Cubits Asociados**: `ReadLabTestCubit`, `WriteLabTestCubit`, `SearchLabTestsCubit`
 * **Funciones Clave**:
   1. **Soporte Híbrido (Individuales vs Packs)**: Gestiona tanto pruebas analíticas individuales como paquetes comerciales (`isPack: true`) que agrupan múltiples análisis.
