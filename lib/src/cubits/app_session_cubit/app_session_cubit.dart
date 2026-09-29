@@ -1,17 +1,42 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../config/app_serum_config.dart';
+
 part 'app_session_state.dart';
 
 class AppSessionCubit extends Cubit<AppSessionState> {
   final AuthRepository authRepository;
+  final BranchesRepository branchesRepository;
   final UsersDataSource usersDataSource;
 
   AppSessionCubit({
     required this.authRepository,
+    required this.branchesRepository,
     UsersDataSource? usersDataSource,
-  }) : usersDataSource = usersDataSource ?? UsersDataSource(),
-       super(const AppSessionState());
+  })  : usersDataSource = usersDataSource ?? UsersDataSource(),
+        super(const AppSessionState());
+
+  String get currentBranchId => state.currentBranch?.id ?? kOriginBranchId;
+  BranchInDb? get currentBranch => state.currentBranch;
+  List<BranchInDb> get branches => state.branches;
+  String get currentBranchName => state.currentBranch?.name ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
+  UserInDb? get user => state.currentUser;
+
+  bool get hasMultipleBranches {
+    final currentUser = state.currentUser;
+    if (currentUser == null) return false;
+    final isAdmin = currentUser.role.toLowerCase() == 'admin';
+    return isAdmin || currentUser.branches.length > 1;
+  }
+
+  BranchInDb? getBranchById(String id) {
+    try {
+      return state.branches.firstWhere((b) => b.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Inicializa la sesión usando los tokens guardados.
   /// Si el token de sesión está a menos de 10 minutos de vencer (o ya venció),
@@ -27,7 +52,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       );
 
       if (token == null || token.isEmpty) {
-        emit(state.copyWith(status: AppSessionStatus.unauthenticated, clearUser: true));
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.unauthenticated,
+            clearUser: true,
+            clearBranch: true,
+            clearCashRegister: true,
+          ),
+        );
         return;
       }
 
@@ -46,10 +78,13 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       await _fetchAndSetCurrentUser();
     } catch (e) {
       await authRepository.logout();
+      AppSerumConfig().setBranchId(null);
       emit(
         state.copyWith(
           status: AppSessionStatus.unauthenticated,
           clearUser: true,
+          clearBranch: true,
+          clearCashRegister: true,
           errorMessage: 'Sesión expirada o no válida.',
         ),
       );
@@ -86,13 +121,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         return false;
       }
 
-      emit(
-        state.copyWith(
-          status: AppSessionStatus.authenticated,
-          currentUser: response.user,
-          clearError: true,
-        ),
-      );
+      await _setupBranchesAndUser(response.user);
       return true;
     } on UnauthorizedException {
       emit(
@@ -113,13 +142,49 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
+  /// Cambia la sucursal activa y actualiza la configuración de red
+  Future<void> changeBranch(String branchId) async {
+    try {
+      BranchInDb? branch = getBranchById(branchId);
+      branch ??= await branchesRepository.getBranchById(branchId);
+
+      if (branch == null && branchId == kOriginBranchId) {
+        branch = BranchInDb(
+          id: kOriginBranchId,
+          name: 'Sucursal Matriz (ORIGIN_BRANCH)',
+          address: 'Matriz Principal',
+          phone: '',
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+        );
+      }
+
+      if (branch == null) {
+        throw Exception("Sucursal no encontrada");
+      }
+
+      AppSerumConfig().setBranchId(branch.id);
+
+      emit(
+        state.copyWith(
+          currentBranch: branch,
+          clearCashRegister: true,
+          clearError: true,
+        ),
+      );
+    } catch (error) {
+      emit(state.copyWith(errorMessage: error.toString()));
+    }
+  }
+
   /// Cierra la sesión activa y limpia los tokens guardados
   Future<void> logout() async {
     await authRepository.logout();
+    AppSerumConfig().setBranchId(null);
     emit(
       state.copyWith(
         status: AppSessionStatus.unauthenticated,
         clearUser: true,
+        clearBranch: true,
         clearCashRegister: true,
         clearError: true,
       ),
@@ -142,13 +207,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       final list = (res['items'] as List<dynamic>?) ?? (res['data'] as List<dynamic>?) ?? [];
       if (list.isNotEmpty) {
         final user = UserInDb.fromJson(list.first as Map<String, dynamic>);
-        emit(
-          state.copyWith(
-            status: AppSessionStatus.authenticated,
-            currentUser: user,
-            clearError: true,
-          ),
-        );
+        await _setupBranchesAndUser(user);
       } else {
         emit(
           state.copyWith(
@@ -165,5 +224,58 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         ),
       );
     }
+  }
+
+  Future<void> _setupBranchesAndUser(UserInDb user) async {
+    List<BranchInDb> allBranches = [];
+    try {
+      allBranches = await branchesRepository.getAllBranches();
+    } catch (_) {
+      allBranches = branchesRepository.branches;
+    }
+
+    final defaultOriginBranch = BranchInDb(
+      id: kOriginBranchId,
+      name: 'Sucursal Matriz (ORIGIN_BRANCH)',
+      address: 'Matriz Principal',
+      phone: '',
+      createdAt: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    // Asegurar que kOriginBranchId esté en allBranches si no hay registros o no está presente
+    if (allBranches.isEmpty) {
+      allBranches = [defaultOriginBranch];
+    } else if (!allBranches.any((b) => b.id == kOriginBranchId)) {
+      allBranches = [defaultOriginBranch, ...allBranches];
+    }
+
+    final isAdmin = user.role.toLowerCase() == 'admin';
+    final userBranches = isAdmin
+        ? allBranches
+        : allBranches.where((b) => user.branches.contains(b.id)).toList();
+
+    final initBranchId = user.branches.firstOrNull ?? kOriginBranchId;
+
+    BranchInDb selectedBranch = allBranches.firstWhere(
+      (b) => b.id == initBranchId,
+      orElse: () => allBranches.firstWhere(
+        (b) => b.id == kOriginBranchId,
+        orElse: () => allBranches.first,
+      ),
+    );
+
+    AppSerumConfig().setBranchId(selectedBranch.id);
+
+    final finalAvailableBranches = userBranches.isNotEmpty ? userBranches : allBranches;
+
+    emit(
+      state.copyWith(
+        status: AppSessionStatus.authenticated,
+        currentUser: user,
+        currentBranch: selectedBranch,
+        branches: finalAvailableBranches,
+        clearError: true,
+      ),
+    );
   }
 }

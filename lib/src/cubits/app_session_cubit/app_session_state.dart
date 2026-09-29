@@ -13,23 +13,31 @@ enum AppSessionStatus {
 class AppSessionState {
   final AppSessionStatus status;
   final UserInDb? currentUser;
+  final BranchInDb? currentBranch;
+  final List<BranchInDb> branches;
   final CashRegisterInDb? activeCashRegister;
   final String? errorMessage;
 
   const AppSessionState({
     this.status = AppSessionStatus.initial,
     this.currentUser,
+    this.currentBranch,
+    this.branches = const [],
     this.activeCashRegister,
     this.errorMessage,
   });
 
   bool get isAuthenticated => status == AppSessionStatus.authenticated && currentUser != null;
+  bool get hasBranch => currentBranch != null;
   bool get hasCashRegister => activeCashRegister != null;
 
   AppSessionState copyWith({
     AppSessionStatus? status,
     UserInDb? currentUser,
     bool clearUser = false,
+    BranchInDb? currentBranch,
+    bool clearBranch = false,
+    List<BranchInDb>? branches,
     CashRegisterInDb? activeCashRegister,
     bool clearCashRegister = false,
     String? errorMessage,
@@ -38,6 +46,8 @@ class AppSessionState {
     return AppSessionState(
       status: status ?? this.status,
       currentUser: clearUser ? null : (currentUser ?? this.currentUser),
+      currentBranch: clearBranch ? null : (currentBranch ?? this.currentBranch),
+      branches: branches ?? this.branches,
       activeCashRegister:
           clearCashRegister ? null : (activeCashRegister ?? this.activeCashRegister),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),

@@ -28,6 +28,9 @@ class ProviderContainer extends StatelessWidget {
         RepositoryProvider<AuthRepository>.value(
           value: sl<AuthRepository>(),
         ),
+        RepositoryProvider<BranchesRepository>.value(
+          value: sl<BranchesRepository>(),
+        ),
         RepositoryProvider(
           create: (_) => PatientsRepository(patientsDataSource),
         ),

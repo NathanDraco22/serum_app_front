@@ -27,9 +27,11 @@ class HttpTools {
   static Map<String, String> generateAuthHeaders() {
     final config = SerumClient.instance;
     final token = config.authToken;
+    final branchId = config.branchId;
     return {
       "Authorization": "Bearer $token",
       "X-Agent": "Serum",
+      if (branchId != null && branchId.isNotEmpty) "X-Branch": branchId,
     };
   }
 }

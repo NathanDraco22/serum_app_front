@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../config/get_it_config.dart';
 import '../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../widgets/dialogs/selectors/branch_selection_dialog.dart';
 
 class HomeMenusScreen extends StatelessWidget {
   const HomeMenusScreen({super.key, required this.navigationShell});
@@ -111,12 +113,76 @@ class _SideNav extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          // Footer / Active Cash Register & Session Info
+          // Footer / Sucursal, Caja & Sesión
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Active Branch Info
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer.withAlpha(50),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.colorScheme.secondaryContainer,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.store,
+                        size: 18,
+                        color: theme.colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sessionState.currentBranch?.name ?? 'Sin sucursal',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Sucursal Activa',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (context.read<AppSessionCubit>().hasMultipleBranches)
+                        IconButton(
+                          icon: const Icon(Icons.swap_horiz, size: 18),
+                          tooltip: 'Cambiar Sucursal',
+                          onPressed: () async {
+                            final authCubit = getIt<AppSessionCubit>();
+                            final filteredBranches = authCubit.branches
+                                .where((b) => b.id != authCubit.currentBranchId)
+                                .toList();
+                            final res = await showBranchSelectionDialog(
+                              context,
+                              filteredBranches,
+                            );
+                            if (res == null) return;
+                            if (!context.mounted) return;
+                            await authCubit.changeBranch(res.id);
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
                 // Active Cash Register info
                 Container(
                   padding: const EdgeInsets.all(10),

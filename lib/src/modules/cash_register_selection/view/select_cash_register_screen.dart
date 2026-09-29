@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../../config/get_it_config.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/cash_register_cubit/read_cash_registers_cubit.dart';
+import '../../../widgets/dialogs/selectors/branch_selection_dialog.dart';
 
 class SelectCashRegisterScreen extends StatelessWidget {
   const SelectCashRegisterScreen({super.key});
@@ -37,7 +39,9 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final user = context.watch<AppSessionCubit>().state.currentUser;
+    final sessionState = context.watch<AppSessionCubit>().state;
+    final user = sessionState.currentUser;
+    final currentBranch = sessionState.currentBranch;
 
     return Container(
       width: double.infinity,
@@ -76,6 +80,35 @@ class _Body extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // Branch Selector Chip
+                  if (currentBranch != null) ...[
+                    ActionChip(
+                      avatar: const Icon(Icons.store, size: 16),
+                      label: Text(
+                        currentBranch.name,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      onPressed: context.read<AppSessionCubit>().hasMultipleBranches
+                          ? () async {
+                              final authCubit = getIt<AppSessionCubit>();
+                              final filtered = authCubit.branches
+                                  .where((b) => b.id != authCubit.currentBranchId)
+                                  .toList();
+                              final res = await showBranchSelectionDialog(
+                                context,
+                                filtered,
+                              );
+                              if (res == null) return;
+                              if (!context.mounted) return;
+                              await authCubit.changeBranch(res.id);
+                            }
+                          : null,
+                      tooltip: context.read<AppSessionCubit>().hasMultipleBranches
+                          ? 'Cambiar Sucursal'
+                          : 'Sucursal Asignada',
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   OutlinedButton.icon(
                     onPressed: () {
                       context.read<AppSessionCubit>().logout();
@@ -114,7 +147,9 @@ class _Body extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Elige la caja operativa para procesar cobros y transacciones en el turno activo.',
+                          currentBranch != null
+                              ? 'Elige la caja operativa de ${currentBranch.name} para procesar cobros y transacciones.'
+                              : 'Elige la caja operativa para procesar cobros y transacciones en el turno activo.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -122,7 +157,7 @@ class _Body extends StatelessWidget {
                         ),
                         const SizedBox(height: 32),
 
-                        // List of Cash Registers
+                        // List of Cash Registers (filtradas por branchId)
                         BlocBuilder<ReadCashRegisterCubit, ReadCashRegisterState>(
                           builder: (context, state) {
                             if (state is ReadCashRegisterLoading ||
@@ -142,8 +177,14 @@ class _Body extends StatelessWidget {
                               );
                             }
 
-                            final items =
-                                state is ReadCashRegisterSuccess ? state.items : <CashRegisterInDb>[];
+                            final allItems = state is ReadCashRegisterSuccess
+                                ? state.items
+                                : <CashRegisterInDb>[];
+
+                            final currentBranchId = sessionState.currentBranch?.id;
+                            final items = currentBranchId != null
+                                ? allItems.where((r) => r.branchId == currentBranchId).toList()
+                                : allItems;
 
                             if (items.isEmpty) {
                               return _buildDefaultDemoOption(context);
@@ -172,10 +213,13 @@ class _Body extends StatelessWidget {
   }
 
   Widget _buildDefaultDemoOption(BuildContext context) {
+    final currentBranch = context.read<AppSessionCubit>().currentBranch;
     final defaultRegister = CashRegisterInDb(
       id: 'cr_001',
-      name: 'Caja Principal #001',
-      branchId: 'br_centro_001',
+      name: currentBranch != null
+          ? 'Caja Principal - ${currentBranch.name}'
+          : 'Caja Principal #001',
+      branchId: currentBranch?.id ?? kOriginBranchId,
       isOpen: true,
       totalBalance: 5000,
       createdAt: DateTime.now().millisecondsSinceEpoch,

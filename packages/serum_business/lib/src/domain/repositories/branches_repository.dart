@@ -9,6 +9,7 @@ class BranchesRepository with ReactiveRepository<BranchInDb> {
   BranchesRepository(this.branchesDataSource);
 
   List<BranchInDb> _branches = [];
+  List<BranchInDb> get branches => _branches;
 
   Future<BranchInDb> createBranch(CreateBranch createBranch) async {
     final result = await branchesDataSource.createBranch(createBranch.toJson());
