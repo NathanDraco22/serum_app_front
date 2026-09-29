@@ -2,6 +2,7 @@ import 'package:serum_business/src/domain/models/shared/quoted_exam.dart';
 
 class BaseQuotation {
   final String clientName;
+  final String branchId;
   final String? patientId;
   final List<QuotedExam> exams;
   final int totalAmount;
@@ -10,6 +11,7 @@ class BaseQuotation {
 
   BaseQuotation({
     required this.clientName,
+    required this.branchId,
     this.patientId,
     this.exams = const [],
     required this.totalAmount,
@@ -21,6 +23,7 @@ class BaseQuotation {
 class CreateQuotation extends BaseQuotation {
   CreateQuotation({
     required super.clientName,
+    required super.branchId,
     super.patientId,
     super.exams = const [],
     required super.totalAmount,
@@ -32,6 +35,7 @@ class CreateQuotation extends BaseQuotation {
     return {
       'clientName': clientName,
       'patientId': patientId,
+      'branchId': branchId,
       'exams': exams.map((e) => e.toJson()).toList(),
       'totalAmount': totalAmount,
       'status': status,
@@ -47,6 +51,7 @@ class UpdateQuotation {
   final int? totalAmount;
   final String? status;
   final String? convertedToOrderId;
+  final String? branchId;
 
   UpdateQuotation({
     this.clientName,
@@ -55,6 +60,7 @@ class UpdateQuotation {
     this.totalAmount,
     this.status,
     this.convertedToOrderId,
+    this.branchId,
   });
 
   Map<String, dynamic> toJson() {
@@ -66,6 +72,7 @@ class UpdateQuotation {
       if (totalAmount != null) 'totalAmount': totalAmount,
       if (status != null) 'status': status,
       if (convertedToOrderId != null) 'convertedToOrderId': convertedToOrderId,
+      if (branchId != null) 'branchId': branchId,
     };
   }
 }
@@ -79,6 +86,7 @@ class QuotationInDb extends BaseQuotation {
   QuotationInDb({
     required this.id,
     required super.clientName,
+    required super.branchId,
     super.patientId,
     super.exams = const [],
     required super.totalAmount,
@@ -93,6 +101,7 @@ class QuotationInDb extends BaseQuotation {
     return QuotationInDb(
       id: json['id'] as String,
       clientName: json['clientName'] as String,
+      branchId: json['branchId'] as String? ?? '',
       patientId: json['patientId'] as String?,
       exams: (json['exams'] as List<dynamic>?)
               ?.map((e) => QuotedExam.fromJson(e as Map<String, dynamic>))

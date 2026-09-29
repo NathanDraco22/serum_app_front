@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/quotation_cubit/write_quotations_cubit.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class QuotationFormDialog extends StatefulWidget {
   const QuotationFormDialog({super.key});
@@ -22,11 +23,15 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
     if (_formKey.currentState!.validate() && _selectedExams.isNotEmpty) {
       _formKey.currentState!.save();
 
+      final session = context.read<AppSessionCubit>().state;
+      final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+
       final newQuotation = CreateQuotation(
         clientName: _selectedPatientId != null
             ? (patients.firstWhere((p) => p.id == _selectedPatientId).name)
             : _clientName,
         patientId: _selectedPatientId,
+        branchId: activeBranchId,
         exams: _selectedExams,
         totalAmount: totalAmount,
         status: 'pending',

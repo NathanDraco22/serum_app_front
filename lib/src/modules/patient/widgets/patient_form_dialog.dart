@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/patient_cubit/write_patients_cubit.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class PatientFormDialog extends StatefulWidget {
   final PatientInDb? patient;
@@ -74,12 +75,16 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       final mappedGender = _gender == 'male' ? 'M' : _gender == 'female' ? 'F' : 'O';
 
       if (widget.patient == null) {
+        final session = context.read<AppSessionCubit>().state;
+        final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+
         final newPatient = CreatePatient(
           name: _name,
           dateOfBirth: _dateOfBirth.millisecondsSinceEpoch,
           gender: mappedGender,
           phone: _phone,
           address: _address,
+          originBranch: activeBranchId,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
         );

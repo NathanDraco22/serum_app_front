@@ -5,6 +5,7 @@ import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class OrderFormDialog extends StatefulWidget {
   const OrderFormDialog({super.key});
@@ -80,9 +81,13 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
 
       final totalInCents = _selectedItems.fold(0, (sum, i) => sum + i.salePrice);
 
+      final session = context.read<AppSessionCubit>().state;
+      final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+
       final newOrder = CreateOrder(
         patientId: _selectedPatientId!,
         doctorId: _selectedDoctorId,
+        branchId: activeBranchId,
         items: orderItems,
         totalPrice: totalInCents,
         status: 'pending',

@@ -2,6 +2,7 @@ import 'package:serum_business/src/domain/models/shared/user_info.dart';
 
 class BaseCashTransaction {
   final String registerId;
+  final String branchId;
   final String flowType;
   final String subType;
   final String? paymentMethod;
@@ -13,6 +14,7 @@ class BaseCashTransaction {
 
   BaseCashTransaction({
     required this.registerId,
+    required this.branchId,
     required this.flowType,
     required this.subType,
     this.paymentMethod,
@@ -27,6 +29,7 @@ class BaseCashTransaction {
 class CreateCashTransaction extends BaseCashTransaction {
   CreateCashTransaction({
     required super.registerId,
+    required super.branchId,
     required super.flowType,
     required super.subType,
     super.paymentMethod,
@@ -40,6 +43,7 @@ class CreateCashTransaction extends BaseCashTransaction {
   Map<String, dynamic> toJson() {
     return {
       'registerId': registerId,
+      'branchId': branchId,
       'flowType': flowType,
       'subType': subType,
       'paymentMethod': paymentMethod,
@@ -75,6 +79,7 @@ class CashTransactionInDb extends BaseCashTransaction {
   CashTransactionInDb({
     required this.id,
     required super.registerId,
+    required super.branchId,
     required super.flowType,
     required super.subType,
     super.paymentMethod,
@@ -92,6 +97,7 @@ class CashTransactionInDb extends BaseCashTransaction {
     return CashTransactionInDb(
       id: json['id'] as String,
       registerId: json['registerId'] as String,
+      branchId: json['branchId'] as String? ?? '',
       flowType: json['flowType'] as String,
       subType: json['subType'] as String,
       paymentMethod: json['paymentMethod'] as String?,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/doctor_cubit/write_doctors_cubit.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class DoctorFormDialog extends StatefulWidget {
   final DoctorInDb? doctor;
@@ -44,10 +45,14 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
       final cubit = context.read<WriteDoctorCubit>();
 
       if (widget.doctor == null) {
+        final session = context.read<AppSessionCubit>().state;
+        final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+
         final newDoctor = CreateDoctor(
           name: _name,
           specialty: _specialty,
           phone: _phone,
+          originBranch: activeBranchId,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
         );

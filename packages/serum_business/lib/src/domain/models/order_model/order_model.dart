@@ -35,6 +35,7 @@ class OrderItem {
 
 class BaseOrder {
   final String patientId;
+  final String branchId;
   final String? doctorId;
   final String? quotationId;
   final List<OrderItem> items;
@@ -50,6 +51,7 @@ class BaseOrder {
 
   BaseOrder({
     required this.patientId,
+    required this.branchId,
     this.doctorId,
     this.quotationId,
     this.items = const [],
@@ -63,6 +65,7 @@ class BaseOrder {
 class CreateOrder extends BaseOrder {
   CreateOrder({
     required super.patientId,
+    required super.branchId,
     super.doctorId,
     super.quotationId,
     super.items = const [],
@@ -75,6 +78,7 @@ class CreateOrder extends BaseOrder {
   Map<String, dynamic> toJson() {
     return {
       'patientId': patientId,
+      'branchId': branchId,
       if (doctorId != null) 'doctorId': doctorId,
       'quotationId': quotationId,
       'items': items.map((e) => e.toJson()).toList(),
@@ -95,6 +99,7 @@ class UpdateOrder {
   final int? paidAmount;
   final String? status;
   final List<OrderTestResult>? results;
+  final String? branchId;
 
   UpdateOrder({
     this.patientId,
@@ -105,6 +110,7 @@ class UpdateOrder {
     this.paidAmount,
     this.status,
     this.results,
+    this.branchId,
   });
 
   Map<String, dynamic> toJson() {
@@ -118,6 +124,7 @@ class UpdateOrder {
       if (status != null) 'status': status,
       if (results != null)
         'results': results!.map((e) => e.toJson()).toList(),
+      if (branchId != null) 'branchId': branchId,
     };
   }
 }
@@ -154,6 +161,7 @@ class OrderInDb extends BaseOrder {
   OrderInDb({
     required this.id,
     required super.patientId,
+    required super.branchId,
     super.doctorId,
     super.quotationId,
     super.items = const [],
@@ -189,6 +197,7 @@ class OrderInDb extends BaseOrder {
     return OrderInDb(
       id: json['id'] as String,
       patientId: json['patientId'] as String,
+      branchId: json['branchId'] as String? ?? '',
       doctorId: json['doctorId'] as String?,
       quotationId: json['quotationId'] as String?,
       items: parsedItems,
