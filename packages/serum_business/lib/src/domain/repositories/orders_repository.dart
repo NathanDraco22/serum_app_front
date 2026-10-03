@@ -1,4 +1,5 @@
 import 'package:serum_business/src/domain/models/order_model/order_model.dart';
+import 'package:serum_business/src/domain/query_params/order_query_params.dart';
 import 'package:serum_business/src/domain/responses/list_response.dart';
 import 'package:serum_business/src/data/data_sources.dart';
 import 'package:serum_business/src/tools/reactive_repo/reactive_repository.dart';
@@ -18,8 +19,8 @@ class OrdersRepository with ReactiveRepository<OrderInDb> {
     return newOrder;
   }
 
-  Future<List<OrderInDb>> getAllOrders() async {
-    final results = await ordersDataSource.getAllOrders();
+  Future<List<OrderInDb>> getAllOrders({OrderQueryParams? queryParams}) async {
+    final results = await ordersDataSource.getAllOrders(queryParams: queryParams);
     final response = ListResponse<OrderInDb>.fromJson(
       results,
       OrderInDb.fromJson,

@@ -1,3 +1,4 @@
+import 'package:serum_business/src/domain/query_params/order_query_params.dart';
 import 'package:serum_business/src/services/http_service.dart';
 import 'package:serum_business/src/tools/http_tool.dart';
 
@@ -17,8 +18,8 @@ class OrdersDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>> getAllOrders() async {
-    final uri = HttpTools.generateUri(_endpoint);
+  Future<Map<String, dynamic>> getAllOrders({OrderQueryParams? queryParams}) async {
+    final uri = HttpTools.generateUri(_endpoint, queryParameters: queryParams?.toQueryParameters());
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;

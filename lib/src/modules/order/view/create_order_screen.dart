@@ -256,6 +256,24 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     final newOrder = CreateOrder(
       patientId: _selectedPatient!.id,
       doctorId: _selectedDoctor?.id,
+      patientInfo: PatientInfo(
+        name: _selectedPatient!.name,
+        dateOfBirth: _selectedPatient!.dateOfBirth,
+        gender: _selectedPatient!.gender,
+        phone: _selectedPatient!.phone,
+        address: _selectedPatient!.address,
+        cardId: _selectedPatient!.cardId,
+        email: _selectedPatient!.email,
+      ),
+      doctorInfo: _selectedDoctor != null
+          ? DoctorInfo(
+              name: _selectedDoctor!.name,
+              specialty: _selectedDoctor!.specialty,
+              phone: _selectedDoctor!.phone,
+              cardId: _selectedDoctor!.cardId,
+              email: _selectedDoctor!.email,
+            )
+          : null,
       branchId: activeBranchId,
       items: orderItems,
       totalPrice: totalInCents,

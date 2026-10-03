@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
+import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 
 class OrderResultsDialog extends StatefulWidget {
   final OrderInDb order;
@@ -88,8 +89,29 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         );
       }).toList();
 
+      final totalPrice = widget.order.totalPrice > 0
+          ? widget.order.totalPrice
+          : widget.order.salePriceApplied;
+      final isFullyPaid = totalPrice > 0
+          ? (widget.order.paidAmount >= totalPrice)
+          : (widget.order.status == 'paid');
+
+      final hasAllResults = updatedResults.isNotEmpty &&
+          updatedResults.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
+
+      final String newStatus;
+      if (hasAllResults && isFullyPaid) {
+        newStatus = 'completed';
+      } else if (isFullyPaid) {
+        newStatus = 'paid';
+      } else if (widget.order.paidAmount > 0) {
+        newStatus = 'partiallyPaid';
+      } else {
+        newStatus = 'pending';
+      }
+
       final updateOrder = UpdateOrder(
-        status: 'completed',
+        status: newStatus,
         results: updatedResults,
       );
 
@@ -239,6 +261,15 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         ),
       ),
       actions: [
+        if (isReadOnly || widget.order.results.isNotEmpty)
+          OutlinedButton.icon(
+            icon: const Icon(Icons.picture_as_pdf, size: 16),
+            label: const Text('Ver / Exportar Informe'),
+            onPressed: () {
+              Navigator.pop(context);
+              showClinicalOrderViewerDialog(context, widget.order);
+            },
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),

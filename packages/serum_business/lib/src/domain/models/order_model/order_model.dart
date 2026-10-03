@@ -1,6 +1,86 @@
 import 'package:serum_business/src/domain/models/shared/order_test_result.dart';
 import 'package:serum_business/src/domain/models/shared/user_info.dart';
 
+class PatientInfo {
+  final String name;
+  final int dateOfBirth;
+  final String gender;
+  final String phone;
+  final String address;
+  final String? cardId;
+  final String? email;
+
+  PatientInfo({
+    required this.name,
+    this.dateOfBirth = 0,
+    this.gender = 'M',
+    this.phone = '',
+    this.address = '',
+    this.cardId,
+    this.email,
+  });
+
+  factory PatientInfo.fromJson(Map<String, dynamic> json) {
+    return PatientInfo(
+      name: json['name'] as String? ?? '',
+      dateOfBirth: (json['dateOfBirth'] as num?)?.toInt() ?? 0,
+      gender: json['gender'] as String? ?? 'M',
+      phone: json['phone'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      cardId: json['cardId'] as String?,
+      email: json['email'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'dateOfBirth': dateOfBirth,
+      'gender': gender,
+      'phone': phone,
+      'address': address,
+      if (cardId != null) 'cardId': cardId,
+      if (email != null) 'email': email,
+    };
+  }
+}
+
+class DoctorInfo {
+  final String name;
+  final String specialty;
+  final String phone;
+  final String? cardId;
+  final String? email;
+
+  DoctorInfo({
+    required this.name,
+    this.specialty = 'Medicina General',
+    this.phone = '',
+    this.cardId,
+    this.email,
+  });
+
+  factory DoctorInfo.fromJson(Map<String, dynamic> json) {
+    return DoctorInfo(
+      name: json['name'] as String? ?? '',
+      specialty: json['specialty'] as String? ?? 'Medicina General',
+      phone: json['phone'] as String? ?? '',
+      cardId: json['cardId'] as String?,
+      email: json['email'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'specialty': specialty,
+      'phone': phone,
+      if (cardId != null) 'cardId': cardId,
+      if (email != null) 'email': email,
+    };
+  }
+}
+
 class OrderItem {
   final String labTestId;
   final String name;
@@ -37,6 +117,8 @@ class BaseOrder {
   final String patientId;
   final String branchId;
   final String? doctorId;
+  final PatientInfo? patientInfo;
+  final DoctorInfo? doctorInfo;
   final String? quotationId;
   final List<OrderItem> items;
   final int totalPrice;
@@ -53,6 +135,8 @@ class BaseOrder {
     required this.patientId,
     required this.branchId,
     this.doctorId,
+    this.patientInfo,
+    this.doctorInfo,
     this.quotationId,
     this.items = const [],
     this.totalPrice = 0,
@@ -67,6 +151,8 @@ class CreateOrder extends BaseOrder {
     required super.patientId,
     required super.branchId,
     super.doctorId,
+    super.patientInfo,
+    super.doctorInfo,
     super.quotationId,
     super.items = const [],
     super.totalPrice = 0,
@@ -80,6 +166,8 @@ class CreateOrder extends BaseOrder {
       'patientId': patientId,
       'branchId': branchId,
       if (doctorId != null) 'doctorId': doctorId,
+      if (patientInfo != null) 'patientInfo': patientInfo!.toJson(),
+      if (doctorInfo != null) 'doctorInfo': doctorInfo!.toJson(),
       'quotationId': quotationId,
       'items': items.map((e) => e.toJson()).toList(),
       'totalPrice': totalPrice > 0 ? totalPrice : salePriceApplied,
@@ -93,6 +181,8 @@ class CreateOrder extends BaseOrder {
 class UpdateOrder {
   final String? patientId;
   final String? doctorId;
+  final PatientInfo? patientInfo;
+  final DoctorInfo? doctorInfo;
   final String? quotationId;
   final List<OrderItem>? items;
   final int? totalPrice;
@@ -104,6 +194,8 @@ class UpdateOrder {
   UpdateOrder({
     this.patientId,
     this.doctorId,
+    this.patientInfo,
+    this.doctorInfo,
     this.quotationId,
     this.items,
     this.totalPrice,
@@ -117,6 +209,8 @@ class UpdateOrder {
     return {
       if (patientId != null) 'patientId': patientId,
       if (doctorId != null) 'doctorId': doctorId,
+      if (patientInfo != null) 'patientInfo': patientInfo!.toJson(),
+      if (doctorInfo != null) 'doctorInfo': doctorInfo!.toJson(),
       if (quotationId != null) 'quotationId': quotationId,
       if (items != null) 'items': items!.map((e) => e.toJson()).toList(),
       if (totalPrice != null) 'totalPrice': totalPrice,
@@ -166,6 +260,8 @@ class OrderInDb extends BaseOrder {
     required super.patientId,
     required super.branchId,
     super.doctorId,
+    super.patientInfo,
+    super.doctorInfo,
     super.quotationId,
     super.items = const [],
     super.totalPrice = 0,
@@ -197,11 +293,20 @@ class OrderInDb extends BaseOrder {
         (json['salePriceApplied'] as num?)?.toInt() ??
         parsedItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
 
+    final patientInfoRaw = json['patientInfo'];
+    final doctorInfoRaw = json['doctorInfo'];
+
     return OrderInDb(
       id: json['id'] as String,
       patientId: json['patientId'] as String,
       branchId: json['branchId'] as String? ?? '',
       doctorId: json['doctorId'] as String?,
+      patientInfo: patientInfoRaw != null
+          ? PatientInfo.fromJson(patientInfoRaw as Map<String, dynamic>)
+          : null,
+      doctorInfo: doctorInfoRaw != null
+          ? DoctorInfo.fromJson(doctorInfoRaw as Map<String, dynamic>)
+          : null,
       quotationId: json['quotationId'] as String?,
       items: parsedItems,
       totalPrice: total,

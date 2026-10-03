@@ -23,7 +23,7 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
     }
   }
 
-  Future<void> getAll() async {
+  Future<void> getAll([OrderQueryParams? queryParams]) async {
     final currentState = state;
     if (currentState is ReadOrderSuccess) {
       emit(ReadOrderRefreshing.fromSuccess(currentState));
@@ -31,7 +31,7 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
       emit(ReadOrderLoading());
     }
     try {
-      final items = await ordersRepository.getAllOrders();
+      final items = await ordersRepository.getAllOrders(queryParams: queryParams);
       emit(ReadOrderSuccess(items));
     } catch (e) {
       emit(ReadOrderError(e.toString()));

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
+import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
@@ -40,15 +41,22 @@ class OrdersList extends StatelessWidget {
       itemCount: orders.length,
       itemBuilder: (context, index) {
         final order = orders[index];
-        final patientName = patientNames[order.patientId] ?? 'Cargando paciente...';
-        final isCompleted = order.status == 'completed';
+        final patientName =
+            order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
         final totalPrice =
             order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-        final isFullyPaid = totalPrice > 0
-            ? (order.paidAmount >= totalPrice)
-            : (order.status == 'paid');
+        final isFullyPaid = order.status == 'paid' ||
+            order.status == 'completed' ||
+            (totalPrice > 0 && order.paidAmount >= totalPrice);
+        final hasResults = order.results.isNotEmpty &&
+            order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
+        final isCompleted = order.status == 'completed' || (isFullyPaid && hasResults);
         final isPartiallyPaid = order.paidAmount > 0 && !isFullyPaid;
-        final showPayButton = !isFullyPaid && order.status != 'cancelled';
+        final showPayButton = !isFullyPaid &&
+            order.status != 'completed' &&
+            order.status != 'paid' &&
+            order.status != 'cancelled';
+        final canDelete = order.status == 'pending' && order.paidAmount == 0;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -64,15 +72,27 @@ class OrdersList extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: isCompleted
-                      ? (isFullyPaid ? Colors.green.shade100 : Colors.blue.shade100)
-                      : theme.colorScheme.primaryContainer,
+                      ? Colors.green.shade100
+                      : isFullyPaid
+                          ? Colors.blue.shade100
+                          : hasResults
+                              ? Colors.amber.shade100
+                              : theme.colorScheme.primaryContainer,
                   foregroundColor: isCompleted
-                      ? (isFullyPaid ? Colors.green.shade800 : Colors.blue.shade800)
-                      : theme.colorScheme.onPrimaryContainer,
+                      ? Colors.green.shade800
+                      : isFullyPaid
+                          ? Colors.blue.shade800
+                          : hasResults
+                              ? Colors.amber.shade900
+                              : theme.colorScheme.onPrimaryContainer,
                   child: Icon(
                     isCompleted
-                        ? (isFullyPaid ? Icons.check_circle : Icons.assignment_turned_in)
-                        : Icons.pending_actions,
+                        ? Icons.check_circle
+                        : isFullyPaid
+                            ? Icons.paid
+                            : hasResults
+                                ? Icons.assignment_turned_in
+                                : Icons.pending_actions,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -118,27 +138,27 @@ class OrdersList extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: isCompleted ? Colors.purple.shade50 : Colors.orange.shade50,
+                              color: hasResults ? Colors.purple.shade50 : Colors.orange.shade50,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color: isCompleted ? Colors.purple.shade200 : Colors.orange.shade200,
+                                color: hasResults ? Colors.purple.shade200 : Colors.orange.shade200,
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  isCompleted ? Icons.check_circle_outline : Icons.hourglass_top,
+                                  hasResults ? Icons.check_circle_outline : Icons.hourglass_top,
                                   size: 11,
-                                  color: isCompleted ? Colors.purple.shade800 : Colors.orange.shade900,
+                                  color: hasResults ? Colors.purple.shade800 : Colors.orange.shade900,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  isCompleted ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS',
+                                  hasResults ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: isCompleted ? Colors.purple.shade800 : Colors.orange.shade900,
+                                    color: hasResults ? Colors.purple.shade800 : Colors.orange.shade900,
                                   ),
                                 ),
                               ],
@@ -156,10 +176,10 @@ class OrdersList extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: isFullyPaid
-                                    ? Colors.green.shade200
-                                    : isPartiallyPaid
-                                        ? Colors.blue.shade200
-                                        : Colors.amber.shade200,
+                                  ? Colors.green.shade200
+                                  : isPartiallyPaid
+                                      ? Colors.blue.shade200
+                                      : Colors.amber.shade200,
                               ),
                             ),
                             child: Row(
@@ -204,14 +224,28 @@ class OrdersList extends StatelessWidget {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => onEditResults(order),
-                  icon: const Icon(Icons.assignment, size: 16),
-                  label: Text(isCompleted ? 'Ver Resultados' : 'Cargar Resultados'),
+                  onPressed: isCompleted
+                      ? () => showClinicalOrderViewerDialog(context, order)
+                      : () => onEditResults(order),
+                  icon: Icon(isCompleted ? Icons.visibility : Icons.assignment, size: 16),
+                  label: Text(isCompleted ? 'Ver Resultados' : (hasResults ? 'Editar Resultados' : 'Cargar Resultados')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted ? theme.colorScheme.secondaryContainer : theme.colorScheme.primary,
-                    foregroundColor: isCompleted ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onPrimary,
+                    backgroundColor: isCompleted
+                        ? theme.colorScheme.secondaryContainer
+                        : (hasResults ? theme.colorScheme.tertiaryContainer : theme.colorScheme.primary),
+                    foregroundColor: isCompleted
+                        ? theme.colorScheme.onSecondaryContainer
+                        : (hasResults ? theme.colorScheme.onTertiaryContainer : theme.colorScheme.onPrimary),
                   ),
                 ),
+                if (hasResults || isCompleted) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    tooltip: 'Exportar / Imprimir PDF',
+                    onPressed: () => showClinicalOrderViewerDialog(context, order),
+                  ),
+                ],
                 if (showPayButton) ...[
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
@@ -224,38 +258,41 @@ class OrdersList extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (dialogCtx) => AlertDialog(
-                        title: const Text('Eliminar Orden'),
-                        content: const Text('¿Está seguro de eliminar esta orden?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(dialogCtx),
-                            child: const Text('Cancelar'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context.read<WriteOrderCubit>().delete(order.id).then((_) {
-                                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                                if (context.mounted) context.read<ReadOrderCubit>().getAll();
-                              });
-                            },
-                            child: Text(
-                              'Eliminar',
-                              style: TextStyle(color: theme.colorScheme.error),
+                if (canDelete) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Eliminar Orden',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (dialogCtx) => AlertDialog(
+                          title: const Text('Eliminar Orden'),
+                          content: const Text('¿Está seguro de eliminar esta orden pendiente?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dialogCtx),
+                              child: const Text('Cancelar'),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  color: theme.colorScheme.error,
-                ),
+                            TextButton(
+                              onPressed: () {
+                                context.read<WriteOrderCubit>().delete(order.id).then((_) {
+                                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                                  if (context.mounted) context.read<ReadOrderCubit>().getAll();
+                                });
+                              },
+                              child: Text(
+                                'Eliminar',
+                                style: TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    color: theme.colorScheme.error,
+                  ),
+                ],
               ],
             ),
           ),
