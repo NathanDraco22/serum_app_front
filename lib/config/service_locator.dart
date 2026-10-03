@@ -26,6 +26,9 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<BranchesRepository>(
     () => BranchesRepository(getIt<BranchesDataSource>()),
   );
+  getIt.registerLazySingleton<UsersRepository>(
+    () => UsersRepository(getIt<UsersDataSource>()),
+  );
   getIt.registerLazySingleton<CashShiftsRepository>(
     () => CashShiftsRepository(getIt<CashShiftsDataSource>()),
   );

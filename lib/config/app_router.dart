@@ -15,6 +15,9 @@ import '../src/modules/order/view/create_order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
 import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
+import '../src/modules/administration/view/administration_screen.dart';
+import '../src/modules/branch/view/branch_screen.dart';
+import '../src/modules/user/view/user_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
@@ -46,6 +49,9 @@ class AppRouter {
   static const String quotations = '/quotations';
   static const String cashShifts = '/cash-shifts';
   static const String cashTransactions = '/cash-transactions';
+  static const String administration = '/admin';
+  static const String adminBranches = '/admin/branches';
+  static const String adminUsers = '/admin/users';
 
   // Navigator keys para cada branch
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -64,6 +70,7 @@ class AppRouter {
       GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
   static final _cashTransactionsNavKey =
       GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
+  static final _adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
 
   static GoRouter createRouter(AppSessionCubit sessionCubit) {
     return GoRouter(
@@ -110,6 +117,16 @@ class AppRouter {
           path: createOrder,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const CreateOrderScreen(),
+        ),
+        GoRoute(
+          path: adminBranches,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const BranchesScreen(),
+        ),
+        GoRoute(
+          path: adminUsers,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const UsersScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {
@@ -197,6 +214,16 @@ class AppRouter {
                 GoRoute(
                   path: cashTransactions,
                   builder: (context, state) => const CashTransactionsScreen(),
+                ),
+              ],
+            ),
+            // Branch 8: Administración
+            StatefulShellBranch(
+              navigatorKey: _adminNavKey,
+              routes: [
+                GoRoute(
+                  path: administration,
+                  builder: (context, state) => const AdministrationScreen(),
                 ),
               ],
             ),

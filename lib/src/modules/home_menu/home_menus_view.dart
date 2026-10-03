@@ -45,6 +45,7 @@ class _SideNav extends StatelessWidget {
     _NavItemData(icon: Icons.request_quote, label: 'Cotizaciones'),
     _NavItemData(icon: Icons.lock_clock_outlined, label: 'Turnos de Caja'),
     _NavItemData(icon: Icons.payments, label: 'Transacciones de Caja'),
+    _NavItemData(icon: Icons.admin_panel_settings, label: 'Administración'),
   ];
 
   @override
