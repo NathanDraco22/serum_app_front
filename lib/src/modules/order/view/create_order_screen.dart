@@ -345,7 +345,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               children: [
                 const Text(
                   'Nueva Orden Clínica',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
                 Text(
                   'Punto de Registro y Solicitud de Análisis',

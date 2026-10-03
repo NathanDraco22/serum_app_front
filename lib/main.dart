@@ -6,6 +6,7 @@ import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
+import 'config/scroll_behavior.dart';
 import 'config/service_locator.dart';
 import 'material_app_builder.dart';
 import 'provider_container.dart';
@@ -62,6 +63,7 @@ class _AppRootState extends State<AppRoot> {
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,
       theme: AppTheme.lightTheme,
+      scrollBehavior: AlwaysStretchScrollBehavior(),
       darkTheme: AppTheme.darkTheme,
     );
   }
