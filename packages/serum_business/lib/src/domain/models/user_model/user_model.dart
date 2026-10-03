@@ -7,6 +7,7 @@ class BaseUser {
   final String role;
   final List<String> branches;
   final bool isActive;
+  final bool isInternal;
 
   BaseUser({
     required this.username,
@@ -17,6 +18,7 @@ class BaseUser {
     required this.role,
     this.branches = const [],
     this.isActive = true,
+    this.isInternal = false,
   });
 }
 
@@ -30,6 +32,7 @@ class CreateUser extends BaseUser {
     required super.role,
     super.branches = const [],
     super.isActive = true,
+    super.isInternal = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -42,6 +45,7 @@ class CreateUser extends BaseUser {
       'role': role,
       'branches': branches,
       'isActive': isActive,
+      'isInternal': isInternal,
     };
   }
 }
@@ -55,6 +59,7 @@ class UpdateUser {
   final String? role;
   final List<String>? branches;
   final bool? isActive;
+  final bool? isInternal;
 
   UpdateUser({
     this.username,
@@ -65,6 +70,7 @@ class UpdateUser {
     this.role,
     this.branches,
     this.isActive,
+    this.isInternal,
   });
 
   Map<String, dynamic> toJson() {
@@ -77,6 +83,7 @@ class UpdateUser {
       if (role != null) 'role': role,
       if (branches != null) 'branches': branches,
       if (isActive != null) 'isActive': isActive,
+      if (isInternal != null) 'isInternal': isInternal,
     };
   }
 }
@@ -97,6 +104,7 @@ class UserInDb extends BaseUser {
     required super.role,
     super.branches = const [],
     super.isActive = true,
+    super.isInternal = false,
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
@@ -116,6 +124,7 @@ class UserInDb extends BaseUser {
               .toList() ??
           [],
       isActive: json['isActive'] as bool? ?? true,
+      isInternal: json['isInternal'] as bool? ?? false,
       createdAt: json['createdAt'] as int,
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,

@@ -236,9 +236,11 @@ class _BodyState extends State<_Body> {
                 if (readState is ReadUserLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (readState is ReadUserSuccess) {
+                  final nonInternalUsers =
+                      readState.items.where((u) => !u.isInternal).toList();
                   final filteredUsers = _searchQuery.isEmpty
-                      ? readState.items
-                      : readState.items.where((u) {
+                      ? nonInternalUsers
+                      : nonInternalUsers.where((u) {
                           return u.name.toLowerCase().contains(_searchQuery) ||
                               u.username.toLowerCase().contains(_searchQuery) ||
                               u.role.toLowerCase().contains(_searchQuery) ||

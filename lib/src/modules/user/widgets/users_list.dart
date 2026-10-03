@@ -346,7 +346,7 @@ class UsersList extends StatelessWidget {
                       tooltip: 'Editar Usuario',
                       onPressed: () => onEdit(user),
                     ),
-                    if (user.id != 'root' && user.username != 'Serum')
+                    if (!user.isInternal && user.id != 'root' && user.username != 'Serum')
                       IconButton(
                         icon: Icon(
                           Icons.delete_outline_rounded,
