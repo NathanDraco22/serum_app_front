@@ -8,6 +8,7 @@ import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../widgets/lab_tests_list.dart';
 import 'lab_test_form_screen.dart';
 import '../widgets/lab_test_detail_dialog.dart';
+import '../../../widgets/common/app_buttons.dart';
 
 class LabTestsScreen extends StatelessWidget {
   const LabTestsScreen({super.key});
@@ -227,18 +228,10 @@ class _BodyState extends State<_Body> {
                           color: theme.colorScheme.tertiary,
                         ),
                         const SizedBox(width: 16),
-                        ElevatedButton.icon(
+                        PrimaryButton(
                           onPressed: () => _openLabTestForm(context),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Nueva Prueba / Pack'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
+                          icon: Icons.add,
+                          label: 'Nueva Prueba / Pack',
                         ),
                       ],
                     ),

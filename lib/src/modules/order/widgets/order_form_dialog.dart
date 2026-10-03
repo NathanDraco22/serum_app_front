@@ -81,8 +81,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
 
       final totalInCents = _selectedItems.fold(0, (sum, i) => sum + i.salePrice);
 
-      final session = context.read<AppSessionCubit>().state;
-      final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+      final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
       final newOrder = CreateOrder(
         patientId: _selectedPatientId!,

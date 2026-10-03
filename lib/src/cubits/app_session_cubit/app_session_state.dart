@@ -15,7 +15,6 @@ class AppSessionState {
   final UserInDb? currentUser;
   final BranchInDb? currentBranch;
   final List<BranchInDb> branches;
-  final CashRegisterInDb? activeCashRegister;
   final CashShiftInDb? activeShift;
   final String? errorMessage;
 
@@ -24,7 +23,6 @@ class AppSessionState {
     this.currentUser,
     this.currentBranch,
     this.branches = const [],
-    this.activeCashRegister,
     this.activeShift,
     this.errorMessage,
   });
@@ -32,7 +30,6 @@ class AppSessionState {
   bool get isAuthenticated =>
       status == AppSessionStatus.authenticated && currentUser != null;
   bool get hasBranch => currentBranch != null;
-  bool get hasCashRegister => activeCashRegister != null;
   bool get hasActiveShift => activeShift != null;
 
   AppSessionState copyWith({
@@ -42,8 +39,6 @@ class AppSessionState {
     BranchInDb? currentBranch,
     bool clearBranch = false,
     List<BranchInDb>? branches,
-    CashRegisterInDb? activeCashRegister,
-    bool clearCashRegister = false,
     CashShiftInDb? activeShift,
     bool clearActiveShift = false,
     String? errorMessage,
@@ -54,9 +49,6 @@ class AppSessionState {
       currentUser: clearUser ? null : (currentUser ?? this.currentUser),
       currentBranch: clearBranch ? null : (currentBranch ?? this.currentBranch),
       branches: branches ?? this.branches,
-      activeCashRegister: clearCashRegister
-          ? null
-          : (activeCashRegister ?? this.activeCashRegister),
       activeShift:
           clearActiveShift ? null : (activeShift ?? this.activeShift),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),

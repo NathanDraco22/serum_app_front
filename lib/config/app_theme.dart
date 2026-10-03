@@ -52,6 +52,8 @@ class ColorPalette {
   static const Color background = Color(0xFFF7F9FF);
   static const Color onBackground = Color(0xFF181C20);
   static const Color surfaceVariant = Color(0xFFDFE3E8);
+  static const Color deepNavy = Color(0xFF0B1E36);
+  static const Color onDeepNavy = Color(0xFFFFFFFF);
 }
 
 /// Configuración de temas claro y oscuro para la aplicación.
@@ -63,6 +65,19 @@ class AppTheme {
     return ThemeData(
       useMaterial3: false,
       brightness: Brightness.light,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: ColorPalette.deepNavy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: Colors.white),
+        actionsIconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       textTheme: GoogleFonts.interTextTheme(
         ThemeData.light(useMaterial3: false).textTheme,
       ),
@@ -108,6 +123,19 @@ class AppTheme {
     return ThemeData(
       useMaterial3: false,
       brightness: Brightness.dark,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: ColorPalette.deepNavy,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: Colors.white),
+        actionsIconTheme: IconThemeData(color: Colors.white),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       textTheme: GoogleFonts.interTextTheme(
         ThemeData.dark(useMaterial3: false).textTheme,
       ),

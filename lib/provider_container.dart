@@ -22,7 +22,6 @@ class ProviderContainer extends StatelessWidget {
     final labTestsDataSource = LabTestsDataSource();
     final ordersDataSource = OrdersDataSource();
     final quotationsDataSource = QuotationsDataSource();
-    final cashRegistersDataSource = CashRegistersDataSource();
     final cashTransactionsDataSource = CashTransactionsDataSource();
 
     return MultiRepositoryProvider(
@@ -50,9 +49,6 @@ class ProviderContainer extends StatelessWidget {
         ),
         RepositoryProvider(
           create: (_) => QuotationsRepository(quotationsDataSource),
-        ),
-        RepositoryProvider(
-          create: (_) => CashRegistersRepository(cashRegistersDataSource),
         ),
         RepositoryProvider(
           create: (_) => CashTransactionsRepository(cashTransactionsDataSource),

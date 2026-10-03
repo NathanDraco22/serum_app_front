@@ -91,8 +91,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       final mappedGender = _gender == 'male' ? 'M' : _gender == 'female' ? 'F' : 'O';
 
       if (widget.patient == null) {
-        final session = context.read<AppSessionCubit>().state;
-        final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+        final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
         final newPatient = CreatePatient(
           name: _name,

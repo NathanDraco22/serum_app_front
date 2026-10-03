@@ -75,7 +75,6 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
     final request = OrderPayRequest(
       amount: amountInCents,
       shiftId: activeShift.id,
-      registerId: sessionCubit.state.activeCashRegister?.id,
       paymentMethod: _paymentMethod,
       performedBy: performedBy,
     );

@@ -61,8 +61,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
       final cubit = context.read<WriteDoctorCubit>();
 
       if (widget.doctor == null) {
-        final session = context.read<AppSessionCubit>().state;
-        final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+        final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
         final newDoctor = CreateDoctor(
           name: _name,

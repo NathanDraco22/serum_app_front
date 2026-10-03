@@ -12,6 +12,7 @@ import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/orders_list.dart';
 import '../widgets/order_results_dialog.dart';
 import '../widgets/order_pay_dialog.dart';
+import '../../../widgets/common/app_buttons.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 
 class OrdersScreen extends StatelessWidget {
@@ -309,18 +310,10 @@ class _BodyState extends State<_Body> {
                           color: Colors.green.shade700,
                         ),
                         const SizedBox(width: 16),
-                        ElevatedButton.icon(
+                        PrimaryButton(
                           onPressed: () => _openOrderForm(context),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Nueva Orden'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
+                          icon: Icons.add,
+                          label: 'Nueva Orden',
                         ),
                       ],
                     ),

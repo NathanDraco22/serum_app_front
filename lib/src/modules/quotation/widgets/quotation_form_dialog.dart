@@ -23,8 +23,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
     if (_formKey.currentState!.validate() && _selectedExams.isNotEmpty) {
       _formKey.currentState!.save();
 
-      final session = context.read<AppSessionCubit>().state;
-      final activeBranchId = session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+      final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
       final newQuotation = CreateQuotation(
         clientName: _selectedPatientId != null

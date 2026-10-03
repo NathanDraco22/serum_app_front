@@ -62,7 +62,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
             status: AppSessionStatus.unauthenticated,
             clearUser: true,
             clearBranch: true,
-            clearCashRegister: true,
             clearActiveShift: true,
           ),
         );
@@ -92,7 +91,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
           status: AppSessionStatus.unauthenticated,
           clearUser: true,
           clearBranch: true,
-          clearCashRegister: true,
           clearActiveShift: true,
           errorMessage: 'Sesión expirada o no válida.',
         ),
@@ -177,7 +175,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       emit(
         state.copyWith(
           currentBranch: branch,
-          clearCashRegister: true,
           clearError: true,
         ),
       );
@@ -195,7 +192,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         status: AppSessionStatus.unauthenticated,
         clearUser: true,
         clearBranch: true,
-        clearCashRegister: true,
         clearActiveShift: true,
         clearError: true,
       ),
@@ -225,16 +221,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   /// Limpia el turno activo
   void clearActiveShift() {
     emit(state.copyWith(clearActiveShift: true));
-  }
-
-  /// Selecciona la caja registradora activa para operar (retrocompatibilidad)
-  void selectCashRegister(CashRegisterInDb cashRegister) {
-    emit(state.copyWith(activeCashRegister: cashRegister));
-  }
-
-  /// Limpia la caja seleccionada (retrocompatibilidad)
-  void clearCashRegister() {
-    emit(state.copyWith(clearCashRegister: true));
   }
 
   Future<void> _fetchAndSetCurrentUser() async {

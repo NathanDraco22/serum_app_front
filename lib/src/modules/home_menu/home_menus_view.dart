@@ -43,7 +43,7 @@ class _SideNav extends StatelessWidget {
     _NavItemData(icon: Icons.science, label: 'Pruebas de Lab.'),
     _NavItemData(icon: Icons.receipt_long, label: 'Órdenes Clínicas'),
     _NavItemData(icon: Icons.request_quote, label: 'Cotizaciones'),
-    _NavItemData(icon: Icons.point_of_sale, label: 'Cajas Registradoras'),
+    _NavItemData(icon: Icons.lock_clock_outlined, label: 'Turnos de Caja'),
     _NavItemData(icon: Icons.payments, label: 'Transacciones de Caja'),
   ];
 

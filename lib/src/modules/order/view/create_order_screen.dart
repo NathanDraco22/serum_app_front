@@ -11,6 +11,7 @@ import '../../../widgets/dialogs/selectors/patient_selection_dialog.dart';
 import '../../../widgets/dialogs/selectors/doctor_selection_dialog.dart';
 import '../../patient/widgets/patient_form_dialog.dart';
 import '../../doctor/widgets/doctor_form_dialog.dart';
+import '../../../widgets/common/app_buttons.dart';
 import '../widgets/order_catalog_section.dart';
 import '../widgets/order_cart_section.dart';
 
@@ -249,9 +250,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     }
 
     final totalInCents = _selectedItems.fold(0, (sum, i) => sum + i.salePrice);
-    final session = context.read<AppSessionCubit>().state;
-    final activeBranchId =
-        session.activeCashRegister?.branchId ?? session.currentUser?.branches.firstOrNull ?? '';
+    final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
     final newOrder = CreateOrder(
       patientId: _selectedPatient!.id,
@@ -297,8 +296,8 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       allLabTests = labTestsState.items;
     }
 
-    final session = context.watch<AppSessionCubit>().state;
-    final branchName = session.activeCashRegister?.name ?? 'Sucursal Principal';
+    final sessionCubit = context.watch<AppSessionCubit>();
+    final branchName = sessionCubit.currentBranchName;
 
     return PopScope(
       canPop: false,
@@ -332,8 +331,8 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
           appBar: AppBar(
             elevation: 0,
             scrolledUnderElevation: 0,
-            backgroundColor: theme.colorScheme.surfaceContainerLowest,
             leading: BackButton(
+              color: Colors.white,
               onPressed: () async {
                 final shouldPop = await _onWillPop();
                 if (shouldPop && context.mounted) {
@@ -346,57 +345,48 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               children: [
                 const Text(
                   'Nueva Orden Clínica',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
                 ),
                 Text(
                   'Punto de Registro y Solicitud de Análisis',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: const Color(0xFFCCE5FF),
                   ),
                 ),
               ],
             ),
             actions: [
-              OutlinedButton.icon(
+              GlassButton(
                 onPressed: _openCreatePatientDialog,
-                icon: const Icon(Icons.person_add_outlined, size: 18),
-                label: const Text('Nuevo Paciente'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                icon: Icons.person_add_outlined,
+                label: 'Nuevo Paciente',
               ),
               const SizedBox(width: 8),
-              OutlinedButton.icon(
+              GlassButton(
                 onPressed: _openCreateDoctorDialog,
-                icon: const Icon(Icons.medical_services_outlined, size: 18),
-                label: const Text('Nuevo Médico'),
-                style: OutlinedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+                icon: Icons.medical_services_outlined,
+                label: 'Nuevo Médico',
               ),
               const SizedBox(width: 12),
               Container(
                 margin: const EdgeInsets.only(right: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.point_of_sale, size: 16, color: theme.colorScheme.primary),
+                    const Icon(Icons.point_of_sale, size: 16, color: Colors.white),
                     const SizedBox(width: 6),
                     Text(
                       branchName,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onPrimaryContainer,
+                        color: Colors.white,
                       ),
                     ),
                   ],

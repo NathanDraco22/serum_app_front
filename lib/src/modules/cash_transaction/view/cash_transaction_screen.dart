@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../../cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
 import '../../../cubits/cash_transaction_cubit/read_cash_transactions_cubit.dart';
-import '../../../cubits/cash_register_cubit/read_cash_registers_cubit.dart';
 import '../widgets/cash_transactions_list.dart';
 
 class CashTransactionsScreen extends StatelessWidget {
@@ -11,19 +12,11 @@ class CashTransactionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<ReadCashTransactionCubit>(
-          create: (context) => ReadCashTransactionCubit(
-            cashTransactionsRepository: RepositoryProvider.of<CashTransactionsRepository>(context),
-          )..getAll(),
-        ),
-        BlocProvider<ReadCashRegisterCubit>(
-          create: (context) => ReadCashRegisterCubit(
-            cashRegistersRepository: RepositoryProvider.of<CashRegistersRepository>(context),
-          )..getAll(),
-        ),
-      ],
+    return BlocProvider<ReadCashTransactionCubit>(
+      create: (context) => ReadCashTransactionCubit(
+        cashTransactionsRepository:
+            RepositoryProvider.of<CashTransactionsRepository>(context),
+      )..getAll(),
       child: const _RootScaffold(),
     );
   }
@@ -48,16 +41,39 @@ class _Body extends StatefulWidget {
 }
 
 class _BodyState extends State<_Body> {
-  String? _selectedRegisterId;
+  String? _selectedShiftId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cargar o refrescar el listado de turnos para poblar el filtro
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReadCashShiftCubit>().getAll();
+      }
+    });
+  }
+
+  String _formatDateShort(int timestamp) {
+    if (timestamp <= 0) return '';
+    final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final min = date.minute.toString().padLeft(2, '0');
+    return '$day/$month $hour:$min';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sessionState = context.watch<AppSessionCubit>().state;
+    final activeShift = sessionState.activeShift;
 
-    final registersState = context.watch<ReadCashRegisterCubit>().state;
-    List<CashRegisterInDb> registers = [];
-    if (registersState is ReadCashRegisterSuccess) {
-      registers = registersState.items;
+    final shiftsState = context.watch<ReadCashShiftCubit>().state;
+    List<CashShiftInDb> shifts = [];
+    if (shiftsState is ReadCashShiftSuccess) {
+      shifts = shiftsState.items;
     }
 
     return Column(
@@ -87,7 +103,7 @@ class _BodyState extends State<_Body> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Historial detallado de entradas y salidas de efectivo',
+                    'Libro diario de ingresos, egresos y cobros por turno contable',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -95,22 +111,54 @@ class _BodyState extends State<_Body> {
                 ],
               ),
               const Spacer(),
-              // Filter by Cash Register
+              // Filter by Cash Shift
               SizedBox(
-                width: 250,
+                width: 290,
                 child: DropdownButtonFormField<String?>(
-                  initialValue: _selectedRegisterId,
+                  initialValue: _selectedShiftId,
                   decoration: const InputDecoration(
-                    labelText: 'Filtrar por Caja',
+                    labelText: 'Filtrar por Turno',
+                    prefixIcon: Icon(Icons.lock_clock_outlined, size: 20),
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('Todas las Cajas')),
-                    ...registers.map((r) => DropdownMenuItem(value: r.id, child: Text(r.name))),
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('Todos los Turnos'),
+                    ),
+                    if (activeShift != null)
+                      DropdownMenuItem(
+                        value: activeShift.id,
+                        child: Text(
+                          '🟢 Mi Turno Activo (#${activeShift.id.substring(0, activeShift.id.length >= 8 ? 8 : activeShift.id.length)})',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ...shifts
+                        .where((s) => s.id != activeShift?.id)
+                        .map((s) {
+                      final shortId = s.id.length >= 8 ? s.id.substring(0, 8) : s.id;
+                      final icon = s.isOpen ? '🟢' : '⚪';
+                      final dateStr = _formatDateShort(s.openedAt);
+                      return DropdownMenuItem(
+                        value: s.id,
+                        child: Text('$icon #$shortId ($dateStr)'),
+                      );
+                    }),
                   ],
-                  onChanged: (val) => setState(() => _selectedRegisterId = val),
+                  onChanged: (val) => setState(() => _selectedShiftId = val),
                 ),
+              ),
+              const SizedBox(width: 12),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refrescar Transacciones',
+                onPressed: () {
+                  context.read<ReadCashTransactionCubit>().getAll();
+                  context.read<ReadCashShiftCubit>().getAll();
+                },
               ),
             ],
           ),
@@ -124,17 +172,38 @@ class _BodyState extends State<_Body> {
               } else if (readState is ReadCashTransactionSuccess) {
                 var items = readState.items;
 
-                if (_selectedRegisterId != null) {
-                  items = items.where((element) => element.registerId == _selectedRegisterId).toList();
+                if (_selectedShiftId != null) {
+                  items = items
+                      .where((element) => element.shiftId == _selectedShiftId)
+                      .toList();
                 }
 
                 if (items.isEmpty) {
-                  return const Center(child: Text('No hay transacciones registradas'));
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: 56,
+                          color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _selectedShiftId != null
+                              ? 'No hay transacciones registradas para este turno'
+                              : 'No hay transacciones registradas',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 return CashTransactionsList(
                   items: items,
-                  registers: registers,
                 );
               } else if (readState is ReadCashTransactionError) {
                 return Center(

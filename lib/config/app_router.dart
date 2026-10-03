@@ -13,7 +13,7 @@ import '../src/modules/lab_test/view/lab_test_screen.dart';
 import '../src/modules/order/view/order_screen.dart';
 import '../src/modules/order/view/create_order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
-import '../src/modules/cash_register/view/cash_register_screen.dart';
+import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -44,7 +44,7 @@ class AppRouter {
   static const String orders = '/orders';
   static const String createOrder = '/orders/new';
   static const String quotations = '/quotations';
-  static const String cashRegisters = '/cash-registers';
+  static const String cashShifts = '/cash-shifts';
   static const String cashTransactions = '/cash-transactions';
 
   // Navigator keys para cada branch
@@ -60,8 +60,8 @@ class AppRouter {
   static final _ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
   static final _quotationsNavKey =
       GlobalKey<NavigatorState>(debugLabel: 'quotations');
-  static final _cashRegistersNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'cashRegisters');
+  static final _cashShiftsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
   static final _cashTransactionsNavKey =
       GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
 
@@ -176,13 +176,17 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 6: Cajas Registradoras
+            // Branch 6: Turnos de Caja
             StatefulShellBranch(
-              navigatorKey: _cashRegistersNavKey,
+              navigatorKey: _cashShiftsNavKey,
               routes: [
                 GoRoute(
-                  path: cashRegisters,
-                  builder: (context, state) => const CashRegistersScreen(),
+                  path: cashShifts,
+                  builder: (context, state) => const CashShiftsScreen(),
+                ),
+                GoRoute(
+                  path: '/cash-registers',
+                  redirect: (context, state) => cashShifts,
                 ),
               ],
             ),

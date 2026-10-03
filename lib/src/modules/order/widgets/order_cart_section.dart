@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
+import '../../../widgets/common/app_buttons.dart';
 import 'order_patient_card.dart';
 import 'order_doctor_card.dart';
 
@@ -257,30 +258,13 @@ class OrderCartSection extends StatelessWidget {
             const SizedBox(height: 12),
 
             // Submit Button
-            SizedBox(
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: canSubmit ? onSubmitOrder : null,
-                icon: isSubmitting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.check_circle_outline, size: 20),
-                label: Text(
-                  isSubmitting ? 'Creando Orden...' : 'Crear Orden Clínica',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 1,
-                ),
-              ),
+            PrimaryButton(
+              onPressed: canSubmit ? onSubmitOrder : null,
+              icon: Icons.check_circle_outline,
+              label: isSubmitting ? 'Creando Orden...' : 'Crear Orden Clínica',
+              isLoading: isSubmitting,
+              isCompact: false,
+              fullWidth: true,
             ),
           ],
         ),
