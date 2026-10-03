@@ -132,10 +132,12 @@ class _BodyState extends State<_Body> {
     return baseList.where((order) {
       // 1. Filtro por Estado
       final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-      final isFullyPaid = order.status == 'paid' ||
+      final isFullyPaid =
+          order.status == 'paid' ||
           order.status == 'completed' ||
           (totalPrice > 0 && order.paidAmount >= totalPrice);
-      final hasAllResults = order.results.isNotEmpty &&
+      final hasAllResults =
+          order.results.isNotEmpty &&
           order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
 
       if (_filterStatus == 'pending') {
@@ -210,7 +212,10 @@ class _BodyState extends State<_Body> {
           );
         } else if (state is WriteOrderError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${state.message}'), backgroundColor: theme.colorScheme.error),
+            SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: theme.colorScheme.error,
+            ),
           );
         }
       },
@@ -219,26 +224,30 @@ class _BodyState extends State<_Body> {
           final allOrders = (readState is ReadOrderSuccess)
               ? readState.items
               : (readState is ReadOrderRefreshing)
-                  ? readState.items
-                  : <OrderInDb>[];
+              ? readState.items
+              : <OrderInDb>[];
 
           final totalCount = allOrders.length;
           final completedCount = allOrders.where((o) {
             final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
-            final isFullyPaid = o.status == 'paid' ||
+            final isFullyPaid =
+                o.status == 'paid' ||
                 o.status == 'completed' ||
                 (total > 0 && o.paidAmount >= total);
-            final hasResults = o.results.isNotEmpty &&
+            final hasResults =
+                o.results.isNotEmpty &&
                 o.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
             return o.status == 'completed' || (isFullyPaid && hasResults);
           }).length;
 
           final paidCount = allOrders.where((o) {
             final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
-            final isFullyPaid = o.status == 'paid' ||
+            final isFullyPaid =
+                o.status == 'paid' ||
                 o.status == 'completed' ||
                 (total > 0 && o.paidAmount >= total);
-            final hasResults = o.results.isNotEmpty &&
+            final hasResults =
+                o.results.isNotEmpty &&
                 o.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
             return (o.status == 'paid' || isFullyPaid) && !hasResults && o.status != 'completed';
           }).length;
@@ -341,7 +350,10 @@ class _BodyState extends State<_Body> {
                                     )
                                   : null,
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -356,7 +368,7 @@ class _BodyState extends State<_Body> {
                         const SizedBox(width: 16),
                         // Filtro de Estado (Dropdown)
                         SizedBox(
-                          width: 250,
+                          width: 310,
                           child: DropdownButtonFormField<String>(
                             key: ValueKey(_filterStatus),
                             initialValue: _filterStatus,
@@ -364,7 +376,10 @@ class _BodyState extends State<_Body> {
                             decoration: InputDecoration(
                               labelText: 'Estado de la orden',
                               prefixIcon: const Icon(Icons.filter_list, size: 20),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -376,9 +391,18 @@ class _BodyState extends State<_Body> {
                             ),
                             items: const [
                               DropdownMenuItem(value: 'all', child: Text('Todas las órdenes')),
-                              DropdownMenuItem(value: 'pending', child: Text('Pendientes de pago/proceso')),
-                              DropdownMenuItem(value: 'paid', child: Text('Pagadas (por adelantado)')),
-                              DropdownMenuItem(value: 'completed', child: Text('Completadas (con resultados)')),
+                              DropdownMenuItem(
+                                value: 'pending',
+                                child: Text('Pendientes de pago/proceso'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'paid',
+                                child: Text('Pagadas (por adelantado)'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'completed',
+                                child: Text('Completadas (con resultados)'),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) {
@@ -446,7 +470,11 @@ class _BodyState extends State<_Body> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.inbox, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                            Icon(
+                              Icons.inbox,
+                              size: 48,
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               allOrders.isEmpty

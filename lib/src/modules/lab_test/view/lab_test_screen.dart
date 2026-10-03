@@ -78,27 +78,27 @@ class _BodyState extends State<_Body> {
   void _openLabTestForm(BuildContext context, [LabTestInDb? labTest]) {
     Navigator.of(context, rootNavigator: true)
         .push<bool>(
-      MaterialPageRoute(
-        builder: (_) => MultiBlocProvider(
-          providers: [
-            BlocProvider.value(value: BlocProvider.of<WriteLabTestCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
-          ],
-          child: LabTestFormScreen(labTest: labTest),
-        ),
-      ),
-    )
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: BlocProvider.of<WriteLabTestCubit>(context)),
+                BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
+              ],
+              child: LabTestFormScreen(labTest: labTest),
+            ),
+          ),
+        )
         .then((value) {
-      if (value == true && context.mounted) {
-        _searchController.clear();
-        context.read<SearchLabTestCubit>().clear();
-        setState(() {
-          _selectedCategory = 'Todas';
-          _filterType = 'all';
+          if (value == true && context.mounted) {
+            _searchController.clear();
+            context.read<SearchLabTestCubit>().clear();
+            setState(() {
+              _selectedCategory = 'Todas';
+              _filterType = 'all';
+            });
+            context.read<ReadLabTestCubit>().getAll();
+          }
         });
-        context.read<ReadLabTestCubit>().getAll();
-      }
-    });
   }
 
   void _openLabTestDetail(BuildContext context, LabTestInDb labTest, List<LabTestInDb> allTests) {
@@ -154,7 +154,10 @@ class _BodyState extends State<_Body> {
           );
         } else if (state is WriteLabTestError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${state.message}'), backgroundColor: theme.colorScheme.error),
+            SnackBar(
+              content: Text('Error: ${state.message}'),
+              backgroundColor: theme.colorScheme.error,
+            ),
           );
         }
       },
@@ -163,8 +166,8 @@ class _BodyState extends State<_Body> {
           final allTests = (readState is ReadLabTestSuccess)
               ? readState.items
               : (readState is ReadLabTestRefreshing)
-                  ? readState.items
-                  : <LabTestInDb>[];
+              ? readState.items
+              : <LabTestInDb>[];
 
           final totalCount = allTests.length;
           final packCount = allTests.where((t) => t.isPack).length;
@@ -260,7 +263,10 @@ class _BodyState extends State<_Body> {
                                     )
                                   : null,
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -275,7 +281,7 @@ class _BodyState extends State<_Body> {
                         const SizedBox(width: 16),
                         // Filtro de Tipo (Dropdown)
                         SizedBox(
-                          width: 230,
+                          width: 240,
                           child: DropdownButtonFormField<String>(
                             key: ValueKey(_filterType),
                             initialValue: _filterType,
@@ -283,7 +289,10 @@ class _BodyState extends State<_Body> {
                             decoration: InputDecoration(
                               labelText: 'Tipo de análisis',
                               prefixIcon: const Icon(Icons.filter_list, size: 20),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                                 borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -295,7 +304,10 @@ class _BodyState extends State<_Body> {
                             ),
                             items: const [
                               DropdownMenuItem(value: 'all', child: Text('Todos los análisis')),
-                              DropdownMenuItem(value: 'individual', child: Text('Pruebas Individuales')),
+                              DropdownMenuItem(
+                                value: 'individual',
+                                child: Text('Pruebas Individuales'),
+                              ),
                               DropdownMenuItem(value: 'pack', child: Text('Packs / Perfiles')),
                             ],
                             onChanged: (val) {
@@ -343,7 +355,8 @@ class _BodyState extends State<_Body> {
                     }
 
                     List<LabTestInDb> testsToDisplay;
-                    if (searchState is SearchLabTestSuccess && _searchController.text.trim().isNotEmpty) {
+                    if (searchState is SearchLabTestSuccess &&
+                        _searchController.text.trim().isNotEmpty) {
                       testsToDisplay = _applyFilters(searchState.items);
                     } else {
                       if (readState is ReadLabTestLoading) {
