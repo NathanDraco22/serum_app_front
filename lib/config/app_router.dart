@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
 import '../src/modules/splash/view/splash_screen.dart';
 import '../src/modules/auth/view/login_screen.dart';
-import '../src/modules/cash_register_selection/view/select_cash_register_screen.dart';
 import '../src/modules/home_menu/home_menus_view.dart';
 import '../src/modules/dashboard/view/dashboard_screen.dart';
 import '../src/modules/patient/view/patient_screen.dart';
@@ -38,7 +37,6 @@ class AppRouter {
   // Constantes de rutas
   static const String splash = '/splash';
   static const String login = '/login';
-  static const String selectCashRegister = '/select-cash-register';
   static const String dashboard = '/';
   static const String patients = '/patients';
   static const String doctors = '/doctors';
@@ -51,14 +49,21 @@ class AppRouter {
 
   // Navigator keys para cada branch
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final _dashboardNavKey = GlobalKey<NavigatorState>(debugLabel: 'dashboard');
-  static final _patientsNavKey = GlobalKey<NavigatorState>(debugLabel: 'patients');
-  static final _doctorsNavKey = GlobalKey<NavigatorState>(debugLabel: 'doctors');
-  static final _labTestsNavKey = GlobalKey<NavigatorState>(debugLabel: 'labTests');
+  static final _dashboardNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'dashboard');
+  static final _patientsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'patients');
+  static final _doctorsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'doctors');
+  static final _labTestsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'labTests');
   static final _ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
-  static final _quotationsNavKey = GlobalKey<NavigatorState>(debugLabel: 'quotations');
-  static final _cashRegistersNavKey = GlobalKey<NavigatorState>(debugLabel: 'cashRegisters');
-  static final _cashTransactionsNavKey = GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
+  static final _quotationsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'quotations');
+  static final _cashRegistersNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'cashRegisters');
+  static final _cashTransactionsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
 
   static GoRouter createRouter(AppSessionCubit sessionCubit) {
     return GoRouter(
@@ -68,15 +73,12 @@ class AppRouter {
       redirect: (context, state) {
         final sessionState = sessionCubit.state;
 
-        final isInitial =
-            sessionState.status == AppSessionStatus.initial ||
+        final isInitial = sessionState.status == AppSessionStatus.initial ||
             sessionState.status == AppSessionStatus.authenticating;
         final isAuthenticated = sessionState.isAuthenticated;
-        final hasCashRegister = sessionState.hasCashRegister;
 
         final isSplashing = state.matchedLocation == splash;
         final isLoggingIn = state.matchedLocation == login;
-        final isSelectingCash = state.matchedLocation == selectCashRegister;
 
         // 1. Inicialización en progreso -> Redirigir a /splash
         if (isInitial) {
@@ -88,13 +90,8 @@ class AppRouter {
           return isLoggingIn ? null : login;
         }
 
-        // 3. Autenticado pero sin caja seleccionada -> Redirigir a /select-cash-register
-        if (!hasCashRegister) {
-          return isSelectingCash ? null : selectCashRegister;
-        }
-
-        // 4. Autenticado con caja seleccionada -> Redirigir a / si intenta estar en /splash, /login o /select-cash-register
-        if (isSplashing || isLoggingIn || isSelectingCash) {
+        // 3. Autenticado -> Redirigir a Dashboard si intenta estar en /splash o /login
+        if (isSplashing || isLoggingIn) {
           return dashboard;
         }
 
@@ -108,10 +105,6 @@ class AppRouter {
         GoRoute(
           path: login,
           builder: (context, state) => const LoginScreen(),
-        ),
-        GoRoute(
-          path: selectCashRegister,
-          builder: (context, state) => const SelectCashRegisterScreen(),
         ),
         GoRoute(
           path: createOrder,

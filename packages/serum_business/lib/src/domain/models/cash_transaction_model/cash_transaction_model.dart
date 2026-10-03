@@ -1,7 +1,8 @@
 import 'package:serum_business/src/domain/models/shared/user_info.dart';
 
 class BaseCashTransaction {
-  final String registerId;
+  final String? shiftId;
+  final String? registerId;
   final String branchId;
   final String flowType;
   final String subType;
@@ -13,7 +14,8 @@ class BaseCashTransaction {
   final UserInfo performedBy;
 
   BaseCashTransaction({
-    required this.registerId,
+    this.shiftId,
+    this.registerId,
     required this.branchId,
     required this.flowType,
     required this.subType,
@@ -28,7 +30,8 @@ class BaseCashTransaction {
 
 class CreateCashTransaction extends BaseCashTransaction {
   CreateCashTransaction({
-    required super.registerId,
+    super.shiftId,
+    super.registerId,
     required super.branchId,
     required super.flowType,
     required super.subType,
@@ -42,7 +45,8 @@ class CreateCashTransaction extends BaseCashTransaction {
 
   Map<String, dynamic> toJson() {
     return {
-      'registerId': registerId,
+      if (shiftId != null) 'shiftId': shiftId,
+      if (registerId != null) 'registerId': registerId,
       'branchId': branchId,
       'flowType': flowType,
       'subType': subType,
@@ -78,7 +82,8 @@ class CashTransactionInDb extends BaseCashTransaction {
 
   CashTransactionInDb({
     required this.id,
-    required super.registerId,
+    super.shiftId,
+    super.registerId,
     required super.branchId,
     required super.flowType,
     required super.subType,
@@ -96,7 +101,8 @@ class CashTransactionInDb extends BaseCashTransaction {
   factory CashTransactionInDb.fromJson(Map<String, dynamic> json) {
     return CashTransactionInDb(
       id: json['id'] as String,
-      registerId: json['registerId'] as String,
+      shiftId: json['shiftId'] as String?,
+      registerId: json['registerId'] as String?,
       branchId: json['branchId'] as String? ?? '',
       flowType: json['flowType'] as String,
       subType: json['subType'] as String,
@@ -105,7 +111,8 @@ class CashTransactionInDb extends BaseCashTransaction {
       resultingBalance: json['resultingBalance'] as int,
       concept: json['concept'] as String,
       referenceId: json['referenceId'] as String?,
-      performedBy: UserInfo.fromJson(json['performedBy'] as Map<String, dynamic>),
+      performedBy:
+          UserInfo.fromJson(json['performedBy'] as Map<String, dynamic>),
       createdAt: json['createdAt'] as int,
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,

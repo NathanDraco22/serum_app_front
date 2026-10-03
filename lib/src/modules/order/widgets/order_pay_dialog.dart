@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
+import '../../cash_shift/widgets/cash_shift_open_dialog.dart';
 
 class OrderPayDialog extends StatefulWidget {
   final OrderInDb order;
@@ -20,17 +22,18 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
   final _amountController = TextEditingController();
   String _paymentMethod = 'cash';
 
-  int get _totalPrice =>
-      widget.order.totalPrice > 0 ? widget.order.totalPrice : widget.order.salePriceApplied;
+  int get _totalPrice => widget.order.totalPrice > 0
+      ? widget.order.totalPrice
+      : widget.order.salePriceApplied;
 
-  int get _remainingBalance =>
-      max(0, _totalPrice - widget.order.paidAmount);
+  int get _remainingBalance => max(0, _totalPrice - widget.order.paidAmount);
 
   @override
   void initState() {
     super.initState();
     _amountController.text =
-        NumberFormatter.convertFromCentsToDouble(_remainingBalance).toStringAsFixed(2);
+        NumberFormatter.convertFromCentsToDouble(_remainingBalance)
+            .toStringAsFixed(2);
   }
 
   @override
@@ -42,33 +45,27 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
-    final session = context.read<AppSessionCubit>().state;
-    final activeRegister = session.activeCashRegister;
-    final currentUser = session.currentUser;
+    final sessionCubit = context.read<AppSessionCubit>();
+    final activeShift = sessionCubit.activeShift;
+    final currentUser = sessionCubit.user;
 
-    if (activeRegister == null) {
+    if (activeShift == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No hay una caja registradora activa seleccionada.'),
+          content: Text(
+            'Debes abrir tu turno con un fondo inicial para registrar cobros.',
+          ),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    if (!activeRegister.isOpen) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La caja seleccionada se encuentra cerrada. Debe abrirla para registrar cobros.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    final parsedDouble =
-        double.tryParse(_amountController.text.trim().replaceAll(',', '')) ?? 0.0;
-    final amountInCents = NumberFormatter.convertFromDoubleToCents(parsedDouble);
+    final parsedDouble = double.tryParse(
+            _amountController.text.trim().replaceAll(',', '')) ??
+        0.0;
+    final amountInCents =
+        NumberFormatter.convertFromDoubleToCents(parsedDouble);
 
     final performedBy = UserInfo(
       id: currentUser?.id ?? 'system',
@@ -77,13 +74,19 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
 
     final request = OrderPayRequest(
       amount: amountInCents,
-      registerId: activeRegister.id,
+      shiftId: activeShift.id,
+      registerId: sessionCubit.state.activeCashRegister?.id,
       paymentMethod: _paymentMethod,
       performedBy: performedBy,
     );
 
-    context.read<WriteOrderCubit>().payOrder(widget.order.id, request).then((_) {
+    context
+        .read<WriteOrderCubit>()
+        .payOrder(widget.order.id, request)
+        .then((_) {
       if (!mounted) return;
+      // Actualizar también el turno activo de la sesión para reflejar el nuevo cobro
+      sessionCubit.fetchActiveShift();
       Navigator.pop(context, true);
     });
   }
@@ -91,10 +94,10 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final session = context.watch<AppSessionCubit>().state;
-    final activeRegister = session.activeCashRegister;
-    final currentUser = session.currentUser;
-    final canPay = activeRegister != null && activeRegister.isOpen;
+    final session = context.watch<AppSessionCubit>();
+    final activeShift = session.activeShift;
+    final currentUser = session.user;
+    final canPay = activeShift != null && activeShift.isOpen;
 
     return AlertDialog(
       title: Row(
@@ -104,7 +107,8 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
           Expanded(
             child: Text(
               'Cobro de Orden: ${widget.order.examName}',
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -118,11 +122,12 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Resumen financiero de la orden con NumberFormatter
+              // Resumen financiero de la orden
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withAlpha(100),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
@@ -131,10 +136,12 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Precio total:', style: theme.textTheme.bodyMedium),
+                        Text('Precio total:',
+                            style: theme.textTheme.bodyMedium),
                         Text(
                           NumberFormatter.convertToMoneyLike(_totalPrice),
-                          style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -143,9 +150,11 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Monto ya pagado:', style: theme.textTheme.bodySmall),
+                          Text('Monto ya pagado:',
+                              style: theme.textTheme.bodySmall),
                           Text(
-                            NumberFormatter.convertToMoneyLike(widget.order.paidAmount),
+                            NumberFormatter.convertToMoneyLike(
+                                widget.order.paidAmount),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: Colors.green.shade700,
                               fontWeight: FontWeight.bold,
@@ -160,13 +169,17 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                       children: [
                         Text(
                           'Saldo Pendiente:',
-                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          NumberFormatter.convertToMoneyLike(_remainingBalance),
+                          NumberFormatter.convertToMoneyLike(
+                              _remainingBalance),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: _remainingBalance > 0 ? theme.colorScheme.primary : Colors.green,
+                            color: _remainingBalance > 0
+                                ? theme.colorScheme.primary
+                                : Colors.green,
                           ),
                         ),
                       ],
@@ -176,29 +189,22 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
               ),
               const SizedBox(height: 16),
 
-              // Información de Caja Registradora Asignada
-              if (activeRegister != null)
+              // Información del Turno de Caja del Usuario
+              if (activeShift != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: activeRegister.isOpen
-                        ? Colors.green.shade50
-                        : Colors.amber.shade50,
+                    color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: activeRegister.isOpen
-                          ? Colors.green.shade300
-                          : Colors.amber.shade300,
-                    ),
+                    border: Border.all(color: Colors.green.shade300),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        activeRegister.isOpen ? Icons.check_circle : Icons.warning_amber,
+                        Icons.check_circle_rounded,
                         size: 20,
-                        color: activeRegister.isOpen
-                            ? Colors.green.shade800
-                            : Colors.amber.shade900,
+                        color: Colors.green.shade800,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -206,24 +212,18 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Caja: ${activeRegister.name}',
+                              'Turno Activo: \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en efectivo',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: activeRegister.isOpen
-                                    ? Colors.green.shade900
-                                    : Colors.amber.shade900,
+                                color: Colors.green.shade900,
                               ),
                             ),
                             Text(
-                              activeRegister.isOpen
-                                  ? 'Abierta • Saldo disponible: ${NumberFormatter.convertToMoneyLike(activeRegister.totalBalance)}'
-                                  : 'Cerrada • Debe abrirla en el módulo de caja para operar',
+                              'Fondo inicial: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)} • Listo para cobrar',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: activeRegister.isOpen
-                                    ? Colors.green.shade800
-                                    : Colors.amber.shade900,
+                                color: Colors.green.shade800,
                               ),
                             ),
                           ],
@@ -236,18 +236,49 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.shade50,
+                    color: ColorPalette.errorContainer.withAlpha(80),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade200),
+                    border:
+                        Border.all(color: ColorPalette.error.withAlpha(100)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'No hay ninguna caja registradora activa seleccionada. Por favor, selecciona una caja en el menú de sesión antes de cobrar.',
-                          style: TextStyle(color: Colors.red.shade900, fontSize: 12),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.lock_open_rounded,
+                            color: ColorPalette.error,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Sin Turno Abierto',
+                              style: TextStyle(
+                                color: ColorPalette.error,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Debes abrir tu turno con un fondo inicial para registrar cobros.',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.tonalIcon(
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('Abrir Turno Ahora'),
+                          onPressed: () => CashShiftOpenDialog.show(context),
                         ),
                       ),
                     ],
@@ -258,10 +289,11 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
               // Operador asignado
               Row(
                 children: [
-                  Icon(Icons.person, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                  Icon(Icons.person,
+                      size: 16, color: theme.colorScheme.onSurfaceVariant),
                   const SizedBox(width: 6),
                   Text(
-                    'Operador: ${currentUser?.name ?? currentUser?.username ?? 'Sesión activa'}',
+                    'Cajero / Operador: ${currentUser?.name ?? currentUser?.username ?? 'Sesión activa'}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -281,13 +313,16 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                       ? 'Saldo pendiente: ${NumberFormatter.convertToMoneyLike(_remainingBalance)}'
                       : 'Orden saldada',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Requerido';
-                  final parsed = double.tryParse(val.trim().replaceAll(',', ''));
+                  final parsed =
+                      double.tryParse(val.trim().replaceAll(',', ''));
                   if (parsed == null) return 'Ingrese un monto válido';
                   if (parsed <= 0) return 'El monto debe ser mayor a 0';
-                  final inCents = NumberFormatter.convertFromDoubleToCents(parsed);
+                  final inCents =
+                      NumberFormatter.convertFromDoubleToCents(parsed);
                   if (_remainingBalance > 0 && inCents > _remainingBalance) {
                     return 'El monto no puede exceder el saldo restante (${NumberFormatter.convertToMoneyLike(_remainingBalance)})';
                   }
@@ -335,7 +370,8 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                     ),
                   ),
                 ],
-                onChanged: (val) => setState(() => _paymentMethod = val ?? 'cash'),
+                onChanged: (val) =>
+                    setState(() => _paymentMethod = val ?? 'cash'),
               ),
             ],
           ),

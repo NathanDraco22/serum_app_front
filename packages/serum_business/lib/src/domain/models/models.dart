@@ -1,5 +1,6 @@
 export 'branch_model/branch_model.dart';
 export 'cash_register_model/cash_register_model.dart';
+export 'cash_shift_model/cash_shift_model.dart';
 export 'cash_transaction_model/cash_transaction_model.dart';
 export 'doctor_model/doctor_model.dart';
 export 'lab_test_model/lab_test_model.dart';

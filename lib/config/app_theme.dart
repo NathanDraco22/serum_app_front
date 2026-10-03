@@ -61,10 +61,10 @@ class AppTheme {
   /// Configuración del tema claro.
   static ThemeData get lightTheme {
     return ThemeData(
-      useMaterial3: true,
+      useMaterial3: false,
       brightness: Brightness.light,
       textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light(useMaterial3: true).textTheme,
+        ThemeData.light(useMaterial3: false).textTheme,
       ),
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
@@ -106,21 +106,22 @@ class AppTheme {
   /// Configuración del tema oscuro.
   static ThemeData get darkTheme {
     return ThemeData(
-      useMaterial3: true,
+      useMaterial3: false,
       brightness: Brightness.dark,
       textTheme: GoogleFonts.interTextTheme(
-        ThemeData.dark(useMaterial3: true).textTheme,
+        ThemeData.dark(useMaterial3: false).textTheme,
       ),
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: ColorPalette.primary,
-        brightness: Brightness.dark,
-      ).copyWith(
-        primary: ColorPalette.inversePrimary,
-        surface: ColorPalette.inverseSurface,
-        onSurface: ColorPalette.inverseOnSurface,
-        onInverseSurface: ColorPalette.onSurface, // Inverso de inverseOnSurface
-        surfaceTint: ColorPalette.surfaceTint,
-      ),
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: ColorPalette.primary,
+            brightness: Brightness.dark,
+          ).copyWith(
+            primary: ColorPalette.inversePrimary,
+            surface: ColorPalette.inverseSurface,
+            onSurface: ColorPalette.inverseOnSurface,
+            onInverseSurface: ColorPalette.onSurface, // Inverso de inverseOnSurface
+            surfaceTint: ColorPalette.surfaceTint,
+          ),
     );
   }
 }

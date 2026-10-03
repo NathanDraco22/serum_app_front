@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../config/get_it_config.dart';
 import '../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../widgets/dialogs/selectors/branch_selection_dialog.dart';
+import '../cash_shift/widgets/cash_shift_open_dialog.dart';
+import '../cash_shift/widgets/cash_shift_close_dialog.dart';
 
 class HomeMenusScreen extends StatelessWidget {
   const HomeMenusScreen({super.key, required this.navigationShell});
@@ -51,7 +53,7 @@ class _SideNav extends StatelessWidget {
     final currentIndex = navigationShell.currentIndex;
     final sessionState = context.watch<AppSessionCubit>().state;
     final user = sessionState.currentUser;
-    final cashRegister = sessionState.activeCashRegister;
+    final activeShift = sessionState.activeShift;
 
     return Container(
       width: 260,
@@ -183,23 +185,31 @@ class _SideNav extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Active Cash Register info
+                // Active Cash Shift info
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withAlpha(50),
+                    color: activeShift != null
+                        ? theme.colorScheme.primaryContainer.withAlpha(50)
+                        : theme.colorScheme.surfaceContainerHighest.withAlpha(40),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: theme.colorScheme.primaryContainer,
+                      color: activeShift != null
+                          ? theme.colorScheme.primary.withAlpha(80)
+                          : theme.colorScheme.outlineVariant.withAlpha(80),
                       width: 1,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        Icons.point_of_sale,
+                        activeShift != null
+                            ? Icons.point_of_sale
+                            : Icons.lock_open_rounded,
                         size: 18,
-                        color: theme.colorScheme.primary,
+                        color: activeShift != null
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -207,7 +217,9 @@ class _SideNav extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              cashRegister?.name ?? 'Sin caja seleccionada',
+                              activeShift != null
+                                  ? '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en caja'
+                                  : 'Sin turno abierto',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.onSurface,
@@ -216,19 +228,37 @@ class _SideNav extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              'Caja Activa',
+                              activeShift != null
+                                  ? 'Turno Activo (Fondo: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)})'
+                                  : 'Abre turno para cobrar',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.swap_horiz, size: 18),
-                        tooltip: 'Cambiar Caja',
+                        icon: Icon(
+                          activeShift != null
+                              ? Icons.lock_clock_rounded
+                              : Icons.add_circle_outline,
+                          size: 18,
+                          color: activeShift != null
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.primary,
+                        ),
+                        tooltip: activeShift != null
+                            ? 'Corte y Arqueo de Turno'
+                            : 'Abrir Turno de Caja',
                         onPressed: () {
-                          context.read<AppSessionCubit>().clearCashRegister();
+                          if (activeShift != null) {
+                            CashShiftCloseDialog.show(context, activeShift);
+                          } else {
+                            CashShiftOpenDialog.show(context);
+                          }
                         },
                       ),
                     ],

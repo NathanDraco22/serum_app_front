@@ -8,11 +8,13 @@ part 'app_session_state.dart';
 class AppSessionCubit extends Cubit<AppSessionState> {
   final AuthRepository authRepository;
   final BranchesRepository branchesRepository;
+  final CashShiftsRepository? cashShiftsRepository;
   final UsersDataSource usersDataSource;
 
   AppSessionCubit({
     required this.authRepository,
     required this.branchesRepository,
+    this.cashShiftsRepository,
     UsersDataSource? usersDataSource,
   })  : usersDataSource = usersDataSource ?? UsersDataSource(),
         super(const AppSessionState());
@@ -20,8 +22,11 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   String get currentBranchId => state.currentBranch?.id ?? kOriginBranchId;
   BranchInDb? get currentBranch => state.currentBranch;
   List<BranchInDb> get branches => state.branches;
-  String get currentBranchName => state.currentBranch?.name ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
+  String get currentBranchName =>
+      state.currentBranch?.name ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
   UserInDb? get user => state.currentUser;
+  CashShiftInDb? get activeShift => state.activeShift;
+  bool get hasActiveShift => state.hasActiveShift;
 
   bool get hasMultipleBranches {
     final currentUser = state.currentUser;
@@ -58,6 +63,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
             clearUser: true,
             clearBranch: true,
             clearCashRegister: true,
+            clearActiveShift: true,
           ),
         );
         return;
@@ -66,11 +72,13 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       // Llamado liviano para validar el estado actual del usuario en la BD
       final check = await authRepository.checkUser();
       if (check.isUnactive) {
-        emit(state.copyWith(status: AppSessionStatus.accountInactive, clearUser: true));
+        emit(state.copyWith(
+            status: AppSessionStatus.accountInactive, clearUser: true));
         return;
       }
       if (check.isDeleted) {
-        emit(state.copyWith(status: AppSessionStatus.accountDeleted, clearUser: true));
+        emit(state.copyWith(
+            status: AppSessionStatus.accountDeleted, clearUser: true));
         return;
       }
 
@@ -85,6 +93,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
           clearUser: true,
           clearBranch: true,
           clearCashRegister: true,
+          clearActiveShift: true,
           errorMessage: 'Sesión expirada o no válida.',
         ),
       );
@@ -93,7 +102,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   /// Autentica al usuario con username, email o teléfono y contraseña
   Future<bool> login(String identifier, String password) async {
-    emit(state.copyWith(status: AppSessionStatus.authenticating, clearError: true));
+    emit(state.copyWith(
+        status: AppSessionStatus.authenticating, clearError: true));
 
     try {
       final response = await authRepository.login(
@@ -186,17 +196,43 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         clearUser: true,
         clearBranch: true,
         clearCashRegister: true,
+        clearActiveShift: true,
         clearError: true,
       ),
     );
   }
 
-  /// Selecciona la caja registradora activa para operar
+  /// Consulta el turno activo del usuario actual
+  Future<void> fetchActiveShift() async {
+    final currentUser = state.currentUser;
+    if (currentUser == null || cashShiftsRepository == null) return;
+    try {
+      final shift = await cashShiftsRepository!.getCurrentShift(currentUser.id);
+      emit(
+        state.copyWith(
+          activeShift: shift,
+          clearActiveShift: shift == null,
+        ),
+      );
+    } catch (_) {}
+  }
+
+  /// Establece el turno activo
+  void setActiveShift(CashShiftInDb shift) {
+    emit(state.copyWith(activeShift: shift));
+  }
+
+  /// Limpia el turno activo
+  void clearActiveShift() {
+    emit(state.copyWith(clearActiveShift: true));
+  }
+
+  /// Selecciona la caja registradora activa para operar (retrocompatibilidad)
   void selectCashRegister(CashRegisterInDb cashRegister) {
     emit(state.copyWith(activeCashRegister: cashRegister));
   }
 
-  /// Limpia la caja seleccionada
+  /// Limpia la caja seleccionada (retrocompatibilidad)
   void clearCashRegister() {
     emit(state.copyWith(clearCashRegister: true));
   }
@@ -204,7 +240,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<void> _fetchAndSetCurrentUser() async {
     try {
       final res = await usersDataSource.getAllUsers();
-      final list = (res['items'] as List<dynamic>?) ?? (res['data'] as List<dynamic>?) ?? [];
+      final list = (res['items'] as List<dynamic>?) ??
+          (res['data'] as List<dynamic>?) ??
+          [];
       if (list.isNotEmpty) {
         final user = UserInDb.fromJson(list.first as Map<String, dynamic>);
         await _setupBranchesAndUser(user);
@@ -242,7 +280,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       createdAt: DateTime.now().millisecondsSinceEpoch,
     );
 
-    // Asegurar que kOriginBranchId esté en allBranches si no hay registros o no está presente
     if (allBranches.isEmpty) {
       allBranches = [defaultOriginBranch];
     } else if (!allBranches.any((b) => b.id == kOriginBranchId)) {
@@ -266,7 +303,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
     AppSerumConfig().setBranchId(selectedBranch.id);
 
-    final finalAvailableBranches = userBranches.isNotEmpty ? userBranches : allBranches;
+    final finalAvailableBranches =
+        userBranches.isNotEmpty ? userBranches : allBranches;
 
     emit(
       state.copyWith(
@@ -277,5 +315,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         clearError: true,
       ),
     );
+
+    // Consultar turno activo tras configurar usuario
+    await fetchActiveShift();
   }
 }

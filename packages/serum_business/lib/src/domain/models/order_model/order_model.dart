@@ -131,13 +131,15 @@ class UpdateOrder {
 
 class OrderPayRequest {
   final int amount;
-  final String registerId;
+  final String? shiftId;
+  final String? registerId;
   final String paymentMethod;
   final UserInfo performedBy;
 
   OrderPayRequest({
     required this.amount,
-    required this.registerId,
+    this.shiftId,
+    this.registerId,
     required this.paymentMethod,
     required this.performedBy,
   });
@@ -145,7 +147,8 @@ class OrderPayRequest {
   Map<String, dynamic> toJson() {
     return {
       'amount': amount,
-      'registerId': registerId,
+      if (shiftId != null) 'shiftId': shiftId,
+      if (registerId != null) 'registerId': registerId,
       'paymentMethod': paymentMethod,
       'performedBy': performedBy.toJson(),
     };
