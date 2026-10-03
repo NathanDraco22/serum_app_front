@@ -81,7 +81,7 @@ class _BodyState extends State<_Body> {
         );
       },
     ).then((value) {
-      if (value == true && context.mounted) {
+      if (value != null && value != false && context.mounted) {
         context.read<ReadPatientCubit>().getAll();
       }
     });

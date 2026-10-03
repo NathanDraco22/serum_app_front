@@ -5,8 +5,12 @@ import 'package:serum_business/serum_business.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
+import '../../../cubits/patient_cubit/write_patients_cubit.dart';
+import '../../../cubits/doctor_cubit/write_doctors_cubit.dart';
 import '../../../widgets/dialogs/selectors/patient_selection_dialog.dart';
 import '../../../widgets/dialogs/selectors/doctor_selection_dialog.dart';
+import '../../patient/widgets/patient_form_dialog.dart';
+import '../../doctor/widgets/doctor_form_dialog.dart';
 import '../widgets/order_catalog_section.dart';
 import '../widgets/order_cart_section.dart';
 
@@ -61,6 +65,46 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       setState(() {
         _selectedDoctor = doctor;
       });
+    }
+  }
+
+  Future<void> _openCreatePatientDialog() async {
+    final created = await showDialog<dynamic>(
+      context: context,
+      builder: (dialogCtx) => BlocProvider<WritePatientCubit>(
+        create: (context) => WritePatientCubit(
+          patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
+        ),
+        child: const PatientFormDialog(),
+      ),
+    );
+    if (created != null && created is PatientInDb && mounted) {
+      setState(() {
+        _selectedPatient = created;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Paciente "${created.name}" registrado y seleccionado')),
+      );
+    }
+  }
+
+  Future<void> _openCreateDoctorDialog() async {
+    final created = await showDialog<dynamic>(
+      context: context,
+      builder: (dialogCtx) => BlocProvider<WriteDoctorCubit>(
+        create: (context) => WriteDoctorCubit(
+          doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
+        ),
+        child: const DoctorFormDialog(),
+      ),
+    );
+    if (created != null && created is DoctorInDb && mounted) {
+      setState(() {
+        _selectedDoctor = created;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Médico "${created.name}" registrado y seleccionado')),
+      );
     }
   }
 
@@ -295,6 +339,28 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               ],
             ),
             actions: [
+              OutlinedButton.icon(
+                onPressed: _openCreatePatientDialog,
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('Nuevo Paciente'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _openCreateDoctorDialog,
+                icon: const Icon(Icons.medical_services_outlined, size: 18),
+                label: const Text('Nuevo Médico'),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Container(
                 margin: const EdgeInsets.only(right: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

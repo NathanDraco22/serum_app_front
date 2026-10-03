@@ -23,6 +23,12 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   String? _cardId;
   late DateTime _dateOfBirth;
 
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _cardIdFocusNode = FocusNode();
+  final FocusNode _phoneFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _addressFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +58,16 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _cardId = '';
       _dateOfBirth = DateTime.now();
     }
+  }
+
+  @override
+  void dispose() {
+    _nameFocusNode.dispose();
+    _cardIdFocusNode.dispose();
+    _phoneFocusNode.dispose();
+    _emailFocusNode.dispose();
+    _addressFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -90,7 +106,11 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
         );
         cubit.create(newPatient).then((_) {
           if (!mounted) return;
-          Navigator.pop(context, true);
+          if (cubit.state is PatientCreated) {
+            Navigator.pop(context, (cubit.state as PatientCreated).item);
+          } else {
+            Navigator.pop(context, true);
+          }
         });
       } else {
         final updatePatient = UpdatePatient(
@@ -104,7 +124,11 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
         );
         cubit.update(widget.patient!.id, updatePatient).then((_) {
           if (!mounted) return;
-          Navigator.pop(context, true);
+          if (cubit.state is PatientUpdated) {
+            Navigator.pop(context, (cubit.state as PatientUpdated).item);
+          } else {
+            Navigator.pop(context, true);
+          }
         });
       }
     }
@@ -127,12 +151,19 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
               children: [
                 TextFormField(
                   initialValue: _name,
+                  autofocus: true,
+                  focusNode: _nameFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _cardIdFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Nombre Completo *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _name = val ?? '',
                 ),
                 TextFormField(
                   initialValue: _cardId,
+                  focusNode: _cardIdFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Cédula / Identificación'),
                   onSaved: (val) => _cardId = val,
                 ),
@@ -170,17 +201,28 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
                 ),
                 TextFormField(
                   initialValue: _phone,
+                  focusNode: _phoneFocusNode,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.phone,
+                  onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Teléfono *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _phone = val ?? '',
                 ),
                 TextFormField(
                   initialValue: _email,
+                  focusNode: _emailFocusNode,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.emailAddress,
+                  onFieldSubmitted: (_) => _addressFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Correo Electrónico'),
                   onSaved: (val) => _email = val,
                 ),
                 TextFormField(
                   initialValue: _address,
+                  focusNode: _addressFocusNode,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
                   decoration: const InputDecoration(labelText: 'Dirección *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _address = val ?? '',

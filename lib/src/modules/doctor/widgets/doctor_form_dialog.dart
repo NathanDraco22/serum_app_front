@@ -21,6 +21,12 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   String? _email;
   String? _cardId;
 
+  final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _specialtyFocusNode = FocusNode();
+  final FocusNode _cardIdFocusNode = FocusNode();
+  final FocusNode _phoneFocusNode = FocusNode();
+  final FocusNode _emailFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +43,16 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
       _email = '';
       _cardId = '';
     }
+  }
+
+  @override
+  void dispose() {
+    _nameFocusNode.dispose();
+    _specialtyFocusNode.dispose();
+    _cardIdFocusNode.dispose();
+    _phoneFocusNode.dispose();
+    _emailFocusNode.dispose();
+    super.dispose();
   }
 
   void _submit() {
@@ -58,7 +74,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         );
         cubit.create(newDoctor).then((_) {
           if (!mounted) return;
-          Navigator.pop(context, true);
+          if (cubit.state is DoctorCreated) {
+            Navigator.pop(context, (cubit.state as DoctorCreated).item);
+          } else {
+            Navigator.pop(context, true);
+          }
         });
       } else {
         final updateDoctor = UpdateDoctor(
@@ -70,7 +90,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         );
         cubit.update(widget.doctor!.id, updateDoctor).then((_) {
           if (!mounted) return;
-          Navigator.pop(context, true);
+          if (cubit.state is DoctorUpdated) {
+            Navigator.pop(context, (cubit.state as DoctorUpdated).item);
+          } else {
+            Navigator.pop(context, true);
+          }
         });
       }
     }
@@ -92,29 +116,47 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               children: [
                 TextFormField(
                   initialValue: _name,
+                  autofocus: true,
+                  focusNode: _nameFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _specialtyFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Nombre Completo *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _name = val ?? '',
                 ),
                 TextFormField(
                   initialValue: _specialty,
+                  focusNode: _specialtyFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _cardIdFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Especialidad *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _specialty = val ?? '',
                 ),
                 TextFormField(
                   initialValue: _cardId,
+                  focusNode: _cardIdFocusNode,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Nº Licencia / Identificación'),
                   onSaved: (val) => _cardId = val,
                 ),
                 TextFormField(
                   initialValue: _phone,
+                  focusNode: _phoneFocusNode,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.phone,
+                  onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Teléfono *'),
                   validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
                   onSaved: (val) => _phone = val ?? '',
                 ),
                 TextFormField(
                   initialValue: _email,
+                  focusNode: _emailFocusNode,
+                  textInputAction: TextInputAction.done,
+                  keyboardType: TextInputType.emailAddress,
+                  onFieldSubmitted: (_) => _submit(),
                   decoration: const InputDecoration(labelText: 'Correo Electrónico'),
                   onSaved: (val) => _email = val,
                 ),
