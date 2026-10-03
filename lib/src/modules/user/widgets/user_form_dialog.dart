@@ -24,20 +24,17 @@ class _UserFormDialogState extends State<UserFormDialog> {
   late final TextEditingController _phoneController;
 
   late String _selectedRole;
+  late int _selectedAccessLevel;
   late bool _isActive;
   late List<String> _selectedBranches;
+
+  List<RoleInDb> _dbRoles = [];
+  bool _isLoadingRoles = true;
 
   bool _obscurePassword = true;
   bool _isSaving = false;
 
   bool get _isEditing => widget.user != null;
-
-  static const _availableRoles = [
-    {'value': 'Admin', 'label': 'Administrador (Acceso total)'},
-    {'value': 'Cashier', 'label': 'Cajero (Módulo POS y caja)'},
-    {'value': 'Bioanalyst', 'label': 'Bioanalista (Resultados de lab)'},
-    {'value': 'Doctor', 'label': 'Médico (Consultas y órdenes)'},
-  ];
 
   @override
   void initState() {
@@ -49,20 +46,41 @@ class _UserFormDialogState extends State<UserFormDialog> {
     _emailController = TextEditingController(text: u?.email ?? '');
     _phoneController = TextEditingController(text: u?.phone ?? '');
 
-    // Normalizar rol
-    final currentRole = u?.role ?? 'Cashier';
-    _selectedRole = _availableRoles.any(
-            (r) => r['value']!.toLowerCase() == currentRole.toLowerCase())
-        ? _availableRoles.firstWhere((r) =>
-            r['value']!.toLowerCase() == currentRole.toLowerCase())['value']!
-        : 'Cashier';
+    _selectedRole = u?.role ?? 'Operador';
+    _selectedAccessLevel =
+        u?.accessLevel ?? (_selectedRole.toLowerCase() == 'admin' ? 5 : 3);
 
     _isActive = u?.isActive ?? true;
     _selectedBranches = List<String>.from(u?.branches ?? []);
 
-    // Cargar sucursales si no están cargadas
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Cargar sucursales y roles si no están cargadas
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ReadBranchCubit>().getAll();
+      try {
+        final rolesRepo = context.read<RolesRepository>();
+        final loadedRoles = await rolesRepo.getAllRoles();
+        if (mounted) {
+          setState(() {
+            _dbRoles = loadedRoles;
+            _isLoadingRoles = false;
+            // Si el rol actual coincide con alguno de la BD, sincronizar nivel
+            final match = _dbRoles.where(
+              (r) => r.name.toLowerCase() == _selectedRole.toLowerCase(),
+            );
+            if (match.isNotEmpty) {
+              _selectedRole = match.first.name;
+              _selectedAccessLevel = match.first.accessLevel;
+            } else if (_dbRoles.isNotEmpty && !_isEditing) {
+              _selectedRole = _dbRoles.first.name;
+              _selectedAccessLevel = _dbRoles.first.accessLevel;
+            }
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _isLoadingRoles = false);
+        }
+      }
     });
   }
 
@@ -109,6 +127,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                 ? _phoneController.text.trim()
                 : null,
             role: _selectedRole,
+            accessLevel: _selectedAccessLevel,
             branches: _selectedBranches,
             isActive: _isActive,
           ),
@@ -126,6 +145,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                 ? _phoneController.text.trim()
                 : null,
             role: _selectedRole,
+            accessLevel: _selectedAccessLevel,
             branches: _selectedBranches,
             isActive: _isActive,
           ),
@@ -287,20 +307,76 @@ class _UserFormDialogState extends State<UserFormDialog> {
                       Expanded(
                         child: DropdownButtonFormField<String>(
                           initialValue: _selectedRole,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Rol Operativo *',
-                            prefixIcon: Icon(Icons.badge_outlined),
-                            border: OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.badge_outlined),
+                            border: const OutlineInputBorder(),
+                            helperText: 'Nivel $_selectedAccessLevel de 5 (Jerarquía de permisos)',
+                            suffix: _isLoadingRoles
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : null,
                           ),
-                          items: _availableRoles.map((role) {
-                            return DropdownMenuItem<String>(
-                              value: role['value'],
-                              child: Text(role['label']!),
-                            );
-                          }).toList(),
+                          items: () {
+                            final roleNames = <String>{};
+                            final items = <DropdownMenuItem<String>>[];
+
+                            if (_dbRoles.isNotEmpty) {
+                              for (final r in _dbRoles) {
+                                roleNames.add(r.name);
+                                items.add(
+                                  DropdownMenuItem<String>(
+                                    value: r.name,
+                                    child: Text('${r.name} (Nivel ${r.accessLevel})'),
+                                  ),
+                                );
+                              }
+                            } else {
+                              roleNames.addAll(['Admin', 'Operador']);
+                              items.addAll([
+                                const DropdownMenuItem<String>(
+                                  value: 'Admin',
+                                  child: Text('Admin (Nivel 5)'),
+                                ),
+                                const DropdownMenuItem<String>(
+                                  value: 'Operador',
+                                  child: Text('Operador (Nivel 3)'),
+                                ),
+                              ]);
+                            }
+
+                            // Asegurar que el rol actual del usuario esté siempre presente en la lista
+                            if (!roleNames.contains(_selectedRole)) {
+                              items.insert(
+                                0,
+                                DropdownMenuItem<String>(
+                                  value: _selectedRole,
+                                  child: Text('$_selectedRole (Nivel $_selectedAccessLevel)'),
+                                ),
+                              );
+                            }
+
+                            return items;
+                          }(),
                           onChanged: (val) {
                             if (val != null) {
-                              setState(() => _selectedRole = val);
+                              setState(() {
+                                _selectedRole = val;
+                                final match = _dbRoles.where(
+                                  (r) => r.name.toLowerCase() == val.toLowerCase(),
+                                );
+                                if (match.isNotEmpty) {
+                                  _selectedAccessLevel = match.first.accessLevel;
+                                } else {
+                                  _selectedAccessLevel =
+                                      val.toLowerCase() == 'admin' ? 5 : 3;
+                                }
+                              });
                             }
                           },
                         ),

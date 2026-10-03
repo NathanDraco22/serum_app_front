@@ -18,6 +18,7 @@ import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
 import '../src/modules/administration/view/administration_screen.dart';
 import '../src/modules/branch/view/branch_screen.dart';
 import '../src/modules/user/view/user_screen.dart';
+import '../src/modules/role/view/role_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
@@ -52,6 +53,7 @@ class AppRouter {
   static const String administration = '/admin';
   static const String adminBranches = '/admin/branches';
   static const String adminUsers = '/admin/users';
+  static const String adminRoles = '/admin/roles';
 
   // Navigator keys para cada branch
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -127,6 +129,11 @@ class AppRouter {
           path: adminUsers,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const UsersScreen(),
+        ),
+        GoRoute(
+          path: adminRoles,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const RoleScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {

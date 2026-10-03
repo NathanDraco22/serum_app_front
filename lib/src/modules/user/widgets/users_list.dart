@@ -188,7 +188,7 @@ class UsersList extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              user.role.toUpperCase(),
+                              '${user.role.toUpperCase()} • LVL ${user.accessLevel}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: roleColor,
                                 fontWeight: FontWeight.bold,

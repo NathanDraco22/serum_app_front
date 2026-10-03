@@ -55,7 +55,9 @@ serum_app_front/
 │       │   ├── quotation_cubit/        # Cotizaciones (Read, Write, Search)
 │       │   └── user_cubit/             # Usuarios y colaboradores
 │       ├── modules/                    # Módulos de pantalla (UI)
+│       │   ├── administration/         # Hub central de administración (submenú en cuadrícula)
 │       │   ├── auth/                   # Pantalla de Login y autenticación
+│       │   ├── branch/                 # Consola de Sucursales / Sedes (CRUD en pantalla completa)
 │       │   ├── cash_register_selection/# Selección obligatoria de caja física
 │       │   ├── cash_register/          # Gestión de cajas, apertura y arqueo/cierre
 │       │   ├── cash_transaction/       # Kardex contable de auditoría
@@ -66,7 +68,8 @@ serum_app_front/
 │       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados
 │       │   ├── patient/                # Padrón de pacientes y expediente
 │       │   ├── quotation/              # Presupuestos rápidos con conversión a orden
-│       │   └── splash/                 # Pantalla de carga e hidratación de sesión
+│       │   ├── splash/                 # Pantalla de carga e hidratación de sesión
+│       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
 │       ├── services/                   # Implementaciones de servicios locales (Secure storage)
 │       ├── tools/                      # Formateadores, helpers y utilidades de UI
 │       └── widgets/                    # Widgets y selectores transversales compartidos
@@ -236,6 +239,32 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   1. **Auditoría Inmutable**: Libro contable de solo lectura donde se visualizan todos los movimientos monetarios de la sucursal y caja activa.
   2. **Tipificación de Transacciones**: Clasifica los movimientos en Apertura (`opening`), Cobro de Orden (`order_payment`), Ingreso Extraordinario (`income`), Retiro/Gasto (`withdrawal`) y Cierre (`closing`).
   3. **Desglose de Montos y Métodos**: Muestra el sentido contable (entrada `in` / salida `out`), método utilizado y nota de justificación.
+
+---
+
+### ⚙️ 3.12 Módulo `administration` (Hub Central de Administración)
+* **Ubicación**: `lib/src/modules/administration/`
+* **Vistas**: `view/administration_screen.dart`
+* **Widgets**: `widgets/admin_module_card.dart`
+* **Cubits Asociados**: Integrado en el Shell de navegación (`HomeMenusScreen`, Branch 8 `/admin`).
+* **Funciones Clave**:
+  1. **Consola Central**: Submenú moderno con tarjetas interactivas en cuadrícula responsiva (`GridView.extent`) para acceder a las áreas de configuración del sistema.
+  2. **Tarjetas de Submódulos (`AdminModuleCard`)**: Componentes con hover interactivo y microanimaciones que abren las consolas de gestión en pantalla completa.
+  3. **Extensibilidad**: Estructura modular preparada para la incorporación progresiva de nuevos módulos administrativos (roles, auditoría, configuración general).
+
+---
+
+### 🏢 3.13 Submódulos `branch` y `user` (Consolas de Gestión en Pantalla Completa)
+* **Ubicación**: `lib/src/modules/branch/`, `lib/src/modules/user/`
+* **Vistas**: `branch/view/branch_screen.dart` (`/admin/branches`), `user/view/user_screen.dart` (`/admin/users`)
+* **Widgets**:
+  - `branch/widgets/branches_list.dart`, `branch/widgets/branch_form_dialog.dart`
+  - `user/widgets/users_list.dart`, `user/widgets/user_form_dialog.dart`
+* **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`, `ReadUserCubit`, `WriteUserCubit`
+* **Funciones Clave**:
+  1. **Apertura a Pantalla Completa (`parentNavigatorKey: _rootNavigatorKey`)**: Oculta la barra lateral para otorgar máxima amplitud y concentración operativa, con botón de retroceso (`Icons.arrow_back`) para volver al hub.
+  2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con buscador reactivo y protección para la sede matriz (`ORIGIN_BRANCH`).
+  3. **CRUD Completo de Usuarios**: Control de credenciales, roles (`Admin`, `Cashier`, `Bioanalyst`, `Doctor`), asignación dinámica de sucursales autorizadas (`FilterChip`), switch de usuario activo y blindaje de la cuenta `root`.
 
 ---
 

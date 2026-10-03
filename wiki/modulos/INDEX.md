@@ -22,3 +22,4 @@ Este directorio documenta a profundidad cada una de las áreas funcionales de la
 | **[Órdenes, Pagos y Resultados](ordenes_y_resultados.md)** | `order` | Ciclo de órdenes médicas con snapshots inmutables, modal de cobro integrado a caja registradora y captura adaptativa de resultados. |
 | **[Cotizaciones](cotizaciones.md)** | `quotation` | Presupuestos para clientes casuales, cálculo de totales y conversión a órdenes. |
 | **[Cajas y Kardex](cajas_y_kardex.md)** | `cash_register`, `cash_transaction` | Apertura formal de caja, arqueo con cálculo de sobrante/faltante, cierre y Kardex inmutable de movimientos financieros. |
+| **[Administración, Sucursales y Usuarios](administracion_sucursales_y_usuarios.md)** | `administration`, `branch`, `user` | Centro de control de infraestructura clínica, submenú en cuadrícula responsiva, y consolas de gestión en pantalla completa para sucursales y colaboradores con asignación de roles y sedes. |

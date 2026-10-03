@@ -8,5 +8,6 @@ export 'order_model/order_model.dart';
 export 'patient_model/patient_model.dart';
 export 'quotation_model/quotation_model.dart';
 export 'user_model/user_model.dart';
+export 'role_model/role_model.dart';
 export 'auth_model/auth_models.dart';
 export 'shared/export.dart';

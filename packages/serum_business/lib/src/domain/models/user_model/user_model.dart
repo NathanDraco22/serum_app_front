@@ -5,6 +5,7 @@ class BaseUser {
   final String? email;
   final String? phone;
   final String role;
+  final int accessLevel;
   final List<String> branches;
   final bool isActive;
   final bool isInternal;
@@ -16,6 +17,7 @@ class BaseUser {
     this.email,
     this.phone,
     required this.role,
+    this.accessLevel = 3,
     this.branches = const [],
     this.isActive = true,
     this.isInternal = false,
@@ -30,6 +32,7 @@ class CreateUser extends BaseUser {
     super.email,
     super.phone,
     required super.role,
+    super.accessLevel = 3,
     super.branches = const [],
     super.isActive = true,
     super.isInternal = false,
@@ -43,6 +46,7 @@ class CreateUser extends BaseUser {
       'email': email,
       'phone': phone,
       'role': role,
+      'accessLevel': accessLevel,
       'branches': branches,
       'isActive': isActive,
       'isInternal': isInternal,
@@ -57,6 +61,7 @@ class UpdateUser {
   final String? email;
   final String? phone;
   final String? role;
+  final int? accessLevel;
   final List<String>? branches;
   final bool? isActive;
   final bool? isInternal;
@@ -68,6 +73,7 @@ class UpdateUser {
     this.email,
     this.phone,
     this.role,
+    this.accessLevel,
     this.branches,
     this.isActive,
     this.isInternal,
@@ -81,6 +87,7 @@ class UpdateUser {
       if (email != null) 'email': email,
       if (phone != null) 'phone': phone,
       if (role != null) 'role': role,
+      if (accessLevel != null) 'accessLevel': accessLevel,
       if (branches != null) 'branches': branches,
       if (isActive != null) 'isActive': isActive,
       if (isInternal != null) 'isInternal': isInternal,
@@ -102,6 +109,7 @@ class UserInDb extends BaseUser {
     super.email,
     super.phone,
     required super.role,
+    super.accessLevel = 3,
     super.branches = const [],
     super.isActive = true,
     super.isInternal = false,
@@ -111,6 +119,8 @@ class UserInDb extends BaseUser {
   });
 
   factory UserInDb.fromJson(Map<String, dynamic> json) {
+    final role = json['role'] as String? ?? 'Operador';
+    final fallbackAccessLevel = role.toLowerCase() == 'admin' ? 5 : 3;
     return UserInDb(
       id: json['id'] as String,
       username: json['username'] as String,
@@ -118,7 +128,8 @@ class UserInDb extends BaseUser {
       name: json['name'] as String,
       email: json['email'] as String?,
       phone: json['phone'] as String?,
-      role: json['role'] as String,
+      role: role,
+      accessLevel: json['accessLevel'] as int? ?? fallbackAccessLevel,
       branches: (json['branches'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -131,4 +142,3 @@ class UserInDb extends BaseUser {
     );
   }
 }
-

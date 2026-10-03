@@ -124,6 +124,19 @@ class AdministrationScreen extends StatelessWidget {
                             badgeText: 'Personal',
                             onTap: () => context.push(AppRouter.adminUsers),
                           ),
+
+                          // 3. Roles y Niveles de Acceso
+                          AdminModuleCard(
+                            title: 'Roles y Niveles de Acceso',
+                            description:
+                                'Configuración de perfiles y jerarquía de permisos del sistema (Niveles 1 al 5: Admin, Operador, etc.).',
+                            icon: Icons.security_rounded,
+                            iconColor: theme.colorScheme.tertiary,
+                            iconBackgroundColor:
+                                theme.colorScheme.tertiaryContainer.withAlpha(90),
+                            badgeText: 'Jerarquía',
+                            onTap: () => context.push(AppRouter.adminRoles),
+                          ),
                         ],
                       );
                     },
