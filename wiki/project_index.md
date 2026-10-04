@@ -53,6 +53,7 @@ serum_app_front/
 │       │   ├── order_cubit/            # Órdenes médicas (Read, Write, Search)
 │       │   ├── patient_cubit/          # Pacientes (Read, Write, Search)
 │       │   ├── quotation_cubit/        # Cotizaciones (Read, Write, Search)
+│       │   ├── report_cubit/           # Reportes analíticos y métricas de negocio
 │       │   └── user_cubit/             # Usuarios y colaboradores
 │       ├── modules/                    # Módulos de pantalla (UI)
 │       │   ├── administration/         # Hub central de administración (submenú en cuadrícula)
@@ -68,10 +69,12 @@ serum_app_front/
 │       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados
 │       │   ├── patient/                # Padrón de pacientes y expediente
 │       │   ├── quotation/              # Presupuestos rápidos con conversión a orden
+│       │   ├── report/                 # Reportes analíticos con gráficos interactivos (fl_chart)
 │       │   ├── splash/                 # Pantalla de carga e hidratación de sesión
 │       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
 │       ├── services/                   # Implementaciones de servicios locales (Secure storage)
 │       ├── tools/                      # Formateadores, helpers y utilidades de UI
+│       │   └── exports/                # Exportadores PDF (PdfExportTool, templates/reports/)
 │       └── widgets/                    # Widgets y selectores transversales compartidos
 ├── packages/
 │   └── serum_business/                 # Capa de negocio agnóstica en Dart puro
@@ -265,6 +268,29 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   1. **Apertura a Pantalla Completa (`parentNavigatorKey: _rootNavigatorKey`)**: Oculta la barra lateral para otorgar máxima amplitud y concentración operativa, con botón de retroceso (`Icons.arrow_back`) para volver al hub.
   2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con buscador reactivo y protección para la sede matriz (`ORIGIN_BRANCH`).
   3. **CRUD Completo de Usuarios**: Control de credenciales, roles (`Admin`, `Cashier`, `Bioanalyst`, `Doctor`), asignación dinámica de sucursales autorizadas (`FilterChip`), switch de usuario activo y blindaje de la cuenta `root`.
+
+---
+
+### 📊 3.14 Módulo `report` (Reportes Analíticos y Business Intelligence)
+* **Ubicación**: `lib/src/modules/report/`
+* **Vistas**: `view/reports_screen.dart` (`/reports`, Branch 8 de `StatefulShellRoute`)
+* **Widgets**:
+  - `widgets/reports_filter_bar.dart`
+  - `widgets/report_export_button.dart`
+  - `widgets/financial_report_view.dart`
+  - `widgets/top_doctors_report_view.dart`
+  - `widgets/lab_tests_volume_view.dart`
+  - `widgets/pending_balances_view.dart`
+  - `widgets/shifts_audit_view.dart`
+* **Cubits Asociados**: `ReportCubit` (inyectando `ReportsRepository` de `serum_business`)
+* **Funciones Clave**:
+  1. **Inteligencia Financiera**: Comparativa visual entre volumen facturado, cobranza real en Kardex y cartera insoluta, junto con desglose porcentual por método de pago (`PieChart`).
+  2. **Top Médicos Prescriptores**: Ranking clínico de derivaciones con gráfico de barras ordenado por volumen facturado y número de órdenes.
+  3. **Demanda de Catálogo y Packs**: Análisis de frecuencia de órdenes y cotizaciones distinguiendo visualmente entre análisis individuales y paquetes clínicos.
+  4. **Cuentas por Cobrar y Morosidad**: Padrón interactivo de pacientes con saldos pendientes, días de mora acumulada y alertas de antigüedad.
+  5. **Auditoría de Turnos de Caja**: Control de descuadres de caja con gráfico de dispersión/barras diferenciando sobrantes en verde ($>0$), faltantes en rojo ($<0$) y arqueos cuadrados ($0).
+  6. **Control de Acceso Sensible (`PermissionGate`)**: Bloqueo y protección de las pestañas Financiera y Auditoría restringidas exclusivamente a usuarios con nivel supervisor o superior (`AccessLevels.supervisor` / 4+).
+  7. **Exportación e Impresión Institucional a PDF (`ReportExportButton`)**: Generación de documentos PDF A4 con membrete institucional de sucursal, resumen de métricas clave en KPIs, tablas de auditoría detalladas con montos en centavos formateados, y soporte para descarga local (`export`) e impresión/vista previa física (`printPdf`).
 
 ---
 

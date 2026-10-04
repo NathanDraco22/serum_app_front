@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/report_cubit/report_cubit.dart';
+import 'report_export_button.dart';
 
 class ReportsFilterBar extends StatelessWidget {
   const ReportsFilterBar({super.key});
@@ -151,6 +152,7 @@ class ReportsFilterBar extends StatelessWidget {
                     ),
                   ),
                 ),
+              const ReportExportButton(),
               IconButton.filledTonal(
                 tooltip: 'Recargar reporte',
                 icon: reportState.isLoading
