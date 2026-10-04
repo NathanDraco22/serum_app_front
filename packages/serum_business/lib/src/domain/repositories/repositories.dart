@@ -11,4 +11,5 @@ export 'orders_repository.dart';
 export 'patients_repository.dart';
 export 'quotations_repository.dart';
 export 'roles_repository.dart';
+export 'reports_repository.dart';
 export 'users_repository.dart';

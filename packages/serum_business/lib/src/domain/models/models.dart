@@ -10,4 +10,5 @@ export 'quotation_model/quotation_model.dart';
 export 'user_model/user_model.dart';
 export 'role_model/role_model.dart';
 export 'auth_model/auth_models.dart';
+export 'report_model/report_models.dart';
 export 'shared/export.dart';

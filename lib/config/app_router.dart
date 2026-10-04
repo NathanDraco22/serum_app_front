@@ -19,6 +19,7 @@ import '../src/modules/administration/view/administration_screen.dart';
 import '../src/modules/branch/view/branch_screen.dart';
 import '../src/modules/user/view/user_screen.dart';
 import '../src/modules/role/view/role_screen.dart';
+import '../src/modules/report/view/reports_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
@@ -50,6 +51,7 @@ class AppRouter {
   static const String quotations = '/quotations';
   static const String cashShifts = '/cash-shifts';
   static const String cashTransactions = '/cash-transactions';
+  static const String reports = '/reports';
   static const String administration = '/admin';
   static const String adminBranches = '/admin/branches';
   static const String adminUsers = '/admin/users';
@@ -72,6 +74,7 @@ class AppRouter {
       GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
   static final _cashTransactionsNavKey =
       GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
+  static final _reportsNavKey = GlobalKey<NavigatorState>(debugLabel: 'reports');
   static final _adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
 
   static GoRouter createRouter(AppSessionCubit sessionCubit) {
@@ -224,7 +227,17 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 8: Administración
+            // Branch 8: Reportes Analíticos
+            StatefulShellBranch(
+              navigatorKey: _reportsNavKey,
+              routes: [
+                GoRoute(
+                  path: reports,
+                  builder: (context, state) => const ReportsScreen(),
+                ),
+              ],
+            ),
+            // Branch 9: Administración
             StatefulShellBranch(
               navigatorKey: _adminNavKey,
               routes: [
