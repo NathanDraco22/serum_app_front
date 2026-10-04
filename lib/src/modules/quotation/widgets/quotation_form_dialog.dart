@@ -125,11 +125,52 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                           return ListTile(
                             dense: true,
                             title: Text(item.name),
-                            subtitle: Text('\$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => setState(() => _selectedExams.removeAt(index)),
-                              color: theme.colorScheme.error,
+                            subtitle: Text('Tarifa P${item.priceLevel} • \$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Text(
+                                    'P${item.priceLevel}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: item.priceLevel == 2
+                                          ? theme.colorScheme.tertiary
+                                          : theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                  tooltip: 'Alternar tarifa P1 / P2',
+                                  onPressed: () {
+                                    final test = labTests.firstWhere(
+                                      (t) => t.id == item.labTestId,
+                                      orElse: () => LabTestInDb(
+                                        id: item.labTestId,
+                                        name: item.name,
+                                        createdAt: 0,
+                                      ),
+                                    );
+                                    final nextLevel = item.priceLevel == 1 ? 2 : 1;
+                                    final nextPrice = (nextLevel == 2 && test.salePrice2 > 0)
+                                        ? test.salePrice2
+                                        : test.salePrice;
+                                    setState(() {
+                                      _selectedExams[index] = QuotedExam(
+                                        labTestId: item.labTestId,
+                                        name: item.name,
+                                        quotedPrice: nextPrice,
+                                        isPack: item.isPack,
+                                        priceLevel: nextLevel,
+                                      );
+                                    });
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  onPressed: () => setState(() => _selectedExams.removeAt(index)),
+                                  color: theme.colorScheme.error,
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -155,6 +196,12 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                       itemCount: labTests.length,
                       itemBuilder: (context, index) {
                         final test = labTests[index];
+                        final price1Str = (test.salePrice / 100).toStringAsFixed(2);
+                        final price2Str = (test.salePrice2 / 100).toStringAsFixed(2);
+                        final priceDisplay = test.salePrice2 > 0
+                            ? 'P1: \$$price1Str | P2: \$$price2Str'
+                            : '\$$price1Str';
+
                         return ListTile(
                           dense: true,
                           leading: Icon(
@@ -165,7 +212,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                                 : theme.colorScheme.primary,
                           ),
                           title: Text(test.name),
-                          subtitle: Text('\$${(test.salePrice / 100).toStringAsFixed(2)}'),
+                          subtitle: Text(priceDisplay),
                           trailing: IconButton(
                             icon: const Icon(Icons.add_circle),
                             onPressed: () {
@@ -179,6 +226,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                                     name: test.name,
                                     quotedPrice: test.salePrice,
                                     isPack: test.isPack,
+                                    priceLevel: 1,
                                   ),
                                 );
                               });

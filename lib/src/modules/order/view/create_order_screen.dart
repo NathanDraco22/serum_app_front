@@ -49,6 +49,8 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   PatientInDb? _selectedPatient;
   DoctorInDb? _selectedDoctor;
   final List<LabTestInDb> _selectedItems = [];
+  final Map<String, int> _itemPriceLevels = {};
+  int _defaultPriceLevel = 1;
   bool _isSubmitting = false;
 
   Future<void> _pickPatient() async {
@@ -114,8 +116,10 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       final index = _selectedItems.indexWhere((i) => i.id == test.id);
       if (index >= 0) {
         _selectedItems.removeAt(index);
+        _itemPriceLevels.remove(test.id);
       } else {
         _selectedItems.add(test);
+        _itemPriceLevels[test.id] = _defaultPriceLevel;
       }
     });
   }
@@ -123,6 +127,22 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   void _removeItem(LabTestInDb test) {
     setState(() {
       _selectedItems.removeWhere((i) => i.id == test.id);
+      _itemPriceLevels.remove(test.id);
+    });
+  }
+
+  void _changeItemPriceLevel(LabTestInDb test, int level) {
+    setState(() {
+      _itemPriceLevels[test.id] = level;
+    });
+  }
+
+  void _changeDefaultPriceLevel(int level) {
+    setState(() {
+      _defaultPriceLevel = level;
+      for (final item in _selectedItems) {
+        _itemPriceLevels[item.id] = level;
+      }
     });
   }
 
@@ -140,7 +160,10 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
-              setState(() => _selectedItems.clear());
+              setState(() {
+                _selectedItems.clear();
+                _itemPriceLevels.clear();
+              });
             },
             child: const Text('Vaciar', style: TextStyle(color: Colors.red)),
           ),
@@ -194,13 +217,16 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
     setState(() => _isSubmitting = true);
 
-    // 1. Construir lista de OrderItem congelando precio
+    // 1. Construir lista de OrderItem congelando precio según su priceLevel
     final orderItems = _selectedItems.map((test) {
+      final level = _itemPriceLevels[test.id] ?? _defaultPriceLevel;
+      final price = (level == 2 && test.salePrice2 > 0) ? test.salePrice2 : test.salePrice;
       return OrderItem(
         labTestId: test.id,
         name: test.name,
-        salePriceApplied: test.salePrice,
+        salePriceApplied: price,
         isPack: test.isPack,
+        priceLevel: level,
       );
     }).toList();
 
@@ -249,7 +275,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       }
     }
 
-    final totalInCents = _selectedItems.fold(0, (sum, i) => sum + i.salePrice);
+    final totalInCents = orderItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
     final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
     final newOrder = CreateOrder(
@@ -422,12 +448,16 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedPatient: _selectedPatient,
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
+                          itemPriceLevels: _itemPriceLevels,
+                          defaultPriceLevel: _defaultPriceLevel,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
                           onRemovePatient: () => setState(() => _selectedPatient = null),
                           onSelectDoctor: _pickDoctor,
                           onRemoveDoctor: () => setState(() => _selectedDoctor = null),
                           onRemoveItem: _removeItem,
+                          onPriceLevelChanged: _changeItemPriceLevel,
+                          onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
                           onClearItems: _clearItems,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
@@ -456,12 +486,16 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedPatient: _selectedPatient,
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
+                          itemPriceLevels: _itemPriceLevels,
+                          defaultPriceLevel: _defaultPriceLevel,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
                           onRemovePatient: () => setState(() => _selectedPatient = null),
                           onSelectDoctor: _pickDoctor,
                           onRemoveDoctor: () => setState(() => _selectedDoctor = null),
                           onRemoveItem: _removeItem,
+                          onPriceLevelChanged: _changeItemPriceLevel,
+                          onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
                           onClearItems: _clearItems,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),

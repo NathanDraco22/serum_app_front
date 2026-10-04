@@ -5,6 +5,7 @@ class BaseLabTest {
   final String? code;
   final String commercialCategory;
   final int salePrice;
+  final int salePrice2;
   final String currency;
   final bool isPack;
   final List<String> childTestIds;
@@ -22,6 +23,7 @@ class BaseLabTest {
     this.code,
     this.commercialCategory = '',
     this.salePrice = 0,
+    this.salePrice2 = 0,
     this.currency = 'USD',
     this.isPack = false,
     this.childTestIds = const [],
@@ -39,6 +41,7 @@ class CreateLabTest extends BaseLabTest {
     super.code,
     super.commercialCategory = '',
     super.salePrice = 0,
+    super.salePrice2 = 0,
     super.currency = 'USD',
     super.isPack = false,
     super.childTestIds = const [],
@@ -56,6 +59,7 @@ class CreateLabTest extends BaseLabTest {
       'code': code,
       'commercialCategory': commercialCategory,
       'salePrice': salePrice,
+      'salePrice2': salePrice2,
       'currency': currency,
       'isPack': isPack,
       'childTestIds': childTestIds,
@@ -73,6 +77,7 @@ class UpdateLabTest {
   final String? code;
   final String? commercialCategory;
   final int? salePrice;
+  final int? salePrice2;
   final String? currency;
   final bool? isPack;
   final List<String>? childTestIds;
@@ -87,6 +92,7 @@ class UpdateLabTest {
     this.code,
     this.commercialCategory,
     this.salePrice,
+    this.salePrice2,
     this.currency,
     this.isPack,
     this.childTestIds,
@@ -104,6 +110,7 @@ class UpdateLabTest {
       if (code != null) 'code': code,
       if (commercialCategory != null) 'commercialCategory': commercialCategory,
       if (salePrice != null) 'salePrice': salePrice,
+      if (salePrice2 != null) 'salePrice2': salePrice2,
       if (currency != null) 'currency': currency,
       if (isPack != null) 'isPack': isPack,
       if (childTestIds != null) 'childTestIds': childTestIds,
@@ -130,6 +137,7 @@ class LabTestInDb extends BaseLabTest {
     super.code,
     super.commercialCategory = '',
     super.salePrice = 0,
+    super.salePrice2 = 0,
     super.currency = 'USD',
     super.isPack = false,
     super.childTestIds = const [],
@@ -152,6 +160,7 @@ class LabTestInDb extends BaseLabTest {
       code: json['code'] as String?,
       commercialCategory: rawCategory,
       salePrice: (json['salePrice'] as num?)?.toInt() ?? 0,
+      salePrice2: (json['salePrice2'] as num?)?.toInt() ?? 0,
       currency: json['currency'] as String? ?? 'USD',
       isPack: json['isPack'] as bool? ?? false,
       childTestIds: (json['childTestIds'] as List<dynamic>?)

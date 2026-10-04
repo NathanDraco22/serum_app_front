@@ -8,12 +8,16 @@ class OrderCartSection extends StatelessWidget {
   final PatientInDb? selectedPatient;
   final DoctorInDb? selectedDoctor;
   final List<LabTestInDb> selectedItems;
+  final Map<String, int> itemPriceLevels;
+  final int defaultPriceLevel;
   final bool isSubmitting;
   final VoidCallback onSelectPatient;
   final VoidCallback onRemovePatient;
   final VoidCallback onSelectDoctor;
   final VoidCallback onRemoveDoctor;
   final void Function(LabTestInDb) onRemoveItem;
+  final void Function(LabTestInDb, int) onPriceLevelChanged;
+  final void Function(int) onDefaultPriceLevelChanged;
   final VoidCallback onClearItems;
   final VoidCallback onSubmitOrder;
 
@@ -22,12 +26,16 @@ class OrderCartSection extends StatelessWidget {
     required this.selectedPatient,
     required this.selectedDoctor,
     required this.selectedItems,
+    this.itemPriceLevels = const {},
+    this.defaultPriceLevel = 1,
     required this.isSubmitting,
     required this.onSelectPatient,
     required this.onRemovePatient,
     required this.onSelectDoctor,
     required this.onRemoveDoctor,
     required this.onRemoveItem,
+    required this.onPriceLevelChanged,
+    required this.onDefaultPriceLevelChanged,
     required this.onClearItems,
     required this.onSubmitOrder,
   });
@@ -35,7 +43,11 @@ class OrderCartSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final totalCents = selectedItems.fold(0, (sum, i) => sum + i.salePrice);
+    final totalCents = selectedItems.fold<int>(0, (sum, item) {
+      final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
+      final price = (level == 2 && item.salePrice2 > 0) ? item.salePrice2 : item.salePrice;
+      return sum + price;
+    });
     final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
     // Calculate total individual clinical tests that will result from packs + items
@@ -109,6 +121,49 @@ class OrderCartSection extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
+            // Selector global de Nivel de Tarifa para toda la orden
+            if (selectedItems.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'Tarifa predeterminada:',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Precio 1 (Regular)', style: TextStyle(fontSize: 10)),
+                      selected: defaultPriceLevel == 1,
+                      onSelected: isSubmitting
+                          ? null
+                          : (sel) {
+                              if (sel) onDefaultPriceLevelChanged(1);
+                            },
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    ChoiceChip(
+                      label: const Text('Precio 2 (Convenio)', style: TextStyle(fontSize: 10)),
+                      selected: defaultPriceLevel == 2,
+                      onSelected: isSubmitting
+                          ? null
+                          : (sel) {
+                              if (sel) onDefaultPriceLevelChanged(2);
+                            },
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ],
+                ),
+              ),
+
             // Items List
             Expanded(
               child: selectedItems.isEmpty
@@ -145,11 +200,15 @@ class OrderCartSection extends StatelessWidget {
                       separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = selectedItems[index];
-                        final priceStr = NumberFormatter.convertToMoneyLike(item.salePrice);
+                        final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
+                        final appliedPrice = (level == 2 && item.salePrice2 > 0)
+                            ? item.salePrice2
+                            : item.salePrice;
+                        final priceStr = NumberFormatter.convertToMoneyLike(appliedPrice);
 
                         return ListTile(
                           dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           leading: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
@@ -182,14 +241,87 @@ class OrderCartSection extends StatelessWidget {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                priceStr,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              // Selector compacto P1 / P2
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHigh,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    InkWell(
+                                      onTap: isSubmitting ? null : () => onPriceLevelChanged(item, 1),
+                                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: level == 1 ? theme.colorScheme.primary : Colors.transparent,
+                                          borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                                        ),
+                                        child: Text(
+                                          'P1',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: level == 1
+                                                ? theme.colorScheme.onPrimary
+                                                : theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: isSubmitting
+                                          ? null
+                                          : () {
+                                              if (item.salePrice2 <= 0) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Este análisis no tiene Precio 2 configurado. Se cobrará el precio regular.',
+                                                    ),
+                                                    duration: Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                              onPriceLevelChanged(item, 2);
+                                            },
+                                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: level == 2 ? theme.colorScheme.tertiary : Colors.transparent,
+                                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                                        ),
+                                        child: Text(
+                                          'P2',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: level == 2
+                                                ? theme.colorScheme.onTertiary
+                                                : theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 8),
+                              Text(
+                                priceStr,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: level == 2 ? theme.colorScheme.tertiary : theme.colorScheme.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
                               IconButton(
                                 icon: const Icon(Icons.close, size: 18),
                                 color: theme.colorScheme.error,

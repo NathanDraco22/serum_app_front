@@ -157,12 +157,22 @@ class LabTestsList extends StatelessWidget {
                                 Icon(Icons.sell, size: 14, color: theme.colorScheme.primary),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '\$$priceFormatted USD',
+                                  'P1: \$$priceFormatted',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: theme.colorScheme.primary,
                                   ),
                                 ),
+                                if (labTest.salePrice2 > 0) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'P2: \$${(labTest.salePrice2 / 100.0).toStringAsFixed(2)}',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.tertiary,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                             Row(

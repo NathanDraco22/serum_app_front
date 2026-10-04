@@ -3,6 +3,7 @@ class QuotedExam {
   final String name;
   final int quotedPrice;
   final bool isPack;
+  final int priceLevel;
 
   String get examId => labTestId;
   String get examName => name;
@@ -12,6 +13,7 @@ class QuotedExam {
     required this.name,
     required this.quotedPrice,
     this.isPack = false,
+    this.priceLevel = 1,
   });
 
   factory QuotedExam.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class QuotedExam {
       name: json['name'] as String? ?? json['examName'] as String? ?? '',
       quotedPrice: (json['quotedPrice'] as num?)?.toInt() ?? 0,
       isPack: json['isPack'] as bool? ?? false,
+      priceLevel: (json['priceLevel'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -29,6 +32,7 @@ class QuotedExam {
       'name': name,
       'quotedPrice': quotedPrice,
       'isPack': isPack,
+      'priceLevel': priceLevel,
     };
   }
 }

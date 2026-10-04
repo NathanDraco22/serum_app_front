@@ -86,12 +86,14 @@ class OrderItem {
   final String name;
   final int salePriceApplied;
   final bool isPack;
+  final int priceLevel;
 
   OrderItem({
     required this.labTestId,
     required this.name,
     required this.salePriceApplied,
     this.isPack = false,
+    this.priceLevel = 1,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
@@ -100,6 +102,7 @@ class OrderItem {
       name: json['name'] as String? ?? json['examName'] as String? ?? '',
       salePriceApplied: (json['salePriceApplied'] as num?)?.toInt() ?? 0,
       isPack: json['isPack'] as bool? ?? false,
+      priceLevel: (json['priceLevel'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -109,6 +112,7 @@ class OrderItem {
       'name': name,
       'salePriceApplied': salePriceApplied,
       'isPack': isPack,
+      'priceLevel': priceLevel,
     };
   }
 }

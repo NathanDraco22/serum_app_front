@@ -31,6 +31,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
           name: test.name,
           salePriceApplied: test.salePrice,
           isPack: test.isPack,
+          priceLevel: 1,
         );
       }).toList();
 

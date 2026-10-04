@@ -20,6 +20,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
   late String _code;
   late String _commercialCategory;
   late double _salePrice;
+  late double _salePrice2;
   late bool _isPack;
   late List<String> _childTestIds;
   late String _dataType;
@@ -31,6 +32,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _unitController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+  final TextEditingController _price2Controller = TextEditingController();
 
   static const List<String> _commonCategories = [
     'Bioquímica Clínica',
@@ -63,6 +65,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
       _code = widget.labTest!.code ?? '';
       _commercialCategory = widget.labTest!.commercialCategory;
       _salePrice = widget.labTest!.salePrice / 100.0;
+      _salePrice2 = widget.labTest!.salePrice2 / 100.0;
       _isPack = widget.labTest!.isPack;
       _childTestIds = List.from(widget.labTest!.childTestIds);
       _dataType = widget.labTest!.dataType;
@@ -75,6 +78,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
       _code = '';
       _commercialCategory = 'Bioquímica Clínica';
       _salePrice = 0.0;
+      _salePrice2 = 0.0;
       _isPack = false;
       _childTestIds = [];
       _dataType = 'numeric';
@@ -96,6 +100,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
     _categoryController.text = _commercialCategory;
     _unitController.text = _unitOfMeasure;
     _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '';
+    _price2Controller.text = _salePrice2 > 0 ? _salePrice2.toStringAsFixed(2) : '';
   }
 
   @override
@@ -103,6 +108,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
     _categoryController.dispose();
     _unitController.dispose();
     _priceController.dispose();
+    _price2Controller.dispose();
     super.dispose();
   }
 
@@ -111,6 +117,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
       _formKey.currentState!.save();
       final cubit = context.read<WriteLabTestCubit>();
       final priceInCents = (_salePrice * 100).round();
+      final price2InCents = (_salePrice2 * 100).round();
 
       if (widget.labTest == null) {
         final newTest = CreateLabTest(
@@ -118,6 +125,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
           code: _code.trim().isNotEmpty ? _code.trim() : null,
           commercialCategory: _commercialCategory.trim(),
           salePrice: priceInCents,
+          salePrice2: price2InCents,
           isPack: _isPack,
           childTestIds: _isPack ? _childTestIds : [],
           dataType: _isPack ? 'pack' : _dataType,
@@ -139,6 +147,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
           code: _code.trim().isNotEmpty ? _code.trim() : null,
           commercialCategory: _commercialCategory.trim(),
           salePrice: priceInCents,
+          salePrice2: price2InCents,
           isPack: _isPack,
           childTestIds: _isPack ? _childTestIds : [],
           dataType: _isPack ? 'pack' : _dataType,
@@ -323,7 +332,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
-                            flex: 2,
+                            flex: 3,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -362,13 +371,14 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 12),
                           Expanded(
-                            flex: 1,
+                            flex: 2,
                             child: TextFormField(
                               controller: _priceController,
                               decoration: const InputDecoration(
-                                labelText: 'Precio de Venta (\$ USD) *',
+                                labelText: 'Precio 1 (\$ USD) *',
+                                hintText: 'Tarifa regular',
                                 prefixIcon: Icon(Icons.attach_money, size: 20),
                               ),
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -385,6 +395,33 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                 }
                               },
                               onSaved: (val) => _salePrice = double.tryParse(val ?? '0') ?? 0.0,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: _price2Controller,
+                              decoration: const InputDecoration(
+                                labelText: 'Precio 2 (\$ USD)',
+                                hintText: 'Tarifa especial',
+                                prefixIcon: Icon(Icons.attach_money, size: 20),
+                              ),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              validator: (val) {
+                                if (val != null && val.trim().isNotEmpty) {
+                                  final parsed = double.tryParse(val);
+                                  if (parsed == null || parsed < 0) return 'Precio inválido';
+                                }
+                                return null;
+                              },
+                              onChanged: (val) {
+                                final parsed = double.tryParse(val);
+                                if (parsed != null) {
+                                  setState(() => _salePrice2 = parsed);
+                                }
+                              },
+                              onSaved: (val) => _salePrice2 = double.tryParse(val ?? '0') ?? 0.0,
                             ),
                           ),
                         ],

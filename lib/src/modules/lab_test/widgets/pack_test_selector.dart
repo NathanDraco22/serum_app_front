@@ -285,7 +285,9 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                             ],
                             const SizedBox(width: 8),
                             Text(
-                              '\$$testPrice USD',
+                              test.salePrice2 > 0
+                                  ? 'P1: \$$testPrice | P2: \$${(test.salePrice2 / 100.0).toStringAsFixed(2)}'
+                                  : '\$$testPrice USD',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12,
