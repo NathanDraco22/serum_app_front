@@ -133,7 +133,6 @@ class _AdminModuleCardState extends State<AdminModuleCard> {
                         widget.description,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.35,
                         ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
