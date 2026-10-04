@@ -32,8 +32,10 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
         userId: userId,
         status: status,
       );
+      if (isClosed) return;
       emit(ReadCashShiftSuccess(items));
     } catch (error) {
+      if (isClosed) return;
       emit(ReadCashShiftError(error.toString()));
     }
   }
@@ -42,17 +44,20 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
     emit(ReadCashShiftLoading());
     try {
       final item = await _repository.getCashShiftById(shiftId);
+      if (isClosed) return;
       if (item == null) {
         emit(ReadCashShiftError("CashShift not found"));
       } else {
         emit(ReadCashShiftSuccess([item]));
       }
     } catch (error) {
+      if (isClosed) return;
       emit(ReadCashShiftError(error.toString()));
     }
   }
 
   void _handleRepoEvent(RepoEvent<CashShiftInDb> event) {
+    if (isClosed) return;
     switch (event) {
       case RepoItemCreated(:final item):
         markCashShiftCreated(item);
@@ -64,6 +69,7 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
   }
 
   void markCashShiftCreated(CashShiftInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadCashShiftSuccess) {
       final items = [
@@ -76,6 +82,7 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
   }
 
   void markCashShiftUpdated(CashShiftInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadCashShiftSuccess) {
       final items =
@@ -86,6 +93,7 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
   }
 
   void markCashShiftDeleted(CashShiftInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadCashShiftSuccess) {
       final deletedItems = [...currentState.deletedItems, item];
@@ -95,7 +103,7 @@ class ReadCashShiftCubit extends Cubit<ReadCashShiftState> {
 
   @override
   Future<void> close() async {
-    _subscription?.cancel();
-    await super.close();
+    await _subscription?.cancel();
+    return super.close();
   }
 }

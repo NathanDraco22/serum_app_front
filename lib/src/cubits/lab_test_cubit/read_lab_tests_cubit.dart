@@ -7,13 +7,16 @@ part 'read_lab_tests_state.dart';
 
 class ReadLabTestCubit extends Cubit<ReadLabTestState> {
   final LabTestsRepository labTestsRepository;
+  StreamSubscription<RepoEvent<LabTestInDb>>? _subscription;
+
   ReadLabTestCubit({required LabTestsRepository labTestsRepository})
       : labTestsRepository = labTestsRepository,
         super(ReadLabTestInitial()) {
-    labTestsRepository.eventStream.listen(_handleRepoEvent);
+    _subscription = labTestsRepository.eventStream.listen(_handleRepoEvent);
   }
 
   void _handleRepoEvent(RepoEvent<LabTestInDb> event) {
+    if (isClosed) return;
     if (event is RepoItemCreated<LabTestInDb>) {
       markLabTestCreated(event.item);
     } else if (event is RepoItemUpdated<LabTestInDb>) {
@@ -32,10 +35,12 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     }
     try {
       final items = await labTestsRepository.getAllLabTests();
+      if (isClosed) return;
       final sortedItems = List<LabTestInDb>.from(items)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       emit(ReadLabTestSuccess(sortedItems));
     } catch (e) {
+      if (isClosed) return;
       emit(ReadLabTestError(e.toString()));
     }
   }
@@ -44,17 +49,20 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     emit(ReadLabTestLoading());
     try {
       final item = await labTestsRepository.getLabTestById(labTestId);
+      if (isClosed) return;
       if (item != null) {
         emit(ReadLabTestSuccess([item]));
       } else {
         emit(ReadLabTestError('Not found'));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(ReadLabTestError(e.toString()));
     }
   }
 
   void markLabTestCreated(LabTestInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadLabTestSuccess) {
       final items = [item, ...currentState.items.where((u) => u.id != item.id)];
@@ -64,6 +72,7 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
   }
 
   void markLabTestUpdated(LabTestInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadLabTestSuccess) {
       final items = currentState.items.map((u) => u.id == item.id ? item : u).toList();
@@ -73,10 +82,17 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
   }
 
   void markLabTestDeleted(LabTestInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadLabTestSuccess) {
       final deletedItems = [...currentState.deletedItems, item];
       emit(ReadLabTestSuccess(currentState.items, deletedItems: deletedItems));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
   }
 }

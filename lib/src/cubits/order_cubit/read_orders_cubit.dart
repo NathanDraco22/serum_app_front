@@ -7,13 +7,16 @@ part 'read_orders_state.dart';
 
 class ReadOrderCubit extends Cubit<ReadOrderState> {
   final OrdersRepository ordersRepository;
+  StreamSubscription<RepoEvent<OrderInDb>>? _subscription;
+
   ReadOrderCubit({required OrdersRepository ordersRepository})
       : ordersRepository = ordersRepository,
         super(ReadOrderInitial()) {
-    ordersRepository.eventStream.listen(_handleRepoEvent);
+    _subscription = ordersRepository.eventStream.listen(_handleRepoEvent);
   }
 
   void _handleRepoEvent(RepoEvent<OrderInDb> event) {
+    if (isClosed) return;
     if (event is RepoItemCreated<OrderInDb>) {
       markOrderCreated(event.item);
     } else if (event is RepoItemUpdated<OrderInDb>) {
@@ -32,8 +35,10 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
     }
     try {
       final items = await ordersRepository.getAllOrders(queryParams: queryParams);
+      if (isClosed) return;
       emit(ReadOrderSuccess(items));
     } catch (e) {
+      if (isClosed) return;
       emit(ReadOrderError(e.toString()));
     }
   }
@@ -42,17 +47,20 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
     emit(ReadOrderLoading());
     try {
       final item = await ordersRepository.getOrderById(orderId);
+      if (isClosed) return;
       if (item != null) {
         emit(ReadOrderSuccess([item]));
       } else {
         emit(ReadOrderError('Not found'));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(ReadOrderError(e.toString()));
     }
   }
 
   void markOrderCreated(OrderInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadOrderSuccess) {
       final items = [item, ...currentState.items.where((u) => u.id != item.id)];
@@ -62,6 +70,7 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
   }
 
   void markOrderUpdated(OrderInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadOrderSuccess) {
       final items = currentState.items.map((u) => u.id == item.id ? item : u).toList();
@@ -71,10 +80,17 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
   }
 
   void markOrderDeleted(OrderInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadOrderSuccess) {
       final deletedItems = [...currentState.deletedItems, item];
       emit(ReadOrderSuccess(currentState.items, deletedItems: deletedItems));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
   }
 }

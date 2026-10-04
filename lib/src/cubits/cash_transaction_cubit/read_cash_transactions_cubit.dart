@@ -18,8 +18,10 @@ class ReadCashTransactionCubit extends Cubit<ReadCashTransactionState> {
     }
     try {
       final items = await cashTransactionsRepository.getAllCashTransactions();
+      if (isClosed) return;
       emit(ReadCashTransactionSuccess(items));
     } catch (e) {
+      if (isClosed) return;
       emit(ReadCashTransactionError(e.toString()));
     }
   }

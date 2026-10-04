@@ -7,13 +7,16 @@ part 'read_branches_state.dart';
 
 class ReadBranchCubit extends Cubit<ReadBranchState> {
   final BranchesRepository branchesRepository;
+  StreamSubscription<RepoEvent<BranchInDb>>? _subscription;
+
   ReadBranchCubit({required BranchesRepository branchesRepository})
       : branchesRepository = branchesRepository,
         super(ReadBranchInitial()) {
-    branchesRepository.eventStream.listen(_handleRepoEvent);
+    _subscription = branchesRepository.eventStream.listen(_handleRepoEvent);
   }
 
   void _handleRepoEvent(RepoEvent<BranchInDb> event) {
+    if (isClosed) return;
     if (event is RepoItemCreated<BranchInDb>) {
       markBranchCreated(event.item);
     } else if (event is RepoItemUpdated<BranchInDb>) {
@@ -32,8 +35,10 @@ class ReadBranchCubit extends Cubit<ReadBranchState> {
     }
     try {
       final items = await branchesRepository.getAllBranches();
+      if (isClosed) return;
       emit(ReadBranchSuccess(items));
     } catch (e) {
+      if (isClosed) return;
       emit(ReadBranchError(e.toString()));
     }
   }
@@ -42,17 +47,20 @@ class ReadBranchCubit extends Cubit<ReadBranchState> {
     emit(ReadBranchLoading());
     try {
       final item = await branchesRepository.getBranchById(branchId);
+      if (isClosed) return;
       if (item != null) {
         emit(ReadBranchSuccess([item]));
       } else {
         emit(ReadBranchError('Not found'));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(ReadBranchError(e.toString()));
     }
   }
 
   void markBranchCreated(BranchInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadBranchSuccess) {
       final items = [item, ...currentState.items.where((u) => u.id != item.id)];
@@ -62,6 +70,7 @@ class ReadBranchCubit extends Cubit<ReadBranchState> {
   }
 
   void markBranchUpdated(BranchInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadBranchSuccess) {
       final items = currentState.items.map((u) => u.id == item.id ? item : u).toList();
@@ -71,10 +80,17 @@ class ReadBranchCubit extends Cubit<ReadBranchState> {
   }
 
   void markBranchDeleted(BranchInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadBranchSuccess) {
       final deletedItems = [...currentState.deletedItems, item];
       emit(ReadBranchSuccess(currentState.items, deletedItems: deletedItems));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
   }
 }

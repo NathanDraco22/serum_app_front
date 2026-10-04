@@ -7,13 +7,16 @@ part 'read_doctors_state.dart';
 
 class ReadDoctorCubit extends Cubit<ReadDoctorState> {
   final DoctorsRepository doctorsRepository;
+  StreamSubscription<RepoEvent<DoctorInDb>>? _subscription;
+
   ReadDoctorCubit({required DoctorsRepository doctorsRepository})
       : doctorsRepository = doctorsRepository,
         super(ReadDoctorInitial()) {
-    doctorsRepository.eventStream.listen(_handleRepoEvent);
+    _subscription = doctorsRepository.eventStream.listen(_handleRepoEvent);
   }
 
   void _handleRepoEvent(RepoEvent<DoctorInDb> event) {
+    if (isClosed) return;
     if (event is RepoItemCreated<DoctorInDb>) {
       markDoctorCreated(event.item);
     } else if (event is RepoItemUpdated<DoctorInDb>) {
@@ -32,8 +35,10 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
     }
     try {
       final items = await doctorsRepository.getAllDoctors();
+      if (isClosed) return;
       emit(ReadDoctorSuccess(items));
     } catch (e) {
+      if (isClosed) return;
       emit(ReadDoctorError(e.toString()));
     }
   }
@@ -42,17 +47,20 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
     emit(ReadDoctorLoading());
     try {
       final item = await doctorsRepository.getDoctorById(doctorId);
+      if (isClosed) return;
       if (item != null) {
         emit(ReadDoctorSuccess([item]));
       } else {
         emit(ReadDoctorError('Not found'));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(ReadDoctorError(e.toString()));
     }
   }
 
   void markDoctorCreated(DoctorInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadDoctorSuccess) {
       final items = [item, ...currentState.items.where((u) => u.id != item.id)];
@@ -62,6 +70,7 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
   }
 
   void markDoctorUpdated(DoctorInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadDoctorSuccess) {
       final items = currentState.items.map((u) => u.id == item.id ? item : u).toList();
@@ -71,10 +80,17 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
   }
 
   void markDoctorDeleted(DoctorInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadDoctorSuccess) {
       final deletedItems = [...currentState.deletedItems, item];
       emit(ReadDoctorSuccess(currentState.items, deletedItems: deletedItems));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
   }
 }

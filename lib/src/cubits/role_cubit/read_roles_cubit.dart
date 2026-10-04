@@ -7,14 +7,16 @@ part 'read_roles_state.dart';
 
 class ReadRoleCubit extends Cubit<ReadRoleState> {
   final RolesRepository rolesRepository;
+  StreamSubscription<RepoEvent<RoleInDb>>? _subscription;
 
   ReadRoleCubit({required RolesRepository rolesRepository})
       : rolesRepository = rolesRepository,
         super(ReadRoleInitial()) {
-    rolesRepository.eventStream.listen(_handleRepoEvent);
+    _subscription = rolesRepository.eventStream.listen(_handleRepoEvent);
   }
 
   void _handleRepoEvent(RepoEvent<RoleInDb> event) {
+    if (isClosed) return;
     if (event is RepoItemCreated<RoleInDb>) {
       markRoleCreated(event.item);
     } else if (event is RepoItemUpdated<RoleInDb>) {
@@ -33,8 +35,10 @@ class ReadRoleCubit extends Cubit<ReadRoleState> {
     }
     try {
       final items = await rolesRepository.getAllRoles();
+      if (isClosed) return;
       emit(ReadRoleSuccess(items));
     } catch (error) {
+      if (isClosed) return;
       emit(ReadRoleError(error.toString()));
     }
   }
@@ -43,17 +47,20 @@ class ReadRoleCubit extends Cubit<ReadRoleState> {
     emit(ReadRoleLoading());
     try {
       final item = await rolesRepository.getRoleById(roleId);
+      if (isClosed) return;
       if (item == null) {
         emit(ReadRoleError("Rol no encontrado"));
       } else {
         emit(ReadRoleSuccess([item]));
       }
     } catch (error) {
+      if (isClosed) return;
       emit(ReadRoleError(error.toString()));
     }
   }
 
   void markRoleCreated(RoleInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadRoleSuccess) {
       final items = [item, ...currentState.items.where((u) => u.id != item.id)];
@@ -64,6 +71,7 @@ class ReadRoleCubit extends Cubit<ReadRoleState> {
   }
 
   void markRoleUpdated(RoleInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadRoleSuccess) {
       final items = currentState.items.map((u) => u.id == item.id ? item : u).toList();
@@ -74,11 +82,18 @@ class ReadRoleCubit extends Cubit<ReadRoleState> {
   }
 
   void markRoleDeleted(RoleInDb item) {
+    if (isClosed) return;
     final currentState = state;
     if (currentState is ReadRoleSuccess) {
       final items = currentState.items.where((u) => u.id != item.id).toList();
       final deletedItems = [...currentState.deletedItems, item];
       emit(ReadRoleSuccess(items, deletedItems: deletedItems));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _subscription?.cancel();
+    return super.close();
   }
 }
