@@ -17,7 +17,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
   late String _specialty;
-  late String _phone;
+  String? _phone;
   String? _email;
   String? _cardId;
 
@@ -39,7 +39,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     } else {
       _name = '';
       _specialty = '';
-      _phone = '';
+      _phone = null;
       _email = '';
       _cardId = '';
     }
@@ -66,7 +66,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         final newDoctor = CreateDoctor(
           name: _name,
           specialty: _specialty,
-          phone: _phone,
+          phone: _phone?.trim().isNotEmpty == true ? _phone!.trim() : null,
           originBranch: activeBranchId,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
@@ -83,7 +83,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         final updateDoctor = UpdateDoctor(
           name: _name,
           specialty: _specialty,
-          phone: _phone,
+          phone: _phone?.trim().isNotEmpty == true ? _phone!.trim() : null,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
         );
@@ -146,9 +146,8 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.phone,
                   onFieldSubmitted: (_) => _emailFocusNode.requestFocus(),
-                  decoration: const InputDecoration(labelText: 'Teléfono *'),
-                  validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
-                  onSaved: (val) => _phone = val ?? '',
+                  decoration: const InputDecoration(labelText: 'Teléfono'),
+                  onSaved: (val) => _phone = val,
                 ),
                 TextFormField(
                   initialValue: _email,

@@ -17,7 +17,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late String _name;
   late String _phone;
-  late String _address;
+  String? _address;
   late String _gender;
   String? _email;
   String? _cardId;
@@ -52,7 +52,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     } else {
       _name = '';
       _phone = '';
-      _address = '';
+      _address = null;
       _gender = 'male';
       _email = '';
       _cardId = '';
@@ -98,7 +98,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
           dateOfBirth: _dateOfBirth.millisecondsSinceEpoch,
           gender: mappedGender,
           phone: _phone,
-          address: _address,
+          address: _address?.trim().isNotEmpty == true ? _address!.trim() : null,
           originBranch: activeBranchId,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
@@ -117,7 +117,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
           dateOfBirth: _dateOfBirth.millisecondsSinceEpoch,
           gender: mappedGender,
           phone: _phone,
-          address: _address,
+          address: _address?.trim().isNotEmpty == true ? _address!.trim() : null,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
         );
@@ -222,9 +222,8 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
                   focusNode: _addressFocusNode,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(labelText: 'Dirección *'),
-                  validator: (val) => val == null || val.isEmpty ? 'Requerido' : null,
-                  onSaved: (val) => _address = val ?? '',
+                  decoration: const InputDecoration(labelText: 'Dirección'),
+                  onSaved: (val) => _address = val,
                 ),
               ],
             ),

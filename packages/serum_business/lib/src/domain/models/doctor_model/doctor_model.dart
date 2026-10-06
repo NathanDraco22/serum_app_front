@@ -1,7 +1,7 @@
 class BaseDoctor {
   final String name;
   final String specialty;
-  final String phone;
+  final String? phone;
   final String? email;
   final String? cardId;
   final String originBranch;
@@ -9,7 +9,7 @@ class BaseDoctor {
   BaseDoctor({
     required this.name,
     required this.specialty,
-    required this.phone,
+    this.phone,
     this.email,
     this.cardId,
     required this.originBranch,
@@ -20,7 +20,7 @@ class CreateDoctor extends BaseDoctor {
   CreateDoctor({
     required super.name,
     required super.specialty,
-    required super.phone,
+    super.phone,
     super.email,
     super.cardId,
     required super.originBranch,
@@ -77,7 +77,7 @@ class DoctorInDb extends BaseDoctor {
     required this.id,
     required super.name,
     required super.specialty,
-    required super.phone,
+    super.phone,
     super.email,
     super.cardId,
     required super.originBranch,
@@ -91,7 +91,7 @@ class DoctorInDb extends BaseDoctor {
       id: json['id'] as String,
       name: json['name'] as String,
       specialty: json['specialty'] as String,
-      phone: json['phone'] as String,
+      phone: json['phone'] as String?,
       email: json['email'] as String?,
       cardId: json['cardId'] as String?,
       originBranch: json['originBranch'] as String? ?? '',

@@ -97,7 +97,9 @@ class PatientsList extends StatelessWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              patient.address,
+                              patient.address != null && patient.address!.isNotEmpty
+                                  ? patient.address!
+                                  : 'Sin dirección',
                               style: theme.textTheme.bodySmall,
                               overflow: TextOverflow.ellipsis,
                             ),

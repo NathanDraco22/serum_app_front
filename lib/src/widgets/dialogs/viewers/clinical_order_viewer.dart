@@ -119,7 +119,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
               dateOfBirth: p.dateOfBirth,
               gender: p.gender,
               phone: p.phone,
-              address: p.address,
+              address: p.address ?? '',
               cardId: p.cardId,
               email: p.email,
             );
@@ -138,7 +138,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
             _doctorInfo = DoctorInfo(
               name: d.name,
               specialty: d.specialty,
-              phone: d.phone,
+              phone: d.phone ?? '',
               cardId: d.cardId,
               email: d.email,
             );

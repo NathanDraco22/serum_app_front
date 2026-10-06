@@ -106,7 +106,7 @@ class OrderDoctorCard extends StatelessWidget {
                           'Cédula: ${doctor!.cardId}',
                           style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                         ),
-                      if (doctor!.phone.isNotEmpty)
+                      if (doctor!.phone != null && doctor!.phone!.isNotEmpty)
                         Text(
                           'Tel: ${doctor!.phone}',
                           style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),

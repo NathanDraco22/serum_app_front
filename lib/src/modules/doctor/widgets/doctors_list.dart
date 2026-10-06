@@ -79,7 +79,12 @@ class DoctorsList extends StatelessWidget {
                         children: [
                           Icon(Icons.phone, size: 14, color: theme.colorScheme.onSurfaceVariant),
                           const SizedBox(width: 4),
-                          Text(doctor.phone, style: theme.textTheme.bodySmall),
+                          Text(
+                            doctor.phone != null && doctor.phone!.isNotEmpty
+                                ? doctor.phone!
+                                : 'Sin teléfono',
+                            style: theme.textTheme.bodySmall,
+                          ),
                           const SizedBox(width: 16),
                           Icon(Icons.email, size: 14, color: theme.colorScheme.onSurfaceVariant),
                           const SizedBox(width: 4),

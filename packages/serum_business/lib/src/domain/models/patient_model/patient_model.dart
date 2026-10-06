@@ -3,7 +3,7 @@ class BasePatient {
   final int dateOfBirth;
   final String gender;
   final String phone;
-  final String address;
+  final String? address;
   final String? email;
   final String? cardId;
   final String originBranch;
@@ -13,7 +13,7 @@ class BasePatient {
     required this.dateOfBirth,
     required this.gender,
     required this.phone,
-    required this.address,
+    this.address,
     this.email,
     this.cardId,
     required this.originBranch,
@@ -26,7 +26,7 @@ class CreatePatient extends BasePatient {
     required super.dateOfBirth,
     required super.gender,
     required super.phone,
-    required super.address,
+    super.address,
     super.email,
     super.cardId,
     required super.originBranch,
@@ -93,7 +93,7 @@ class PatientInDb extends BasePatient {
     required super.dateOfBirth,
     required super.gender,
     required super.phone,
-    required super.address,
+    super.address,
     super.email,
     super.cardId,
     required super.originBranch,
@@ -109,7 +109,7 @@ class PatientInDb extends BasePatient {
       dateOfBirth: json['dateOfBirth'] as int,
       gender: json['gender'] as String,
       phone: json['phone'] as String,
-      address: json['address'] as String,
+      address: json['address'] as String?,
       email: json['email'] as String?,
       cardId: json['cardId'] as String?,
       originBranch: json['originBranch'] as String? ?? '',

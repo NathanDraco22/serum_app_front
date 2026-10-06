@@ -286,7 +286,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
         dateOfBirth: _selectedPatient!.dateOfBirth,
         gender: _selectedPatient!.gender,
         phone: _selectedPatient!.phone,
-        address: _selectedPatient!.address,
+        address: _selectedPatient!.address ?? '',
         cardId: _selectedPatient!.cardId,
         email: _selectedPatient!.email,
       ),
@@ -294,7 +294,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
           ? DoctorInfo(
               name: _selectedDoctor!.name,
               specialty: _selectedDoctor!.specialty,
-              phone: _selectedDoctor!.phone,
+              phone: _selectedDoctor!.phone ?? '',
               cardId: _selectedDoctor!.cardId,
               email: _selectedDoctor!.email,
             )

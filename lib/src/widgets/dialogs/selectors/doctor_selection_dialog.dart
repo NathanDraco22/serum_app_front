@@ -219,7 +219,7 @@ class _DoctorSelectionDialogState extends State<DoctorSelectionDialog> {
                   'Cédula: ${doctor.cardId}',
                   style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
                 ),
-              if (doctor.phone.isNotEmpty)
+              if (doctor.phone != null && doctor.phone!.isNotEmpty)
                 Text(
                   'Tel: ${doctor.phone}',
                   style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
