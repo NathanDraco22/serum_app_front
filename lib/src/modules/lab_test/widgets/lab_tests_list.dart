@@ -157,12 +157,13 @@ class LabTestsList extends StatelessWidget {
                                 Icon(Icons.sell, size: 14, color: theme.colorScheme.primary),
                                 const SizedBox(width: 4),
                                 Text(
-                                  'P1: \$$priceFormatted',
+                                  '\$$priceFormatted',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: theme.colorScheme.primary,
                                   ),
                                 ),
+                                /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                                 if (labTest.salePrice2 > 0) ...[
                                   const SizedBox(width: 8),
                                   Text(
@@ -173,6 +174,7 @@ class LabTestsList extends StatelessWidget {
                                     ),
                                   ),
                                 ],
+                                */
                               ],
                             ),
                             Row(

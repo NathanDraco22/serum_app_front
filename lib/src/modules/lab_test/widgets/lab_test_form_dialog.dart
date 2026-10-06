@@ -377,8 +377,8 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                             child: TextFormField(
                               controller: _priceController,
                               decoration: const InputDecoration(
-                                labelText: 'Precio 1 (\$ USD) *',
-                                hintText: 'Tarifa regular',
+                                labelText: 'Precio de Venta (\$ USD) *',
+                                hintText: 'ej. 15.00',
                                 prefixIcon: Icon(Icons.attach_money, size: 20),
                               ),
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -397,6 +397,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               onSaved: (val) => _salePrice = double.tryParse(val ?? '0') ?? 0.0,
                             ),
                           ),
+                          /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                           const SizedBox(width: 12),
                           Expanded(
                             flex: 2,
@@ -424,6 +425,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               onSaved: (val) => _salePrice2 = double.tryParse(val ?? '0') ?? 0.0,
                             ),
                           ),
+                          */
                         ],
                       ),
                       const SizedBox(height: 24),

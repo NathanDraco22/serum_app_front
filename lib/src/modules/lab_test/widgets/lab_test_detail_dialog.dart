@@ -116,12 +116,13 @@ class LabTestDetailDialog extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _InfoTile(
-                            label: 'Precio 1 (Regular)',
+                            label: 'Precio de Venta',
                             value: '\$$priceFormatted USD',
                             icon: Icons.sell,
                             isHighlighted: true,
                           ),
                         ),
+                        /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                         const SizedBox(width: 12),
                         Expanded(
                           child: _InfoTile(
@@ -133,6 +134,7 @@ class LabTestDetailDialog extends StatelessWidget {
                             isHighlighted: labTest.salePrice2 > 0,
                           ),
                         ),
+                        */
                         const SizedBox(width: 12),
                         Expanded(
                           child: _InfoTile(

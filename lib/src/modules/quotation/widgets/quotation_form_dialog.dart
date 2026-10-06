@@ -125,10 +125,11 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                           return ListTile(
                             dense: true,
                             title: Text(item.name),
-                            subtitle: Text('Tarifa P${item.priceLevel} • \$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
+                            subtitle: Text('\$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                                 IconButton(
                                   icon: Text(
                                     'P${item.priceLevel}',
@@ -165,6 +166,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                                     });
                                   },
                                 ),
+                                */
                                 IconButton(
                                   icon: const Icon(Icons.delete),
                                   onPressed: () => setState(() => _selectedExams.removeAt(index)),
@@ -197,10 +199,13 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                       itemBuilder: (context, index) {
                         final test = labTests[index];
                         final price1Str = (test.salePrice / 100).toStringAsFixed(2);
+                        /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                         final price2Str = (test.salePrice2 / 100).toStringAsFixed(2);
                         final priceDisplay = test.salePrice2 > 0
                             ? 'P1: \$$price1Str | P2: \$$price2Str'
                             : '\$$price1Str';
+                        */
+                        final priceDisplay = '\$$price1Str';
 
                         return ListTile(
                           dense: true,

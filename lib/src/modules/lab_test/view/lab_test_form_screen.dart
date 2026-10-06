@@ -460,8 +460,8 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                   child: TextFormField(
                                     controller: _priceController,
                                     decoration: InputDecoration(
-                                      labelText: 'Precio 1 (\$ USD) *',
-                                      hintText: 'Tarifa regular',
+                                      labelText: 'Precio de Venta (\$ USD) *',
+                                      hintText: 'ej. 15.00',
                                       prefixIcon: const Icon(Icons.attach_money, size: 20),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -490,6 +490,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                         _salePrice = double.tryParse(val ?? '0') ?? 0.0,
                                   ),
                                 ),
+                                /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                                 const SizedBox(width: 12),
                                 Expanded(
                                   flex: 2,
@@ -525,6 +526,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                         _salePrice2 = double.tryParse(val ?? '0') ?? 0.0,
                                   ),
                                 ),
+                                */
                               ],
                             ),
                           ],

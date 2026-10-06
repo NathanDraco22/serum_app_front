@@ -121,6 +121,7 @@ class OrderCartSection extends StatelessWidget {
             ),
             const SizedBox(height: 4),
 
+            /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
             // Selector global de Nivel de Tarifa para toda la orden
             if (selectedItems.isNotEmpty)
               Padding(
@@ -163,6 +164,7 @@ class OrderCartSection extends StatelessWidget {
                   ],
                 ),
               ),
+            */
 
             // Items List
             Expanded(
@@ -241,6 +243,7 @@ class OrderCartSection extends StatelessWidget {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                               // Selector compacto P1 / P2
                               Container(
                                 decoration: BoxDecoration(
@@ -313,6 +316,7 @@ class OrderCartSection extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
+                              */
                               Text(
                                 priceStr,
                                 style: TextStyle(
