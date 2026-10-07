@@ -1,4 +1,5 @@
 import 'package:serum_business/src/domain/models/quotation_model/quotation_model.dart';
+import 'package:serum_business/src/domain/query_params/quotation_query_params.dart';
 import 'package:serum_business/src/domain/responses/list_response.dart';
 import 'package:serum_business/src/data/data_sources.dart';
 import 'package:serum_business/src/tools/reactive_repo/reactive_repository.dart';
@@ -18,8 +19,8 @@ class QuotationsRepository with ReactiveRepository<QuotationInDb> {
     return newQuotation;
   }
 
-  Future<List<QuotationInDb>> getAllQuotations() async {
-    final results = await quotationsDataSource.getAllQuotations();
+  Future<List<QuotationInDb>> getAllQuotations({QuotationQueryParams? queryParams}) async {
+    final results = await quotationsDataSource.getAllQuotations(queryParams: queryParams);
     final response = ListResponse<QuotationInDb>.fromJson(
       results,
       QuotationInDb.fromJson,

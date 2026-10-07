@@ -18,6 +18,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late List<OrderTestResult> _results;
   late Map<String, TextEditingController> _controllers;
   late Map<String, String> _qualitativeValues;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -47,8 +48,13 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _submit() async {
+    if (_isSubmitting) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
       final updatedResults = _results.map((r) {
         String? val;
         String? alert;
@@ -115,10 +121,37 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         results: updatedResults,
       );
 
-      context.read<WriteOrderCubit>().update(widget.order.id, updateOrder).then((_) {
-        if (!mounted) return;
-        Navigator.pop(context, true);
-      });
+      final writeCubit = context.read<WriteOrderCubit>();
+      await writeCubit.update(widget.order.id, updateOrder);
+
+      if (!mounted) return;
+
+      final state = writeCubit.state;
+      if (state is OrderUpdated) {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(true);
+        }
+      } else if (state is WriteOrderError) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar resultados: ${state.message}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      } else {
+        setState(() => _isSubmitting = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error inesperado: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
   }
 
@@ -127,8 +160,10 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     final theme = Theme.of(context);
     final isReadOnly = widget.order.status == 'completed';
 
-    return AlertDialog(
-      title: Text('Resultados de Orden: ${widget.order.examName}'),
+    return PopScope(
+      canPop: !_isSubmitting,
+      child: AlertDialog(
+        title: Text('Resultados de Orden: ${widget.order.examName}'),
       content: SizedBox(
         width: 550,
         height: 450,
@@ -265,21 +300,38 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           OutlinedButton.icon(
             icon: const Icon(Icons.picture_as_pdf, size: 16),
             label: const Text('Ver / Exportar Informe'),
-            onPressed: () {
-              Navigator.pop(context);
-              showClinicalOrderViewerDialog(context, widget.order);
-            },
+            onPressed: _isSubmitting
+                ? null
+                : () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.pop(context);
+                    }
+                    showClinicalOrderViewerDialog(context, widget.order);
+                  },
           ),
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isSubmitting
+              ? null
+              : () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
+                },
           child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),
         ),
         if (!isReadOnly)
           ElevatedButton(
-            onPressed: _submit,
-            child: const Text('Completar y Guardar'),
+            onPressed: _isSubmitting ? null : _submit,
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Completar y Guardar'),
           ),
       ],
+      ),
     );
   }
 }

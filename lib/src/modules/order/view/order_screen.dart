@@ -97,6 +97,7 @@ class _BodyState extends State<_Body> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return BlocProvider.value(
           value: BlocProvider.of<WriteOrderCubit>(context),
@@ -113,6 +114,7 @@ class _BodyState extends State<_Body> {
   void _openPayDialog(BuildContext context, OrderInDb order) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return BlocProvider.value(
           value: BlocProvider.of<WriteOrderCubit>(context),

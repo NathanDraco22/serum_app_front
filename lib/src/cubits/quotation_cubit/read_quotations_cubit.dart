@@ -26,7 +26,7 @@ class ReadQuotationCubit extends Cubit<ReadQuotationState> {
     }
   }
 
-  Future<void> getAll() async {
+  Future<void> getAll([QuotationQueryParams? queryParams]) async {
     final currentState = state;
     if (currentState is ReadQuotationSuccess) {
       emit(ReadQuotationRefreshing.fromSuccess(currentState));
@@ -34,7 +34,8 @@ class ReadQuotationCubit extends Cubit<ReadQuotationState> {
       emit(ReadQuotationLoading());
     }
     try {
-      final items = await quotationsRepository.getAllQuotations();
+      final params = queryParams ?? QuotationQueryParams.last30Days();
+      final items = await quotationsRepository.getAllQuotations(queryParams: params);
       if (isClosed) return;
       emit(ReadQuotationSuccess(items));
     } catch (e) {

@@ -79,14 +79,18 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
       performedBy: performedBy,
     );
 
-    context
-        .read<WriteOrderCubit>()
+    final writeCubit = context.read<WriteOrderCubit>();
+    writeCubit
         .payOrder(widget.order.id, request)
         .then((_) {
       if (!mounted) return;
-      // Actualizar también el turno activo de la sesión para reflejar el nuevo cobro
-      sessionCubit.fetchActiveShift();
-      Navigator.pop(context, true);
+      if (writeCubit.state is OrderPaid) {
+        // Actualizar también el turno activo de la sesión para reflejar el nuevo cobro
+        sessionCubit.fetchActiveShift();
+        if (Navigator.of(context).canPop()) {
+          Navigator.pop(context, true);
+        }
+      }
     });
   }
 
@@ -94,12 +98,16 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final session = context.watch<AppSessionCubit>();
+    final writeState = context.watch<WriteOrderCubit>().state;
+    final isWriting = writeState is WritingOrder;
     final activeShift = session.activeShift;
     final currentUser = session.user;
-    final canPay = activeShift != null && activeShift.isOpen;
+    final canPay = activeShift != null && activeShift.isOpen && !isWriting;
 
-    return AlertDialog(
-      title: Row(
+    return PopScope(
+      canPop: !isWriting,
+      child: AlertDialog(
+        title: Row(
         children: [
           Icon(Icons.point_of_sale, color: theme.colorScheme.primary),
           const SizedBox(width: 8),
@@ -378,7 +386,13 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: isWriting
+              ? null
+              : () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
+                },
           child: const Text('Cancelar'),
         ),
         BlocBuilder<WriteOrderCubit, WriteOrderState>(
@@ -402,6 +416,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
           },
         ),
       ],
+      ),
     );
   }
 }
