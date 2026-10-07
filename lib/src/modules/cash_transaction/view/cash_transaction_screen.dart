@@ -142,9 +142,13 @@ class _BodyState extends State<_Body> {
                       final shortId = s.id.length >= 8 ? s.id.substring(0, 8) : s.id;
                       final icon = s.isOpen ? '🟢' : '⚪';
                       final dateStr = _formatDateShort(s.openedAt);
+                      final userLabel = s.userName?.isNotEmpty == true ? ' • ${s.userName}' : '';
                       return DropdownMenuItem(
                         value: s.id,
-                        child: Text('$icon #$shortId ($dateStr)'),
+                        child: Text(
+                          '$icon #$shortId ($dateStr$userLabel)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }),
                   ],

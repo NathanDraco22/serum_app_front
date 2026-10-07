@@ -56,6 +56,8 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
       branchId: branchId,
       initialBalance: cents,
       notes: _notesController.text.trim(),
+      userName: user.name,
+      branchName: sessionCubit.currentBranchName,
     );
 
     setState(() => _isLoading = true);

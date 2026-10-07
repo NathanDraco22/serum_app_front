@@ -2,11 +2,15 @@ class BaseCashShift {
   final String userId;
   final String branchId;
   final String notes;
+  final String? userName;
+  final String? branchName;
 
   BaseCashShift({
     required this.userId,
     required this.branchId,
     this.notes = '',
+    this.userName,
+    this.branchName,
   });
 }
 
@@ -17,6 +21,8 @@ class CreateCashShift extends BaseCashShift {
     required super.userId,
     required super.branchId,
     super.notes = '',
+    super.userName,
+    super.branchName,
     required this.initialBalance,
   });
 
@@ -25,6 +31,8 @@ class CreateCashShift extends BaseCashShift {
       'userId': userId,
       'branchId': branchId,
       'notes': notes,
+      if (userName != null) 'userName': userName,
+      if (branchName != null) 'branchName': branchName,
       'initialBalance': initialBalance,
     };
   }
@@ -80,6 +88,8 @@ class CashShiftInDb extends BaseCashShift {
     required super.userId,
     required super.branchId,
     super.notes = '',
+    super.userName,
+    super.branchName,
     this.status = 'OPEN',
     required this.openedAt,
     this.closedAt,
@@ -113,6 +123,8 @@ class CashShiftInDb extends BaseCashShift {
       userId: json['userId'] as String? ?? '',
       branchId: json['branchId'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
+      userName: json['userName'] as String?,
+      branchName: json['branchName'] as String?,
       status: json['status'] as String? ?? 'OPEN',
       openedAt: json['openedAt'] as int? ?? 0,
       closedAt: json['closedAt'] as int?,

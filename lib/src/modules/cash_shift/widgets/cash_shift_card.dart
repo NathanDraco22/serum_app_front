@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../widgets/cash_shift_close_dialog.dart';
 
 class CashShiftCard extends StatelessWidget {
@@ -30,8 +32,20 @@ class CashShiftCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sessionCubit = context.watch<AppSessionCubit>();
     final isOpen = shift.isOpen;
     final shortId = shift.id.length >= 8 ? shift.id.substring(0, 8) : shift.id;
+
+    final branchName = shift.branchName?.isNotEmpty == true
+        ? shift.branchName!
+        : (sessionCubit.getBranchById(shift.branchId)?.name ??
+            (shift.branchId.isNotEmpty ? shift.branchId : 'Sucursal'));
+
+    final custodianName = shift.userName?.isNotEmpty == true
+        ? shift.userName!
+        : (shift.userId == sessionCubit.user?.id
+            ? sessionCubit.user?.name ?? 'Usuario'
+            : (shift.userId.isNotEmpty ? shift.userId : 'Sistema'));
 
     return Card(
       elevation: 0,
@@ -145,7 +159,7 @@ class CashShiftCard extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Metadata: Custodian, Opened At, Closed At
+            // Metadata: Custodian, Branch, Opened At, Closed At
             Wrap(
               spacing: 20,
               runSpacing: 8,
@@ -153,7 +167,12 @@ class CashShiftCard extends StatelessWidget {
                 _InfoChip(
                   icon: Icons.person_outline,
                   label: 'Custodio',
-                  value: shift.userId.isNotEmpty ? shift.userId : 'Sistema',
+                  value: custodianName,
+                ),
+                _InfoChip(
+                  icon: Icons.store_outlined,
+                  label: 'Sucursal',
+                  value: branchName,
                 ),
                 _InfoChip(
                   icon: Icons.login_rounded,
@@ -166,12 +185,6 @@ class CashShiftCard extends StatelessWidget {
                     label: 'Cierre',
                     value: _formatDateTime(shift.closedAt),
                   ),
-                if (shift.branchId.isNotEmpty)
-                  _InfoChip(
-                    icon: Icons.store_outlined,
-                    label: 'Sucursal',
-                    value: shift.branchId,
-                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -182,12 +195,13 @@ class CashShiftCard extends StatelessWidget {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isNarrow = constraints.maxWidth < 650;
+                final boxWidth = isNarrow ? constraints.maxWidth : 160.0;
                 return Wrap(
-                  spacing: 16,
+                  spacing: 12,
                   runSpacing: 12,
                   children: [
                     _MetricBox(
-                      width: isNarrow ? constraints.maxWidth : 180,
+                      width: boxWidth,
                       label: 'Fondo Inicial',
                       amount:
                           '\$${shift.initialBalanceDouble.toStringAsFixed(2)}',
@@ -195,30 +209,38 @@ class CashShiftCard extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                     _MetricBox(
-                      width: isNarrow ? constraints.maxWidth : 180,
+                      width: boxWidth,
                       label: 'Efectivo Cobrado',
-                      amount: '+\$${shift.cashBalanceDouble.toStringAsFixed(2)}',
+                      amount:
+                          '+\$${shift.cashBalanceDouble.toStringAsFixed(2)}',
                       icon: Icons.payments_outlined,
                       color: Colors.green.shade700,
                     ),
                     _MetricBox(
-                      width: isNarrow ? constraints.maxWidth : 180,
-                      label: 'Total Efectivo Esperado',
+                      width: boxWidth,
+                      label: 'Tarjeta',
+                      amount:
+                          '\$${shift.cardBalanceDouble.toStringAsFixed(2)}',
+                      icon: Icons.credit_card,
+                      color: Colors.blue.shade700,
+                    ),
+                    _MetricBox(
+                      width: boxWidth,
+                      label: 'Transferencia',
+                      amount:
+                          '\$${shift.transferBalanceDouble.toStringAsFixed(2)}',
+                      icon: Icons.swap_horiz_rounded,
+                      color: Colors.purple.shade700,
+                    ),
+                    _MetricBox(
+                      width: boxWidth,
+                      label: 'Total Efectivo Gaveta',
                       amount:
                           '\$${shift.totalCashExpectedDouble.toStringAsFixed(2)}',
                       icon: Icons.account_balance_wallet_rounded,
                       color: theme.colorScheme.primary,
                       isBold: true,
                     ),
-                    if (shift.cardBalance > 0 || shift.transferBalance > 0)
-                      _MetricBox(
-                        width: isNarrow ? constraints.maxWidth : 180,
-                        label: 'Tarjetas / Transf.',
-                        amount:
-                            '\$${(shift.cardBalanceDouble + shift.transferBalanceDouble).toStringAsFixed(2)}',
-                        icon: Icons.credit_card,
-                        color: theme.colorScheme.secondary,
-                      ),
                   ],
                 );
               },
