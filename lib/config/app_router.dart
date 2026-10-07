@@ -13,6 +13,7 @@ import '../src/modules/lab_test/view/lab_test_screen.dart';
 import '../src/modules/order/view/order_screen.dart';
 import '../src/modules/order/view/create_order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
+import '../src/modules/quotation/view/create_quotation_screen.dart';
 import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
 import '../src/modules/administration/view/administration_screen.dart';
@@ -49,6 +50,7 @@ class AppRouter {
   static const String orders = '/orders';
   static const String createOrder = '/orders/new';
   static const String quotations = '/quotations';
+  static const String createQuotation = '/quotations/new';
   static const String cashShifts = '/cash-shifts';
   static const String cashTransactions = '/cash-transactions';
   static const String reports = '/reports';
@@ -122,6 +124,11 @@ class AppRouter {
           path: createOrder,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const CreateOrderScreen(),
+        ),
+        GoRoute(
+          path: createQuotation,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const CreateQuotationScreen(),
         ),
         GoRoute(
           path: adminBranches,

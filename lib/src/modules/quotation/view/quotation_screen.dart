@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../../config/app_router.dart';
 import '../../../cubits/quotation_cubit/read_quotations_cubit.dart';
 import '../../../cubits/quotation_cubit/write_quotations_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
+import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/quotations_list.dart';
-import '../widgets/quotation_form_dialog.dart';
 
 class QuotationsScreen extends StatelessWidget {
   const QuotationsScreen({super.key});
@@ -29,6 +31,11 @@ class QuotationsScreen extends StatelessWidget {
         BlocProvider<ReadPatientCubit>(
           create: (context) => ReadPatientCubit(
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
+          )..getAll(),
+        ),
+        BlocProvider<ReadDoctorCubit>(
+          create: (context) => ReadDoctorCubit(
+            doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
           )..getAll(),
         ),
         BlocProvider<ReadLabTestCubit>(
@@ -61,24 +68,33 @@ class _Body extends StatefulWidget {
 }
 
 class _BodyState extends State<_Body> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _openQuotationForm(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider.value(value: BlocProvider.of<WriteQuotationCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadPatientCubit>(context)),
-            BlocProvider.value(value: BlocProvider.of<ReadLabTestCubit>(context)),
-          ],
-          child: const QuotationFormDialog(),
-        );
-      },
-    ).then((value) {
+    context.push<bool>(AppRouter.createQuotation).then((value) {
       if (value == true && context.mounted) {
         context.read<ReadQuotationCubit>().getAll();
       }
     });
+  }
+
+  List<QuotationInDb> _applyFilters(List<QuotationInDb> baseList) {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return baseList;
+
+    return baseList.where((quote) {
+      final matchClient = quote.clientName.toLowerCase().contains(query);
+      final matchId = quote.id.toLowerCase().contains(query);
+      final matchExam = quote.exams.any((e) => e.name.toLowerCase().contains(query));
+
+      return matchClient || matchId || matchExam;
+    }).toList();
   }
 
   @override
@@ -127,7 +143,7 @@ class _BodyState extends State<_Body> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Cotizaciones',
+                      'Cotizaciones y Presupuestos',
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
@@ -135,7 +151,7 @@ class _BodyState extends State<_Body> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Presupuestos y cotizaciones de exámenes clínicos',
+                      'Preventa de análisis clínicos con exportación e impresión a PDF',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -150,6 +166,7 @@ class _BodyState extends State<_Body> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
                     foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -158,6 +175,50 @@ class _BodyState extends State<_Body> {
               ],
             ),
           ),
+
+          // Filters Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Buscador
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por cliente, folio o análisis...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Quotations List
           Expanded(
             child: BlocBuilder<ReadQuotationCubit, ReadQuotationState>(
@@ -165,11 +226,8 @@ class _BodyState extends State<_Body> {
                 if (readState is ReadQuotationLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (readState is ReadQuotationSuccess) {
-                  final quotations = readState.items;
-                  if (quotations.isEmpty) {
-                    return const Center(child: Text('No hay cotizaciones registradas'));
-                  }
-                  return QuotationsList(quotations: quotations);
+                  final filteredList = _applyFilters(readState.items);
+                  return QuotationsList(quotations: filteredList);
                 } else if (readState is ReadQuotationError) {
                   return Center(
                     child: Text(

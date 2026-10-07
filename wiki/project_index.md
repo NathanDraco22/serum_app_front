@@ -68,7 +68,7 @@ serum_app_front/
 │       │   ├── lab_test/               # Catálogo de pruebas clínicas y packs
 │       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados
 │       │   ├── patient/                # Padrón de pacientes y expediente
-│       │   ├── quotation/              # Presupuestos rápidos con conversión a orden
+│       │   ├── quotation/              # Presupuestos de venta con PDF e impresión inmediata
 │       │   ├── report/                 # Reportes analíticos con gráficos interactivos (fl_chart)
 │       │   ├── splash/                 # Pantalla de carga e hidratación de sesión
 │       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
@@ -186,16 +186,18 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ---
 
-### 📝 3.8 Módulo `quotation` (Cotizaciones y Preventa)
+### 📝 3.8 Módulo `quotation` (Cotizaciones, Preventa y Presupuestos PDF)
 * **Ubicación**: `lib/src/modules/quotation/`
-* **Vistas**: `view/quotation_screen.dart`
-* **Widgets**: `widgets/quotations_list.dart`, `widgets/quotation_form_dialog.dart`
-* **Cubits Asociados**: `ReadQuotationCubit`, `WriteQuotationCubit`, `SearchQuotationsCubit`
+* **Vistas**: `view/quotation_screen.dart`, `view/create_quotation_screen.dart` (Ruta `/quotations/new`)
+* **Widgets**: `widgets/quotation_cart_section.dart`, `widgets/quotation_client_card.dart`, `widgets/quotations_list.dart`, visor `lib/src/widgets/dialogs/viewers/quotation_viewer.dart`, plantilla `lib/src/tools/exports/pdf/templates/quotation_pdf_template.dart`
+* **Cubits Asociados**: `ReadQuotationCubit`, `WriteQuotationCubit`, `ReadLabTestCubit`
 * **Funciones Clave**:
-  1. **Presupuestos Rápidos**: Permite registrar cotizaciones para clientes casuales ingresando un nombre provisional en texto libre sin obligar a crear un expediente de paciente previo.
-  2. **Selección de Exámenes y Cálculo en Vivo**: Agrega análisis individuales o packs, calculando subtotales, descuentos y total general en centavos.
-  3. **Vigencia y Estados**: Controla el ciclo de vida de la cotización (`draft`, `issued`, `converted`, `expired`).
-  4. **Conversión a Orden Médica**: Permite transformar una cotización en una orden formal exigiendo la vinculación o registro del paciente definitivo.
+  1. **Creación en Dos Columnas (`CreateQuotationScreen`)**: Flujo análogo a creación de órdenes en ruta `/quotations/new`, con catálogo clínico a la izquierda y carrito de presupuesto a la derecha.
+  2. **Cliente y Médico Totalmente Opcionales**: Admite capturar clientes casuales ingresando un nombre provisional en texto libre (o dejando `"Cliente General"`), o bien seleccionando pacientes del catálogo maestro. Médico referente opcional.
+  3. **Flujo Directo (Menos Pasos)**: No genera resultados clínicos de laboratorio ni obliga a realizar cobros inmediatos o asociar arqueos de caja.
+  4. **Exportación e Impresión Inmediata a PDF**: Se abre automáticamente al confirmar la cotización con la plantilla `SingleQuotationTemplate` para imprimir en ticket/láser (`Printing.layoutPdf`) o descargar como archivo PDF (`PdfExportTool.export`).
+  5. **Búsqueda en Historial e Impresión Rápida**: Listado con búsqueda en tiempo real por cliente, número de folio o análisis, y botón directo de impresión/visor (`Icons.print_outlined`) en cada tarjeta.
+  6. **Carácter Exclusivamente Presupuestario**: Una cotización es estrictamente un presupuesto informativo independiente; no se procesa como orden médica ni genera resultados clínicos.
 
 ---
 
