@@ -11,6 +11,7 @@ import 'config/service_locator.dart';
 import 'material_app_builder.dart';
 import 'provider_container.dart';
 import 'src/cubits/app_session_cubit/app_session_cubit.dart';
+import 'src/tools/exports/pdf/pdf_font_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,7 @@ Future<void> main() async {
 
   await Hive.initFlutter();
   await setupServiceLocator();
+  await PdfFontHelper.ensureInitialized();
 
   runApp(const MyApp());
 }

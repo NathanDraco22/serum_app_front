@@ -1,6 +1,7 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:serum_business/serum_business.dart';
+import '../pdf_font_helper.dart';
 import '../pdf_template.dart';
 
 class SingleQuotationTemplate implements PdfTemplate {
@@ -38,6 +39,7 @@ class SingleQuotationTemplate implements PdfTemplate {
 
   @override
   Future<pw.Document> buildDocument() async {
+    await PdfFontHelper.ensureInitialized();
     final doc = pw.Document();
 
     final quoteDate = DateTime.fromMillisecondsSinceEpoch(quotation.createdAt);
@@ -65,7 +67,7 @@ class SingleQuotationTemplate implements PdfTemplate {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text(
-                  'Serum LIS — Sistema de Laboratorio Clínico',
+                  'Serum LIS - Sistema de Laboratorio Clínico',
                   style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
                 ),
                 pw.Text(

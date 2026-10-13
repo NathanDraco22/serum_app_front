@@ -1,3 +1,4 @@
+export 'pdf/pdf_font_helper.dart';
 export 'pdf/pdf_template.dart';
 export 'pdf/templates/clinical_order_pdf_template.dart';
 export 'pdf/templates/reports/reports_templates.dart';

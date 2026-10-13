@@ -1,4 +1,5 @@
 import 'package:printing/printing.dart';
+import 'pdf/pdf_font_helper.dart';
 import 'pdf/pdf_template.dart';
 
 class PdfExportTool {
@@ -7,6 +8,7 @@ class PdfExportTool {
     PdfTemplate template, {
     String fileName = "documento.pdf",
   }) async {
+    await PdfFontHelper.ensureInitialized();
     final doc = await template.buildDocument();
     await Printing.sharePdf(
       bytes: await doc.save(),
@@ -19,6 +21,7 @@ class PdfExportTool {
     PdfTemplate template, {
     String name = "documento.pdf",
   }) async {
+    await PdfFontHelper.ensureInitialized();
     final doc = await template.buildDocument();
     await Printing.layoutPdf(
       onLayout: (_) => doc.save(),

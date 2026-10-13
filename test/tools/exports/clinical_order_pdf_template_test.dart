@@ -103,5 +103,52 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye PDF correctamente con valores nulos (fallbacks de guion) y caracteres especiales', () async {
+      final branch = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Serum',
+        address: 'Calle 10',
+        phone: 'PBX 2222',
+        createdAt: nowMs,
+      );
+
+      final orderWithNulls = OrderInDb(
+        id: 'ord-nulls-unicode',
+        patientId: mockOrder.patientId,
+        doctorId: mockOrder.doctorId,
+        branchId: mockOrder.branchId,
+        items: mockOrder.items,
+        status: mockOrder.status,
+        totalPrice: mockOrder.totalPrice,
+        paidAmount: mockOrder.paidAmount,
+        createdAt: nowMs,
+        patientInfo: mockOrder.patientInfo,
+        doctorInfo: mockOrder.doctorInfo,
+        results: [
+          OrderTestResult(
+            labTestId: 'lt-unicode',
+            parameterName: 'Prueba Especial con Símbolos (≥, ≤, µ, °C, —)',
+            medicalClassification: 'Inmunología',
+            dataType: 'numeric',
+            unitOfMeasure: '', // Dispara el fallback '-'
+            referenceValues: [],
+            qualitativeOptions: [],
+            resultValue: null, // Dispara el fallback '-'
+          ),
+        ],
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: orderWithNulls,
+        branch: branch,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }
