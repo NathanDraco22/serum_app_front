@@ -57,6 +57,7 @@ serum_app_front/
 │       │   └── user_cubit/             # Usuarios y colaboradores
 │       ├── modules/                    # Módulos de pantalla (UI)
 │       │   ├── administration/         # Hub central de administración (submenú en cuadrícula)
+│       │   ├── api_keys/               # Consola de Llaves de API e Integraciones (sub-módulo admin)
 │       │   ├── auth/                   # Pantalla de Login y autenticación
 │       │   ├── branch/                 # Consola de Sucursales / Sedes (CRUD en pantalla completa)
 │       │   ├── cash_register_selection/# Selección obligatoria de caja física
@@ -293,6 +294,18 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   5. **Auditoría de Turnos de Caja**: Control de descuadres de caja con gráfico de dispersión/barras diferenciando sobrantes en verde ($>0$), faltantes en rojo ($<0$) y arqueos cuadrados ($0).
   6. **Control de Acceso Sensible (`PermissionGate`)**: Bloqueo y protección de las pestañas Financiera y Auditoría restringidas exclusivamente a usuarios con nivel supervisor o superior (`AccessLevels.supervisor` / 4+).
   7. **Exportación e Impresión Institucional a PDF (`ReportExportButton`)**: Generación de documentos PDF A4 con membrete institucional de sucursal, resumen de métricas clave en KPIs, tablas de auditoría detalladas con montos en centavos formateados, y soporte para descarga local (`export`) e impresión/vista previa física (`printPdf`).
+
+---
+
+### 🔑 3.15 Submódulo `api_keys` (Llaves de API e Integraciones Externas)
+* **Ubicación**: `lib/src/modules/api_keys/`
+* **Vistas**: `view/api_keys_screen.dart` (`/admin/api-keys`, sub-módulo de Administración montado sobre `_rootNavigatorKey`)
+* **Cubits Asociados**: `ApiKeysCubit` (inyectando `ApiKeysRepository` y `ApiKeysDataSource` de `serum_business`)
+* **Funciones Clave**:
+  1. **Consola de Integraciones en Pantalla Completa**: Vista amplia con botón de retorno al panel administrativo, banner didáctico con documentación de la cabecera `X-API-KEY` y prefijo `srm_live_...`.
+  2. **Ciclo de Vida de Credenciales**: Generación de llaves para Power BI, E-commerce, ERPs, LIS externos y servicios personalizados, alternado dinámico de estado activo/pausado (`toggleApiKeyStatus`) y revocación con diálogo de confirmación.
+  3. **Seguridad y Enmascaramiento**: Despliegue de llaves con máscara (`srm_live_k9X2...4hJ1`), copiado al portapapeles y visualización de la llave completa (`rawKey`) exclusivamente por única vez en un modal oscuro monoespaciado al momento de su creación.
+  4. **Trazabilidad y Auditoría**: Monitoreo de fecha de creación y timestamp del último acceso/consumo (`lastUsedAt`).
 
 ---
 

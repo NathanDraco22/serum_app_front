@@ -1,5 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
+export 'api_keys_repository.dart';
 export 'auth_repository.dart';
 export 'branches_repository.dart';
 export 'cash_registers_repository.dart';

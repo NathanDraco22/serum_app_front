@@ -137,6 +137,19 @@ class AdministrationScreen extends StatelessWidget {
                             badgeText: 'Jerarquía',
                             onTap: () => context.push(AppRouter.adminRoles),
                           ),
+
+                          // 4. Llaves de API e Integraciones
+                          AdminModuleCard(
+                            title: 'Llaves de API / Integraciones',
+                            description:
+                                'Generación y control de llaves criptográficas (srm_live_...) para conectar Power BI, sistemas externos y servicios autorizados.',
+                            icon: Icons.key_rounded,
+                            iconColor: Colors.amber.shade800,
+                            iconBackgroundColor:
+                                Colors.amber.shade800.withAlpha(30),
+                            badgeText: 'Integraciones',
+                            onTap: () => context.push(AppRouter.adminApiKeys),
+                          ),
                         ],
                       );
                     },

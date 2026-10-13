@@ -1,3 +1,4 @@
+export 'api_key/api_key_model.dart';
 export 'branch_model/branch_model.dart';
 export 'cash_register_model/cash_register_model.dart';
 export 'cash_shift_model/cash_shift_model.dart';

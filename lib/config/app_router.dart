@@ -21,6 +21,7 @@ import '../src/modules/branch/view/branch_screen.dart';
 import '../src/modules/user/view/user_screen.dart';
 import '../src/modules/role/view/role_screen.dart';
 import '../src/modules/report/view/reports_screen.dart';
+import '../src/modules/api_keys/view/api_keys_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription<dynamic> _subscription;
@@ -58,6 +59,7 @@ class AppRouter {
   static const String adminBranches = '/admin/branches';
   static const String adminUsers = '/admin/users';
   static const String adminRoles = '/admin/roles';
+  static const String adminApiKeys = '/admin/api-keys';
 
   // Navigator keys para cada branch
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -144,6 +146,11 @@ class AppRouter {
           path: adminRoles,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const RoleScreen(),
+        ),
+        GoRoute(
+          path: adminApiKeys,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const ApiKeysScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {
