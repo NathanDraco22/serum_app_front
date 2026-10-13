@@ -240,14 +240,36 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(color: Colors.grey.shade300),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: ClinicalOrderViewerContent(
-                    order: widget.order,
-                    branch: widget.branch,
-                    patientInfo: resolvedPatient,
-                    doctorInfo: _doctorInfo,
-                  ),
+                child: Stack(
+                  children: [
+                    if (widget.branch.imageUrl != null &&
+                        widget.branch.imageUrl!.isNotEmpty)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Center(
+                            child: Opacity(
+                              opacity: 0.15,
+                              child: Image.network(
+                                widget.branch.imageUrl!,
+                                width: 340,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const SizedBox(),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: ClinicalOrderViewerContent(
+                        order: widget.order,
+                        branch: widget.branch,
+                        patientInfo: resolvedPatient,
+                        doctorInfo: _doctorInfo,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -323,12 +345,24 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(8),
+                          image: branch.imageUrl != null &&
+                                  branch.imageUrl!.isNotEmpty
+                              ? DecorationImage(
+                                  image: NetworkImage(branch.imageUrl!),
+                                  fit: BoxFit.contain,
+                                )
+                              : null,
                         ),
-                        child: Icon(Icons.biotech, size: 28, color: Colors.blue.shade800),
+                        child: branch.imageUrl == null ||
+                                branch.imageUrl!.isEmpty
+                            ? Icon(Icons.biotech,
+                                size: 28, color: Colors.blue.shade800)
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(

@@ -114,6 +114,7 @@ mixin HttpService {
     String fileName = "",
     String mediaType = "image/jpeg",
     Map<String, String>? headers,
+    String fieldName = "file",
   }) async {
     final request = http.MultipartRequest("POST", url);
 
@@ -122,7 +123,7 @@ mixin HttpService {
     }
 
     request.files.add(
-      http.MultipartFile.fromBytes("file", bytes, filename: fileName, contentType: MediaType.parse(mediaType)),
+      http.MultipartFile.fromBytes(fieldName, bytes, filename: fileName, contentType: MediaType.parse(mediaType)),
     );
 
     late http.Response response;

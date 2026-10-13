@@ -43,6 +43,8 @@ dependencies:
   serum_business:
     path: packages/serum_business
   share_plus: ^12.0.2
+  file_picker: ^11.0.2
+  http: ^1.2.0
 
 dev_dependencies:
 

@@ -1,3 +1,4 @@
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:serum_business/serum_business.dart';
@@ -44,14 +45,46 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     final formattedDate =
         '${DateTimeTool.formatddMMyy(orderDate)} ${DateTimeTool.formatHHmm(orderDate)}';
 
+    pw.MemoryImage? logoImage;
+    if (branch.imageUrl != null && branch.imageUrl!.isNotEmpty) {
+      try {
+        final response = await http.get(Uri.parse(branch.imageUrl!));
+        if (response.statusCode == 200) {
+          logoImage = pw.MemoryImage(response.bodyBytes);
+        }
+      } catch (_) {
+        // Si no se puede descargar el logo, se continúa generando el informe limpiamente
+      }
+    }
+
+    final pageTheme = pw.PageTheme(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+      buildBackground: (pw.Context context) {
+        if (logoImage == null) return pw.SizedBox();
+        return pw.FullPage(
+          ignoreMargins: true,
+          child: pw.Center(
+            child: pw.Opacity(
+              opacity: 0.15,
+              child: pw.Image(
+                logoImage,
+                width: 320,
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
     doc.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+        pageTheme: pageTheme,
         header: (pw.Context context) {
           return pw.Container(
             margin: const pw.EdgeInsets.only(bottom: 12),
-            child: _buildHeader(formattedDate),
+            child: _buildHeader(formattedDate, logoImage),
           );
         },
         footer: (pw.Context context) {
@@ -95,32 +128,47 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return doc;
   }
 
-  pw.Widget _buildHeader(String formattedDate) {
+  pw.Widget _buildHeader(String formattedDate, pw.MemoryImage? logoImage) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Expanded(
           flex: 6,
-          child: pw.Column(
+          child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                branch.name.toUpperCase(),
-                style: pw.TextStyle(
-                  fontSize: 16,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blue900,
+              if (logoImage != null) ...[
+                pw.Container(
+                  width: 52,
+                  height: 52,
+                  margin: const pw.EdgeInsets.only(right: 10),
+                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
                 ),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Text(
-                'Dirección: ${branch.address}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
-              ),
-              pw.Text(
-                'Teléfono: ${branch.phone}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+              ],
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      branch.name.toUpperCase(),
+                      style: pw.TextStyle(
+                        fontSize: 15,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue900,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      'Dirección: ${branch.address}',
+                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                    ),
+                    pw.Text(
+                      'Teléfono: ${branch.phone}',
+                      style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -107,18 +107,27 @@ class BranchesList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Icon Avatar
+                // Icon / Logo Avatar
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.primaryContainer.withAlpha(80),
                     borderRadius: BorderRadius.circular(12),
+                    image: branch.imageUrl != null && branch.imageUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(branch.imageUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  child: Icon(
-                    Icons.store_mall_directory_rounded,
-                    color: theme.colorScheme.primary,
-                    size: 26,
-                  ),
+                  child: branch.imageUrl == null || branch.imageUrl!.isEmpty
+                      ? Icon(
+                          Icons.store_mall_directory_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 26,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 16),
 
