@@ -108,26 +108,33 @@ class BranchesList extends StatelessWidget {
             child: Row(
               children: [
                 // Icon / Logo Avatar
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withAlpha(80),
-                    borderRadius: BorderRadius.circular(12),
-                    image: branch.imageUrl != null && branch.imageUrl!.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(branch.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: branch.imageUrl == null || branch.imageUrl!.isEmpty
-                      ? Icon(
-                          Icons.store_mall_directory_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 26,
-                        )
-                      : null,
+                Builder(
+                  builder: (context) {
+                    final displayLogo = branch.effectiveLogo ?? branch.effectiveIsoLogo;
+                    final hasDisplayLogo = displayLogo != null && displayLogo.isNotEmpty;
+
+                    return Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withAlpha(80),
+                        borderRadius: BorderRadius.circular(12),
+                        image: hasDisplayLogo
+                            ? DecorationImage(
+                                image: NetworkImage(displayLogo),
+                                fit: BoxFit.contain,
+                              )
+                            : null,
+                      ),
+                      child: !hasDisplayLogo
+                          ? Icon(
+                              Icons.store_mall_directory_rounded,
+                              color: theme.colorScheme.primary,
+                              size: 26,
+                            )
+                          : null,
+                    );
+                  },
                 ),
                 const SizedBox(width: 16),
 
@@ -212,6 +219,42 @@ class BranchesList extends StatelessWidget {
                               ),
                             ],
                           ),
+                          if (branch.email != null && branch.email!.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.email_outlined,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  branch.email!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          if (branch.facebook != null && branch.facebook!.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.facebook_outlined,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  branch.facebook!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ],

@@ -253,24 +253,32 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
                 ),
                 child: Stack(
                   children: [
-                    if (widget.branch.imageUrl != null &&
-                        widget.branch.imageUrl!.isNotEmpty)
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: Center(
-                            child: Opacity(
-                              opacity: 0.15,
-                              child: Image.network(
-                                widget.branch.imageUrl!,
-                                width: 340,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const SizedBox(),
+                    Builder(
+                      builder: (context) {
+                        final watermarkImg = widget.branch.effectiveLogo ??
+                            widget.branch.effectiveIsoLogo;
+                        if (watermarkImg == null || watermarkImg.isEmpty) {
+                          return const SizedBox();
+                        }
+
+                        return Positioned.fill(
+                          child: IgnorePointer(
+                            child: Center(
+                              child: Opacity(
+                                opacity: 0.12,
+                                child: Image.network(
+                                  watermarkImg,
+                                  width: 340,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const SizedBox(),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(32),
                       child: ClinicalOrderViewerContent(
@@ -350,59 +358,125 @@ class ClinicalOrderViewerContent extends StatelessWidget {
           children: [
             Expanded(
               flex: 6,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          image: branch.imageUrl != null &&
-                                  branch.imageUrl!.isNotEmpty
-                              ? DecorationImage(
-                                  image: NetworkImage(branch.imageUrl!),
-                                  fit: BoxFit.contain,
-                                )
-                              : null,
+              child: Builder(
+                builder: (context) {
+                  final isIsoLogo =
+                      branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
+                  final headerImg = branch.effectiveIsoLogo;
+
+                  if (isIsoLogo && headerImg != null && headerImg.isNotEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Image.network(
+                          headerImg,
+                          height: 48,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Text(
+                            branch.name.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade900,
+                            ),
+                          ),
                         ),
-                        child: branch.imageUrl == null ||
-                                branch.imageUrl!.isEmpty
-                            ? Icon(Icons.biotech,
-                                size: 28, color: Colors.blue.shade800)
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              branch.name.toUpperCase(),
+                        const SizedBox(height: 6),
+                        if (branch.address.isNotEmpty)
+                          Text('Dirección: ${branch.address}',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue.shade900,
-                              ),
-                            ),
-                            Text(
-                              'Laboratorio Clínico y Diagnóstico Especializado',
-                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                            ),
+                                  fontSize: 11, color: Colors.grey.shade800)),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            if (branch.phone.isNotEmpty)
+                              Text('Tel: ${branch.phone}',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade800)),
+                            if (branch.email != null &&
+                                branch.email!.isNotEmpty)
+                              Text('Email: ${branch.email!}',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade800)),
                           ],
                         ),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              image: headerImg != null && headerImg.isNotEmpty
+                                  ? DecorationImage(
+                                      image: NetworkImage(headerImg),
+                                      fit: BoxFit.contain,
+                                    )
+                                  : null,
+                            ),
+                            child: headerImg == null || headerImg.isEmpty
+                                ? Icon(Icons.biotech,
+                                    size: 28, color: Colors.blue.shade800)
+                                : null,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  branch.name.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade900,
+                                  ),
+                                ),
+                                Text(
+                                  'Laboratorio Clínico y Diagnóstico Especializado',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (branch.address.isNotEmpty)
+                        Text('Dirección: ${branch.address}',
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade800)),
+                      Wrap(
+                        spacing: 12,
+                        children: [
+                          if (branch.phone.isNotEmpty)
+                            Text('Teléfono: ${branch.phone}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade800)),
+                          if (branch.email != null &&
+                              branch.email!.isNotEmpty)
+                            Text('Email: ${branch.email!}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade800)),
+                        ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Dirección: ${branch.address}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade800)),
-                  Text('Teléfono: ${branch.phone}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade800)),
-                ],
+                  );
+                },
               ),
             ),
             const SizedBox(width: 16),

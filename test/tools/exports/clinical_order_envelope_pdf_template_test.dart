@@ -98,5 +98,29 @@ void main() {
       expect(doc.document.pdfPageList.pages.length, equals(1));
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye sobre PDF con sucursal que incluye email, facebook e isoLogoUrl', () async {
+      final fullBranch = BranchInDb(
+        id: 'br-full',
+        name: 'Laboratorio Central',
+        address: 'Calle Real 100',
+        phone: '2222-3333',
+        email: 'central@laboratorio.com',
+        facebook: 'facebook.com/labcentral',
+        isoLogoUrl: null, // Sin red remota real en test pero probando el modelo
+        createdAt: nowMs,
+      );
+
+      final template = ClinicalOrderEnvelopePdfTemplate(
+        order: mockOrderWithDoctor,
+        branch: fullBranch,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.length, equals(1));
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }

@@ -126,10 +126,16 @@ class SingleQuotationTemplate implements PdfTemplate {
                 'Dirección: ${branch.address}',
                 style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
               ),
-              pw.Text(
-                'Teléfono: ${branch.phone}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
-              ),
+              if (branch.phone.isNotEmpty)
+                pw.Text(
+                  'Teléfono: ${branch.phone}',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                ),
+              if (branch.email != null && branch.email!.isNotEmpty)
+                pw.Text(
+                  'Email: ${branch.email!}',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                ),
             ],
           ),
         ),

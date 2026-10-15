@@ -182,15 +182,34 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     final formattedDate =
         '${DateTimeTool.formatddMMyy(orderDate)} ${DateTimeTool.formatHHmm(orderDate)}';
 
-    pw.MemoryImage? logoImage;
-    if (branch.imageUrl != null && branch.imageUrl!.isNotEmpty) {
+    pw.MemoryImage? headerImage;
+    pw.MemoryImage? watermarkImage;
+
+    final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
+    final headerImageUrl = branch.effectiveIsoLogo;
+    final watermarkImageUrl = branch.effectiveLogo ?? branch.effectiveIsoLogo;
+
+    if (headerImageUrl != null && headerImageUrl.isNotEmpty) {
       try {
-        final response = await http.get(Uri.parse(branch.imageUrl!));
+        final response = await http.get(Uri.parse(headerImageUrl));
         if (response.statusCode == 200) {
-          logoImage = pw.MemoryImage(response.bodyBytes);
+          headerImage = pw.MemoryImage(response.bodyBytes);
         }
       } catch (_) {
-        // Si no se puede descargar el logo, se continúa generando el informe limpiamente
+        // En caso de no poder descargar la imagen se continúa sin ella
+      }
+    }
+
+    if (watermarkImageUrl != null && watermarkImageUrl.isNotEmpty) {
+      if (watermarkImageUrl == headerImageUrl && headerImage != null) {
+        watermarkImage = headerImage;
+      } else {
+        try {
+          final response = await http.get(Uri.parse(watermarkImageUrl));
+          if (response.statusCode == 200) {
+            watermarkImage = pw.MemoryImage(response.bodyBytes);
+          }
+        } catch (_) {}
       }
     }
 
@@ -198,14 +217,15 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 36, vertical: 26),
       buildBackground: (pw.Context context) {
-        if (logoImage == null) return pw.SizedBox();
+        final bgImage = watermarkImage ?? headerImage;
+        if (bgImage == null) return pw.SizedBox();
         return pw.FullPage(
           ignoreMargins: true,
           child: pw.Center(
             child: pw.Opacity(
               opacity: 0.08,
               child: pw.Image(
-                logoImage,
+                bgImage,
                 width: 280,
                 fit: pw.BoxFit.contain,
               ),
@@ -230,7 +250,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         header: (pw.Context context) {
           return pw.Container(
             margin: const pw.EdgeInsets.only(bottom: 8),
-            child: _buildHeader(formattedDate, logoImage),
+            child: _buildHeader(formattedDate, headerImage, isIsoLogo),
           );
         },
         footer: (pw.Context context) {
@@ -272,7 +292,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return doc;
   }
 
-  pw.Widget _buildHeader(String formattedDate, pw.MemoryImage? logoImage) {
+  pw.Widget _buildHeader(
+      String formattedDate, pw.MemoryImage? headerImage, bool isIsoLogo) {
     final shortId = order.id.length > 8
         ? order.id.substring(order.id.length - 8).toUpperCase()
         : order.id.toUpperCase();
@@ -283,44 +304,93 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       children: [
         pw.Expanded(
           flex: 6,
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              if (logoImage != null) ...[
-                pw.Container(
-                  width: 48,
-                  height: 48,
-                  margin: const pw.EdgeInsets.only(right: 10),
-                  child: pw.Image(logoImage, fit: pw.BoxFit.contain),
-                ),
-              ],
-              pw.Expanded(
-                child: pw.Column(
+          child: isIsoLogo && headerImage != null
+              ? pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(
-                      branch.name.toUpperCase(),
-                      style: pw.TextStyle(
-                        fontSize: 13,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blueGrey900,
-                      ),
+                    pw.Container(
+                      height: 42,
+                      margin: const pw.EdgeInsets.only(bottom: 4),
+                      child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                     ),
                     if (branch.address.isNotEmpty)
                       pw.Text(
                         branch.address,
-                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                        style: const pw.TextStyle(
+                            fontSize: 7.5, color: PdfColors.grey700),
                       ),
-                    if (branch.phone.isNotEmpty)
-                      pw.Text(
-                        'Teléfono: ${branch.phone}',
-                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                    pw.Row(
+                      children: [
+                        if (branch.phone.isNotEmpty)
+                          pw.Text(
+                            'Tel: ${branch.phone}',
+                            style: const pw.TextStyle(
+                                fontSize: 7.5, color: PdfColors.grey700),
+                          ),
+                        if (branch.phone.isNotEmpty &&
+                            branch.email != null &&
+                            branch.email!.isNotEmpty)
+                          pw.Text(
+                            ' | ',
+                            style: const pw.TextStyle(
+                                fontSize: 7.5, color: PdfColors.grey500),
+                          ),
+                        if (branch.email != null && branch.email!.isNotEmpty)
+                          pw.Text(
+                            branch.email!,
+                            style: const pw.TextStyle(
+                                fontSize: 7.5, color: PdfColors.grey700),
+                          ),
+                      ],
+                    ),
+                  ],
+                )
+              : pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (headerImage != null) ...[
+                      pw.Container(
+                        width: 48,
+                        height: 48,
+                        margin: const pw.EdgeInsets.only(right: 10),
+                        child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                       ),
+                    ],
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            branch.name.toUpperCase(),
+                            style: pw.TextStyle(
+                              fontSize: 13,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blueGrey900,
+                            ),
+                          ),
+                          if (branch.address.isNotEmpty)
+                            pw.Text(
+                              branch.address,
+                              style: const pw.TextStyle(
+                                  fontSize: 8, color: PdfColors.grey700),
+                            ),
+                          if (branch.phone.isNotEmpty)
+                            pw.Text(
+                              'Teléfono: ${branch.phone}',
+                              style: const pw.TextStyle(
+                                  fontSize: 8, color: PdfColors.grey700),
+                            ),
+                          if (branch.email != null && branch.email!.isNotEmpty)
+                            pw.Text(
+                              'Email: ${branch.email!}',
+                              style: const pw.TextStyle(
+                                  fontSize: 8, color: PdfColors.grey700),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
         pw.Expanded(
           flex: 4,

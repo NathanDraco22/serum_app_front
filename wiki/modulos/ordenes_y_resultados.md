@@ -55,3 +55,12 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - **Campos Cualitativos**: Selector desplegable con las opciones clínicas configuradas.
   - **Observaciones**: Campo de texto para notas patológicas.
 - Permite guardar resultados parciales o marcar la orden como completada (`completed`).
+
+### D. Informes Clínicos y Sobres Físicos de Entrega
+- **Informe Clínico PDF (`ClinicalOrderViewer` y `SingleClinicalOrderTemplate`)**:
+  - Emisión del documento A4 oficial con membrete de sucursal, subseries clínicas (`SERIE ROJA`, `SERIE BLANCA`, `DIFERENCIAL`, etc.) y alertas clínicas discretas `H`/`L` en rojo al rebasar límites biológicos.
+- **Sobre Físico de Entrega (`OrderEnvelopeViewer` y `ClinicalOrderEnvelopePdfTemplate`)**:
+  - Rotulación directa de sobres comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) alimentados en vertical en la bandeja manual de la impresora.
+  - Recuadro central delimitado con línea negra que incluye médico tratante (condicional: solo si existe), paciente y fecha.
+  - Pie de sobre con marco redondeado azul y datos de contacto de la sede.
+  - Para detalles de hardware, alimentación e implementación, ver **[Impresión de Sobres Clínicos](impresion_sobres_clinicos.md)**.

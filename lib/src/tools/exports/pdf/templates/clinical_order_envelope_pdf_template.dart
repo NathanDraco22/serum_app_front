@@ -48,15 +48,18 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
     final orderDate = DateTime.fromMillisecondsSinceEpoch(order.createdAt);
     final dateStr = DateTimeTool.formatddMMyy(orderDate);
 
-    pw.MemoryImage? logoImage;
-    if (branch.imageUrl != null && branch.imageUrl!.isNotEmpty) {
+    pw.MemoryImage? brandImage;
+    final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
+    final brandImageUrl = branch.effectiveIsoLogo;
+
+    if (brandImageUrl != null && brandImageUrl.isNotEmpty) {
       try {
-        final response = await http.get(Uri.parse(branch.imageUrl!));
+        final response = await http.get(Uri.parse(brandImageUrl));
         if (response.statusCode == 200) {
-          logoImage = pw.MemoryImage(response.bodyBytes);
+          brandImage = pw.MemoryImage(response.bodyBytes);
         }
       } catch (_) {
-        // En caso de no poder descargar el logo se continúa sin él
+        // En caso de no poder descargar la imagen se continúa sin ella
       }
     }
 
@@ -75,8 +78,8 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
           final content = pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
-              // 1. Esquina superior izquierda: Logo y nombre de laboratorio
-              _buildHeader(logoImage),
+              // 1. Esquina superior izquierda: IsoLogo o Logo y nombre de laboratorio
+              _buildHeader(brandImage, isIsoLogo),
 
               pw.Spacer(flex: 1),
 
@@ -105,19 +108,30 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
     return doc;
   }
 
-  pw.Widget _buildHeader(pw.MemoryImage? logoImage) {
+  pw.Widget _buildHeader(pw.MemoryImage? brandImage, bool isIsoLogo) {
+    if (brandImage != null && isIsoLogo) {
+      // El IsoLogo ya contiene el logotipo y el nombre comercial integrado
+      return pw.Align(
+        alignment: pw.Alignment.topLeft,
+        child: pw.Container(
+          height: 38,
+          child: pw.Image(brandImage, fit: pw.BoxFit.contain),
+        ),
+      );
+    }
+
     return pw.Align(
       alignment: pw.Alignment.topLeft,
       child: pw.Row(
         mainAxisSize: pw.MainAxisSize.min,
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          if (logoImage != null) ...[
+          if (brandImage != null) ...[
             pw.Container(
               width: 42,
               height: 42,
               margin: const pw.EdgeInsets.only(right: 8),
-              child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+              child: pw.Image(brandImage, fit: pw.BoxFit.contain),
             ),
           ],
           pw.Column(
@@ -252,37 +266,55 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
           pw.SizedBox(height: 3),
 
           // 2. Canales de contacto con iconos circulares
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            children: [
-              // Facebook / Nombre comercial
-              _buildContactItem(
-                label: 'f',
-                text: 'Laboratorio clínico ${branch.name}',
-                iconColor: PdfColors.blue700,
-              ),
-              pw.SizedBox(width: 14),
-
-              // Correo electrónico
-              _buildContactItem(
-                label: '@',
-                text: 'info@${branch.name.toLowerCase().replaceAll(' ', '')}.com',
-                iconColor: PdfColors.blue500,
-              ),
-
-              // Teléfono / WhatsApp
-              if (branch.phone.isNotEmpty) ...[
-                pw.SizedBox(width: 14),
-                _buildContactItem(
-                  label: 'W',
-                  text: branch.phone,
-                  iconColor: PdfColors.teal,
-                ),
-              ],
-            ],
-          ),
+          _buildFooterContactItems(),
         ],
       ),
+    );
+  }
+
+  pw.Widget _buildFooterContactItems() {
+    final contactItems = <pw.Widget>[];
+
+    // Facebook
+    if (branch.facebook != null && branch.facebook!.trim().isNotEmpty) {
+      contactItems.add(
+        _buildContactItem(
+          label: 'f',
+          text: branch.facebook!.trim(),
+          iconColor: PdfColors.blue700,
+        ),
+      );
+    }
+
+    // Correo electrónico
+    if (branch.email != null && branch.email!.trim().isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      contactItems.add(
+        _buildContactItem(
+          label: '@',
+          text: branch.email!.trim(),
+          iconColor: PdfColors.blue500,
+        ),
+      );
+    }
+
+    // Teléfono / WhatsApp
+    if (branch.phone.isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      contactItems.add(
+        _buildContactItem(
+          label: 'W',
+          text: branch.phone,
+          iconColor: PdfColors.teal,
+        ),
+      );
+    }
+
+    if (contactItems.isEmpty) return pw.SizedBox();
+
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      children: contactItems,
     );
   }
 

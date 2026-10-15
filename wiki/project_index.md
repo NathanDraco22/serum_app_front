@@ -75,7 +75,7 @@ serum_app_front/
 │       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
 │       ├── services/                   # Implementaciones de servicios locales (Secure storage)
 │       ├── tools/                      # Formateadores, helpers y utilidades de UI
-│       │   └── exports/                # Exportadores PDF (PdfExportTool, templates/reports/)
+│       │   └── exports/                # Exportadores PDF (PdfExportTool, sobres 10.5x24cm, templates/reports/)
 │       └── widgets/                    # Widgets y selectores transversales compartidos
 ├── packages/
 │   └── serum_business/                 # Capa de negocio agnóstica en Dart puro
@@ -205,7 +205,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 ### 📦 3.9 Módulo `order` (Órdenes Clínicas, Pagos y Resultados)
 * **Ubicación**: `lib/src/modules/order/`
 * **Vistas**: `view/order_screen.dart`, `view/create_order_screen.dart`
-* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`
+* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`, visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart` y plantilla `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`
 * **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `ReadLabTestCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
 * **Funciones Clave**:
   1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
@@ -220,6 +220,9 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
      - Despliega formulario adaptativo según el tipo de dato de cada prueba (campo numérico, selector cualitativo o área de texto).
      - Compara automáticamente los valores numéricos contra los rangos de referencia y alerta visualmente si un resultado está fuera de límites.
      - Permite marcar la orden como completada para su entrega al paciente.
+  7. **Emisión de Informes Clínicos y Sobres Físicos de Entrega**:
+     - Emisión de informe oficial PDF A4 con membrete, subseries clínicas y alertas discretas `H`/`L`.
+     - Rotulación directa de sobres físicos comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) con alimentación vertical para la bandeja manual de la impresora, recuadro de atención con médico condicional (se oculta si es nulo), datos de paciente y pie de página con marco redondeado (ver especificación completa en **[Impresión de Sobres Clínicos](modulos/impresion_sobres_clinicos.md)**).
 
 ---
 
