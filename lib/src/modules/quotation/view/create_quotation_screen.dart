@@ -26,7 +26,7 @@ class CreateQuotationScreen extends StatelessWidget {
         BlocProvider<ReadLabTestCubit>(
           create: (context) => ReadLabTestCubit(
             labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(),
+          )..getAll(branchId: context.read<AppSessionCubit>().currentBranchId),
         ),
         BlocProvider<WriteQuotationCubit>(
           create: (context) => WriteQuotationCubit(

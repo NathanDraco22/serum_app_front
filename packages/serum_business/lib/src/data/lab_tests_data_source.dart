@@ -17,15 +17,24 @@ class LabTestsDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>> getAllLabTests() async {
-    final uri = HttpTools.generateUri(_endpoint);
+  Future<Map<String, dynamic>> getAllLabTests({String? branchId}) async {
+    final uri = HttpTools.generateUri(
+      _endpoint,
+      queryParameters: branchId != null ? {'branch_id': branchId} : null,
+    );
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;
   }
 
-  Future<Map<String, dynamic>?> getLabTestById(String labTestId) async {
-    final uri = HttpTools.generateUri("$_endpoint/$labTestId");
+  Future<Map<String, dynamic>?> getLabTestById(
+    String labTestId, {
+    String? branchId,
+  }) async {
+    final uri = HttpTools.generateUri(
+      "$_endpoint/$labTestId",
+      queryParameters: branchId != null ? {'branch_id': branchId} : null,
+    );
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;
@@ -48,8 +57,14 @@ class LabTestsDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>> searchLabTestsByText(String textQuery) async {
-    final uri = HttpTools.generateUri("$_endpoint/search/$textQuery");
+  Future<Map<String, dynamic>> searchLabTestsByText(
+    String textQuery, {
+    String? branchId,
+  }) async {
+    final uri = HttpTools.generateUri(
+      "$_endpoint/search/$textQuery",
+      queryParameters: branchId != null ? {'branch_id': branchId} : null,
+    );
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;

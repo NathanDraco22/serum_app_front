@@ -9,10 +9,13 @@ class SearchLabTestCubit extends Cubit<SearchLabTestState> {
   SearchLabTestCubit({required this.labTestsRepository})
       : super(SearchLabTestInitial());
 
-  Future<void> search(String textQuery) async {
+  Future<void> search(String textQuery, {String? branchId}) async {
     emit(SearchLabTestLoading());
     try {
-      final items = await labTestsRepository.searchLabTestsByText(textQuery);
+      final items = await labTestsRepository.searchLabTestsByText(
+        textQuery,
+        branchId: branchId,
+      );
       emit(SearchLabTestSuccess(items));
     } catch (e) {
       emit(SearchLabTestError(e.toString()));

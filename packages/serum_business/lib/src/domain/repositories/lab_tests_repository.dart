@@ -18,8 +18,8 @@ class LabTestsRepository with ReactiveRepository<LabTestInDb> {
     return newLabTest;
   }
 
-  Future<List<LabTestInDb>> getAllLabTests() async {
-    final results = await labTestsDataSource.getAllLabTests();
+  Future<List<LabTestInDb>> getAllLabTests({String? branchId}) async {
+    final results = await labTestsDataSource.getAllLabTests(branchId: branchId);
     final response = ListResponse<LabTestInDb>.fromJson(
       results,
       LabTestInDb.fromJson,
@@ -29,9 +29,15 @@ class LabTestsRepository with ReactiveRepository<LabTestInDb> {
     return _labTests;
   }
 
-  Future<List<LabTestInDb>> searchLabTestsByText(String textQuery) async {
+  Future<List<LabTestInDb>> searchLabTestsByText(
+    String textQuery, {
+    String? branchId,
+  }) async {
     if (textQuery.trim().isEmpty) return [];
-    final results = await labTestsDataSource.searchLabTestsByText(textQuery);
+    final results = await labTestsDataSource.searchLabTestsByText(
+      textQuery,
+      branchId: branchId,
+    );
     final response = ListResponse<LabTestInDb>.fromJson(
       results,
       LabTestInDb.fromJson,
@@ -39,8 +45,14 @@ class LabTestsRepository with ReactiveRepository<LabTestInDb> {
     return response.data;
   }
 
-  Future<LabTestInDb?> getLabTestById(String labTestId) async {
-    final result = await labTestsDataSource.getLabTestById(labTestId);
+  Future<LabTestInDb?> getLabTestById(
+    String labTestId, {
+    String? branchId,
+  }) async {
+    final result = await labTestsDataSource.getLabTestById(
+      labTestId,
+      branchId: branchId,
+    );
     if (result == null) return null;
     return LabTestInDb.fromJson(result);
   }

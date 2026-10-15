@@ -280,9 +280,10 @@ class LabTestDetailDialog extends StatelessWidget {
                   ],
                 ),
                 ...labTest.referenceValues.map((ref) {
-                  final genderLabel = ref.gender == 'male'
+                  final g = ref.gender.toLowerCase();
+                  final genderLabel = (g == 'male' || g == 'm')
                       ? 'Masculino'
-                      : ref.gender == 'female'
+                      : (g == 'female' || g == 'f')
                           ? 'Femenino'
                           : 'Ambos';
                   final ageYearsMin = (ref.minAgeDays / 365).floor();
@@ -382,11 +383,35 @@ class LabTestDetailDialog extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Análisis Incluidos (${labTest.childTestIds.length})',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                Text(
+                  'Análisis Incluidos (${labTest.childTestIds.length})',
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: labTest.useChildTestsPriceSum
+                        ? theme.colorScheme.primaryContainer
+                        : theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    labTest.useChildTestsPriceSum ? 'Precio: Sumatoria' : 'Precio: Tarifa Fija',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: labTest.useChildTestsPriceSum
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            if (savings > 0 && individualSum > 0)
+            if (!labTest.useChildTestsPriceSum && savings > 0 && individualSum > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(

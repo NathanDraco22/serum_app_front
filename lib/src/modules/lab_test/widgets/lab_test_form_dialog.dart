@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import 'pack_test_selector.dart';
@@ -22,6 +23,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
   late double _salePrice;
   late double _salePrice2;
   late bool _isPack;
+  late bool _useChildTestsPriceSum;
   late List<String> _childTestIds;
   late String _dataType;
   late String _unitOfMeasure;
@@ -57,6 +59,21 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
     'x10^3/µL',
   ];
 
+  static String _normalizeGender(String raw) {
+    final lower = raw.trim().toLowerCase();
+    if (lower == 'f' || lower == 'female' || lower == 'femenino') return 'female';
+    if (lower == 'm' || lower == 'male' || lower == 'masculino') return 'male';
+    return 'both';
+  }
+
+  double _calculateChildrenSum(List<LabTestInDb> allAvailableTests) {
+    final selectedTests = allAvailableTests
+        .where((t) => _childTestIds.contains(t.id))
+        .toList();
+    final totalCents = selectedTests.fold<int>(0, (sum, t) => sum + t.salePrice);
+    return totalCents / 100.0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -67,10 +84,20 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
       _salePrice = widget.labTest!.salePrice / 100.0;
       _salePrice2 = widget.labTest!.salePrice2 / 100.0;
       _isPack = widget.labTest!.isPack;
+      _useChildTestsPriceSum = widget.labTest!.useChildTestsPriceSum;
       _childTestIds = List.from(widget.labTest!.childTestIds);
       _dataType = widget.labTest!.dataType;
       _unitOfMeasure = widget.labTest!.unitOfMeasure;
-      _referenceValues = List.from(widget.labTest!.referenceValues);
+      _referenceValues = widget.labTest!.referenceValues.map((ref) {
+        return ReferenceValue(
+          patientType: ref.patientType,
+          gender: _normalizeGender(ref.gender),
+          minAgeDays: ref.minAgeDays,
+          maxAgeDays: ref.maxAgeDays,
+          minValue: ref.minValue,
+          maxValue: ref.maxValue,
+        );
+      }).toList();
       _qualitativeOptions = List.from(widget.labTest!.qualitativeOptions);
       _expectedQualitativeValue = widget.labTest!.expectedQualitativeValue ?? '';
     } else {
@@ -80,6 +107,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
       _salePrice = 0.0;
       _salePrice2 = 0.0;
       _isPack = false;
+      _useChildTestsPriceSum = true;
       _childTestIds = [];
       _dataType = 'numeric';
       _unitOfMeasure = 'mg/dL';
@@ -113,20 +141,35 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
   }
 
   void _submit() {
+    if (_isPack && _childTestIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Debe seleccionar al menos un análisis clínico para el pack.',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       final cubit = context.read<WriteLabTestCubit>();
       final priceInCents = (_salePrice * 100).round();
       final price2InCents = (_salePrice2 * 100).round();
+      final branchId = context.read<AppSessionCubit>().currentBranchId;
 
       if (widget.labTest == null) {
         final newTest = CreateLabTest(
+          branchId: branchId,
           name: _name.trim(),
           code: _code.trim().isNotEmpty ? _code.trim() : null,
           commercialCategory: _commercialCategory.trim(),
           salePrice: priceInCents,
           salePrice2: price2InCents,
           isPack: _isPack,
+          useChildTestsPriceSum: _isPack ? _useChildTestsPriceSum : true,
           childTestIds: _isPack ? _childTestIds : [],
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
@@ -143,12 +186,14 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
         });
       } else {
         final updateTest = UpdateLabTest(
+          branchId: branchId,
           name: _name.trim(),
           code: _code.trim().isNotEmpty ? _code.trim() : null,
           commercialCategory: _commercialCategory.trim(),
           salePrice: priceInCents,
           salePrice2: price2InCents,
           isPack: _isPack,
+          useChildTestsPriceSum: _isPack ? _useChildTestsPriceSum : true,
           childTestIds: _isPack ? _childTestIds : [],
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
@@ -274,7 +319,13 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                           ],
                           selected: {_isPack},
                           onSelectionChanged: (set) {
-                            setState(() => _isPack = set.first);
+                            setState(() {
+                              _isPack = set.first;
+                              if (_isPack && _useChildTestsPriceSum) {
+                                _salePrice = _calculateChildrenSum(allAvailableTests);
+                                _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                              }
+                            });
                           },
                         ),
                       ),
@@ -376,16 +427,35 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                             flex: 2,
                             child: TextFormField(
                               controller: _priceController,
-                              decoration: const InputDecoration(
-                                labelText: 'Precio de Venta (\$ USD) *',
+                              readOnly: _isPack && _useChildTestsPriceSum,
+                              decoration: InputDecoration(
+                                labelText: _isPack && _useChildTestsPriceSum
+                                    ? 'Precio Calculado Automáticamente (\$ USD)'
+                                    : 'Precio de Venta (\$ USD) *',
                                 hintText: 'ej. 15.00',
-                                prefixIcon: Icon(Icons.attach_money, size: 20),
+                                prefixIcon: Icon(
+                                  _isPack && _useChildTestsPriceSum
+                                      ? Icons.calculate
+                                      : Icons.attach_money,
+                                  size: 20,
+                                  color: _isPack && _useChildTestsPriceSum
+                                      ? theme.colorScheme.primary
+                                      : null,
+                                ),
+                                helperText: _isPack && _useChildTestsPriceSum
+                                    ? 'Sumatoria automática de análisis'
+                                    : (_isPack ? 'Tarifa personalizada (debe ser mayor a 0)' : null),
+                                filled: _isPack && _useChildTestsPriceSum,
+                                fillColor: _isPack && _useChildTestsPriceSum
+                                    ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                                    : null,
                               ),
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               validator: (val) {
-                                if (val == null || val.trim().isEmpty) return 'Requerido';
+                                if (_isPack && _useChildTestsPriceSum) return null;
+                                if (val == null || val.trim().isEmpty) return 'El precio es requerido';
                                 final parsed = double.tryParse(val);
-                                if (parsed == null || parsed < 0) return 'Precio inválido';
+                                if (parsed == null || parsed <= 0) return 'El precio debe ser mayor a 0';
                                 return null;
                               },
                               onChanged: (val) {
@@ -428,6 +498,74 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                           */
                         ],
                       ),
+                      if (_isPack) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: _useChildTestsPriceSum
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                                  : theme.colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _useChildTestsPriceSum
+                                    ? Icons.calculate_outlined
+                                    : Icons.edit_note_outlined,
+                                color: theme.colorScheme.primary,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Usar la sumatoria de los precios de las pruebas que contiene',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _useChildTestsPriceSum
+                                          ? 'El precio del pack se calcula automáticamente sumando el precio de cada análisis seleccionado'
+                                          : 'Establecer tarifa fija personalizada para el perfil/pack (debe ser mayor a 0)',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _useChildTestsPriceSum,
+                                onChanged: (val) {
+                                  setState(() {
+                                    _useChildTestsPriceSum = val;
+                                    if (val) {
+                                      _salePrice = _calculateChildrenSum(allAvailableTests);
+                                      _priceController.text =
+                                          _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                                    } else {
+                                      if (_salePrice > 0) {
+                                        _priceController.text = _salePrice.toStringAsFixed(2);
+                                      } else {
+                                        _priceController.text = '';
+                                      }
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       const Divider(),
                       const SizedBox(height: 16),
@@ -453,8 +591,16 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                           availableTests: allAvailableTests,
                           selectedTestIds: _childTestIds,
                           packSalePrice: _salePrice,
+                          useChildTestsPriceSum: _useChildTestsPriceSum,
                           onSelectionChanged: (updated) {
-                            setState(() => _childTestIds = updated);
+                            setState(() {
+                              _childTestIds = updated;
+                              if (_useChildTestsPriceSum) {
+                                _salePrice = _calculateChildrenSum(allAvailableTests);
+                                _priceController.text =
+                                    _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                              }
+                            });
                           },
                         ),
                       ] else ...[
@@ -603,7 +749,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                       Expanded(
                                         flex: 2,
                                         child: DropdownButtonFormField<String>(
-                                          initialValue: ref.gender,
+                                          initialValue: _normalizeGender(ref.gender),
                                           isDense: true,
                                           decoration: const InputDecoration(
                                             labelText: 'Género',

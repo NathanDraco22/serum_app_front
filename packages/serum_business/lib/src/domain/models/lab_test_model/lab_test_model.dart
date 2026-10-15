@@ -1,3 +1,4 @@
+import 'package:serum_business/src/domain/models/lab_test_account_model/commercial_model.dart';
 import 'package:serum_business/src/domain/models/shared/reference_value.dart';
 
 class BaseLabTest {
@@ -6,8 +7,10 @@ class BaseLabTest {
   final String commercialCategory;
   final int salePrice;
   final int salePrice2;
+  final int costPrice;
   final String currency;
   final bool isPack;
+  final bool useChildTestsPriceSum;
   final List<String> childTestIds;
   final String dataType;
   final String unitOfMeasure;
@@ -24,8 +27,10 @@ class BaseLabTest {
     this.commercialCategory = '',
     this.salePrice = 0,
     this.salePrice2 = 0,
+    this.costPrice = 0,
     this.currency = 'USD',
     this.isPack = false,
+    this.useChildTestsPriceSum = true,
     this.childTestIds = const [],
     this.dataType = 'numeric',
     this.unitOfMeasure = '',
@@ -36,14 +41,19 @@ class BaseLabTest {
 }
 
 class CreateLabTest extends BaseLabTest {
+  final String branchId;
+
   CreateLabTest({
+    required this.branchId,
     required super.name,
     super.code,
     super.commercialCategory = '',
     super.salePrice = 0,
     super.salePrice2 = 0,
+    super.costPrice = 0,
     super.currency = 'USD',
     super.isPack = false,
+    super.useChildTestsPriceSum = true,
     super.childTestIds = const [],
     super.dataType = 'numeric',
     super.unitOfMeasure = '',
@@ -54,14 +64,17 @@ class CreateLabTest extends BaseLabTest {
 
   Map<String, dynamic> toJson() {
     return {
+      'branchId': branchId,
       'name': name,
       'parameterName': name,
       'code': code,
       'commercialCategory': commercialCategory,
       'salePrice': salePrice,
       'salePrice2': salePrice2,
+      'costPrice': costPrice,
       'currency': currency,
       'isPack': isPack,
+      'useChildTestsPriceSum': useChildTestsPriceSum,
       'childTestIds': childTestIds,
       'dataType': dataType,
       'unitOfMeasure': unitOfMeasure,
@@ -73,13 +86,16 @@ class CreateLabTest extends BaseLabTest {
 }
 
 class UpdateLabTest {
+  final String? branchId;
   final String? name;
   final String? code;
   final String? commercialCategory;
   final int? salePrice;
   final int? salePrice2;
+  final int? costPrice;
   final String? currency;
   final bool? isPack;
+  final bool? useChildTestsPriceSum;
   final List<String>? childTestIds;
   final String? dataType;
   final String? unitOfMeasure;
@@ -88,13 +104,16 @@ class UpdateLabTest {
   final String? expectedQualitativeValue;
 
   UpdateLabTest({
+    this.branchId,
     this.name,
     this.code,
     this.commercialCategory,
     this.salePrice,
     this.salePrice2,
+    this.costPrice,
     this.currency,
     this.isPack,
+    this.useChildTestsPriceSum,
     this.childTestIds,
     this.dataType,
     this.unitOfMeasure,
@@ -105,14 +124,18 @@ class UpdateLabTest {
 
   Map<String, dynamic> toJson() {
     return {
+      if (branchId != null) 'branchId': branchId,
       if (name != null) 'name': name,
       if (name != null) 'parameterName': name,
       if (code != null) 'code': code,
       if (commercialCategory != null) 'commercialCategory': commercialCategory,
       if (salePrice != null) 'salePrice': salePrice,
       if (salePrice2 != null) 'salePrice2': salePrice2,
+      if (costPrice != null) 'costPrice': costPrice,
       if (currency != null) 'currency': currency,
       if (isPack != null) 'isPack': isPack,
+      if (useChildTestsPriceSum != null)
+        'useChildTestsPriceSum': useChildTestsPriceSum,
       if (childTestIds != null) 'childTestIds': childTestIds,
       if (dataType != null) 'dataType': dataType,
       if (unitOfMeasure != null) 'unitOfMeasure': unitOfMeasure,
@@ -130,6 +153,7 @@ class LabTestInDb extends BaseLabTest {
   final int createdAt;
   final int? updatedAt;
   final bool isDeleted;
+  final LabTestCommercial? commercial;
 
   LabTestInDb({
     required this.id,
@@ -138,31 +162,52 @@ class LabTestInDb extends BaseLabTest {
     super.commercialCategory = '',
     super.salePrice = 0,
     super.salePrice2 = 0,
+    super.costPrice = 0,
     super.currency = 'USD',
     super.isPack = false,
+    super.useChildTestsPriceSum = true,
     super.childTestIds = const [],
     super.dataType = 'numeric',
     super.unitOfMeasure = '',
     super.referenceValues = const [],
     super.qualitativeOptions = const [],
     super.expectedQualitativeValue,
+    this.commercial,
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
   });
 
   factory LabTestInDb.fromJson(Map<String, dynamic> json) {
-    final rawName = json['name'] as String? ?? json['parameterName'] as String? ?? '';
-    final rawCategory = json['commercialCategory'] as String? ?? json['medicalClassification'] as String? ?? '';
+    final rawName =
+        json['name'] as String? ?? json['parameterName'] as String? ?? '';
+    final rawCategory = json['commercialCategory'] as String? ??
+        json['medicalClassification'] as String? ??
+        '';
+    final rawCommercial = json['commercial'] != null
+        ? LabTestCommercial.fromJson(json['commercial'] as Map<String, dynamic>)
+        : null;
+    final parsedCost = (json['costPrice'] as num?)?.toInt() ??
+        rawCommercial?.costPrice ??
+        0;
+
     return LabTestInDb(
       id: json['id'] as String,
       name: rawName,
       code: json['code'] as String?,
       commercialCategory: rawCategory,
-      salePrice: (json['salePrice'] as num?)?.toInt() ?? 0,
-      salePrice2: (json['salePrice2'] as num?)?.toInt() ?? 0,
-      currency: json['currency'] as String? ?? 'USD',
+      salePrice: (json['salePrice'] as num?)?.toInt() ??
+          rawCommercial?.salePrice ??
+          0,
+      salePrice2: (json['salePrice2'] as num?)?.toInt() ??
+          rawCommercial?.salePrice2 ??
+          0,
+      costPrice: parsedCost,
+      currency: json['currency'] as String? ??
+          rawCommercial?.currency ??
+          'USD',
       isPack: json['isPack'] as bool? ?? false,
+      useChildTestsPriceSum: json['useChildTestsPriceSum'] as bool? ?? true,
       childTestIds: (json['childTestIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -178,6 +223,7 @@ class LabTestInDb extends BaseLabTest {
               .toList() ??
           const [],
       expectedQualitativeValue: json['expectedQualitativeValue'] as String?,
+      commercial: rawCommercial,
       createdAt: json['createdAt'] as int,
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,

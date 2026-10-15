@@ -7,6 +7,7 @@ export 'cash_registers_data_source.dart';
 export 'cash_shifts_data_source.dart';
 export 'cash_transactions_data_source.dart';
 export 'doctors_data_source.dart';
+export 'lab_test_accounts_data_source.dart';
 export 'lab_tests_data_source.dart';
 export 'orders_data_source.dart';
 export 'patients_data_source.dart';

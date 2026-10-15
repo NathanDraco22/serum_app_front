@@ -47,6 +47,9 @@ class ProviderContainer extends StatelessWidget {
         RepositoryProvider<ApiKeysRepository>.value(
           value: sl<ApiKeysRepository>(),
         ),
+        RepositoryProvider<LabTestAccountsRepository>.value(
+          value: sl<LabTestAccountsRepository>(),
+        ),
         RepositoryProvider(
           create: (_) => PatientsRepository(patientsDataSource),
         ),

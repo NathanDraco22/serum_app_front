@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/search_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
@@ -20,7 +21,7 @@ class LabTestsScreen extends StatelessWidget {
         BlocProvider<ReadLabTestCubit>(
           create: (context) => ReadLabTestCubit(
             labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(),
+          )..getAll(branchId: context.read<AppSessionCubit>().currentBranchId),
         ),
         BlocProvider<SearchLabTestCubit>(
           create: (context) => SearchLabTestCubit(
@@ -71,7 +72,8 @@ class _BodyState extends State<_Body> {
     if (query.trim().isEmpty) {
       context.read<SearchLabTestCubit>().clear();
     } else {
-      context.read<SearchLabTestCubit>().search(query.trim());
+      final branchId = context.read<AppSessionCubit>().currentBranchId;
+      context.read<SearchLabTestCubit>().search(query.trim(), branchId: branchId);
     }
   }
 
@@ -96,7 +98,8 @@ class _BodyState extends State<_Body> {
               _selectedCategory = 'Todas';
               _filterType = 'all';
             });
-            context.read<ReadLabTestCubit>().getAll();
+            final branchId = context.read<AppSessionCubit>().currentBranchId;
+            context.read<ReadLabTestCubit>().getAll(branchId: branchId);
           }
         });
   }

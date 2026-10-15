@@ -6,6 +6,7 @@ class PackTestSelector extends StatefulWidget {
   final List<String> selectedTestIds;
   final ValueChanged<List<String>> onSelectionChanged;
   final double packSalePrice;
+  final bool useChildTestsPriceSum;
 
   const PackTestSelector({
     super.key,
@@ -13,6 +14,7 @@ class PackTestSelector extends StatefulWidget {
     required this.selectedTestIds,
     required this.onSelectionChanged,
     required this.packSalePrice,
+    this.useChildTestsPriceSum = true,
   });
 
   @override
@@ -379,16 +381,22 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          savings > 0
-                              ? 'Ahorro al cliente: \$${savings.toStringAsFixed(2)} USD'
-                              : 'Precio del Pack: \$${packPrice.toStringAsFixed(2)} USD',
+                          widget.useChildTestsPriceSum
+                              ? 'Precio del Pack = Sumatoria: \$${packPrice.toStringAsFixed(2)} USD'
+                              : (savings > 0
+                                  ? 'Ahorro al cliente: \$${savings.toStringAsFixed(2)} USD'
+                                  : 'Precio del Pack: \$${packPrice.toStringAsFixed(2)} USD'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: savings > 0 ? Colors.green.shade800 : theme.colorScheme.primary,
+                            color: widget.useChildTestsPriceSum
+                                ? theme.colorScheme.primary
+                                : (savings > 0
+                                    ? Colors.green.shade800
+                                    : theme.colorScheme.primary),
                           ),
                         ),
-                        if (savings > 0 && totalIndividualPrice > 0)
+                        if (!widget.useChildTestsPriceSum && savings > 0 && totalIndividualPrice > 0)
                           Text(
                             '(${((savings / totalIndividualPrice) * 100).toStringAsFixed(1)}% descuento)',
                             style: TextStyle(

@@ -26,7 +26,7 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     }
   }
 
-  Future<void> getAll() async {
+  Future<void> getAll({String? branchId}) async {
     final currentState = state;
     if (currentState is ReadLabTestSuccess) {
       emit(ReadLabTestRefreshing.fromSuccess(currentState));
@@ -34,7 +34,7 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
       emit(ReadLabTestLoading());
     }
     try {
-      final items = await labTestsRepository.getAllLabTests();
+      final items = await labTestsRepository.getAllLabTests(branchId: branchId);
       if (isClosed) return;
       final sortedItems = List<LabTestInDb>.from(items)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -45,10 +45,11 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     }
   }
 
-  Future<void> getById(String labTestId) async {
+  Future<void> getById(String labTestId, {String? branchId}) async {
     emit(ReadLabTestLoading());
     try {
-      final item = await labTestsRepository.getLabTestById(labTestId);
+      final item =
+          await labTestsRepository.getLabTestById(labTestId, branchId: branchId);
       if (isClosed) return;
       if (item != null) {
         emit(ReadLabTestSuccess([item]));
