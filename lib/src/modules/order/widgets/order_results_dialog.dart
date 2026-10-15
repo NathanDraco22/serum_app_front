@@ -218,7 +218,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             maxWidth: 600,
-            maxHeight: 560,
+            maxHeight: 600,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -564,8 +564,8 @@ class _ParameterCard extends StatelessWidget {
             children: [
               // Caja de Referencia
               Container(
-                constraints: const BoxConstraints(minWidth: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                constraints: const BoxConstraints(minWidth: 160),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(6),
@@ -578,18 +578,18 @@ class _ParameterCard extends StatelessWidget {
                     Text(
                       result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO',
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.4,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       _getReferenceText(),
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onSurface,
                       ),
                     ),
@@ -706,7 +706,7 @@ class _ParameterCard extends StatelessWidget {
         isDense: true,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -719,7 +719,7 @@ class _ParameterCard extends StatelessWidget {
         items: options.map((opt) {
           return DropdownMenuItem(
             value: opt,
-            child: Text(opt, style: const TextStyle(fontSize: 13)),
+            child: Text(opt, style: const TextStyle(fontSize: 14)),
           );
         }).toList(),
         onChanged: isReadOnly ? null : (val) {
@@ -731,11 +731,11 @@ class _ParameterCard extends StatelessWidget {
         controller: controller,
         readOnly: isReadOnly,
         maxLines: 1,
-        style: const TextStyle(fontSize: 13),
+        style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Observación...',
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -753,20 +753,24 @@ class _ParameterCard extends StatelessWidget {
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         onChanged: onNumericChanged,
         style: TextStyle(
-          fontSize: 13,
+          fontSize: 15.5,
           fontWeight: FontWeight.bold,
           color: isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: '0.00',
+          hintStyle: TextStyle(
+            fontSize: 15,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
+          ),
           suffixText: result.unitOfMeasure.isNotEmpty ? result.unitOfMeasure : null,
           suffixStyle: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
             color: theme.colorScheme.onSurfaceVariant,
           ),
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
