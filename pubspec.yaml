@@ -47,15 +47,28 @@ dependencies:
   http: ^1.2.0
 
 dev_dependencies:
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  icons_launcher: ^3.1.0
+
+icons_launcher:
+  image_path: "assets/icon/serum_app_icon.png"
+  platforms:
+    android:
+      enable: true
+      adaptive_background_color: "#ffffff"
+      adaptive_foreground_image: "assets/icon/serum_app_icon.png"
+    ios:
+      enable: true
+    web:
+      enable: true
+    windows:
+      enable: true
+    macos:
+      enable: false
+    linux:
+      enable: false
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

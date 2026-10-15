@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:serum_business/serum_business.dart';
+
+import '../../../config/app_assets.dart';
 import '../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../widgets/dialogs/selectors/branch_selection_dialog.dart';
 import '../cash_shift/widgets/cash_shift_open_dialog.dart';
@@ -67,11 +70,7 @@ class _SideNav extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  child: const Icon(Icons.biotech),
-                ),
+                _buildSidebarLogo(context, sessionState.currentBranch),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -315,6 +314,52 @@ class _SideNav extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarLogo(BuildContext context, BranchInDb? currentBranch) {
+    final theme = Theme.of(context);
+    final logoUrl = currentBranch?.effectiveLogo;
+
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer.withAlpha(80),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Image.network(
+          logoUrl,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) =>
+              _buildFallbackAssetLogo(theme),
+        ),
+      );
+    }
+
+    return _buildFallbackAssetLogo(theme);
+  }
+
+  Widget _buildFallbackAssetLogo(ThemeData theme) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withAlpha(80),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Image.asset(
+        AppAssets.serumLogo,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Icon(
+          Icons.biotech,
+          color: theme.colorScheme.primary,
+          size: 26,
+        ),
       ),
     );
   }
