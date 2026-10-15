@@ -199,7 +199,7 @@ class LabTestsList extends StatelessWidget {
                                   Icon(Icons.biotech, size: 14, color: theme.colorScheme.onSurfaceVariant),
                                   const SizedBox(width: 4),
                                   Text(
-                                    labTest.dataType == 'boolean'
+                                    labTest.dataType == 'qualitative' || labTest.dataType == 'boolean'
                                         ? 'Cualitativo'
                                         : labTest.dataType == 'text'
                                             ? 'Texto Libre'

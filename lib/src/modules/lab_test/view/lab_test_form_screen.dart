@@ -37,6 +37,30 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
   final TextEditingController _unitController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _price2Controller = TextEditingController();
+  final TextEditingController _qualitativeOptionsController = TextEditingController();
+
+  static const List<Map<String, dynamic>> _qualitativePresets = [
+    {
+      'label': 'Negativo / Positivo',
+      'options': ['Negativo', 'Positivo'],
+      'expected': 'Negativo',
+    },
+    {
+      'label': 'Sedimento Urinario (No se observó, Escasas...)',
+      'options': ['No se observó', 'Escasas', 'Moderadas', 'Abundantes'],
+      'expected': 'No se observó',
+    },
+    {
+      'label': 'Escala de Cruces (Negativo, Trazas, +, ++, +++)',
+      'options': ['Negativo', 'Trazas', '+', '++', '+++'],
+      'expected': 'Negativo',
+    },
+    {
+      'label': 'Normal / Alterado',
+      'options': ['Normal', 'Alterado'],
+      'expected': 'Normal',
+    },
+  ];
 
   static const List<String> _commonCategories = [
     'Bioquímica Clínica',
@@ -88,7 +112,14 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       _isPack = widget.labTest!.isPack;
       _useChildTestsPriceSum = widget.labTest!.useChildTestsPriceSum;
       _childTestIds = List.from(widget.labTest!.childTestIds);
-      _dataType = widget.labTest!.dataType;
+      final rawType = widget.labTest!.dataType.trim().toLowerCase();
+      if (rawType == 'boolean' || rawType == 'qualitative') {
+        _dataType = 'qualitative';
+      } else if (rawType == 'text') {
+        _dataType = 'text';
+      } else {
+        _dataType = 'numeric';
+      }
       _unitOfMeasure = widget.labTest!.unitOfMeasure;
       _referenceValues = widget.labTest!.referenceValues.map((ref) {
         return ReferenceValue(
@@ -131,6 +162,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     _unitController.text = _unitOfMeasure;
     _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '';
     _price2Controller.text = _salePrice2 > 0 ? _salePrice2.toStringAsFixed(2) : '';
+    _qualitativeOptionsController.text = _qualitativeOptions.join(', ');
   }
 
   @override
@@ -139,6 +171,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     _unitController.dispose();
     _priceController.dispose();
     _price2Controller.dispose();
+    _qualitativeOptionsController.dispose();
     super.dispose();
   }
 
@@ -176,9 +209,9 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
           referenceValues: !_isPack && _dataType == 'numeric' ? _referenceValues : [],
-          qualitativeOptions: !_isPack && _dataType == 'boolean' ? _qualitativeOptions : [],
+          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') ? _qualitativeOptions : [],
           expectedQualitativeValue:
-              !_isPack && _dataType == 'boolean' && _expectedQualitativeValue.isNotEmpty
+              !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
         );
@@ -197,9 +230,9 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
           referenceValues: !_isPack && _dataType == 'numeric' ? _referenceValues : [],
-          qualitativeOptions: !_isPack && _dataType == 'boolean' ? _qualitativeOptions : [],
+          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') ? _qualitativeOptions : [],
           expectedQualitativeValue:
-              !_isPack && _dataType == 'boolean' && _expectedQualitativeValue.isNotEmpty
+              !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
         );
@@ -784,9 +817,9 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                           ),
                                         ),
                                         DropdownMenuItem(
-                                          value: 'boolean',
+                                          value: 'qualitative',
                                           child: Text(
-                                            'Cualitativo / Booleano (Sí/No, Positivo/Negativo)',
+                                            'Cualitativo (Opciones Múltiples, Positivo/Negativo)',
                                           ),
                                         ),
                                         DropdownMenuItem(
@@ -1021,38 +1054,129 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                               ],
 
                               // Editor Cualitativo
-                              if (_dataType == 'boolean') ...[
+                              if (_dataType == 'qualitative' || _dataType == 'boolean') ...[
+                                Text(
+                                  'Plantillas Rápidas Frecuentes:',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: _qualitativePresets.map((preset) {
+                                      final opts = preset['options'] as List<String>;
+                                      final exp = preset['expected'] as String;
+                                      return Padding(
+                                        padding: const EdgeInsets.only(right: 6),
+                                        child: ActionChip(
+                                          avatar: const Icon(Icons.flash_on, size: 14),
+                                          label: Text(
+                                            preset['label'] as String,
+                                            style: const TextStyle(fontSize: 11),
+                                          ),
+                                          onPressed: () {
+                                            setState(() {
+                                              _qualitativeOptions = List.from(opts);
+                                              _expectedQualitativeValue = exp;
+                                              _qualitativeOptionsController.text = opts.join(', ');
+                                            });
+                                          },
+                                          visualDensity: VisualDensity.compact,
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
                                 TextFormField(
-                                  initialValue: _qualitativeOptions.join(', '),
+                                  controller: _qualitativeOptionsController,
                                   decoration: InputDecoration(
-                                    labelText: 'Opciones de Resultado (separadas por coma)',
+                                    labelText: 'Opciones de Resultado (separadas por coma) *',
                                     hintText: 'ej. Negativo, Positivo',
                                     prefixIcon: const Icon(Icons.list_alt, size: 20),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
+                                  validator: (val) {
+                                    if (_dataType == 'qualitative' || _dataType == 'boolean') {
+                                      if (val == null || val.trim().isEmpty || _qualitativeOptions.isEmpty) {
+                                        return 'Debe ingresar al menos una opción';
+                                      }
+                                    }
+                                    return null;
+                                  },
                                   onChanged: (val) {
-                                    _qualitativeOptions = val
-                                        .split(',')
-                                        .map((e) => e.trim())
-                                        .where((e) => e.isNotEmpty)
-                                        .toList();
+                                    setState(() {
+                                      final parsed = val
+                                          .split(',')
+                                          .map((e) => e.trim())
+                                          .where((e) => e.isNotEmpty)
+                                          .toSet()
+                                          .toList();
+                                      _qualitativeOptions = parsed;
+                                      if (!_qualitativeOptions.contains(_expectedQualitativeValue)) {
+                                        _expectedQualitativeValue =
+                                            _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
+                                      }
+                                    });
                                   },
                                 ),
                                 const SizedBox(height: 14),
-                                TextFormField(
-                                  initialValue: _expectedQualitativeValue,
-                                  decoration: InputDecoration(
-                                    labelText: 'Valor Normal / Esperado',
-                                    hintText: 'ej. Negativo',
-                                    prefixIcon: const Icon(Icons.check_circle_outline, size: 20),
-                                    border: OutlineInputBorder(
+                                if (_qualitativeOptions.isNotEmpty)
+                                  DropdownButtonFormField<String>(
+                                    key: ValueKey('expected_$_expectedQualitativeValue'),
+                                    initialValue: _qualitativeOptions.contains(_expectedQualitativeValue)
+                                        ? _expectedQualitativeValue
+                                        : _qualitativeOptions.first,
+                                    decoration: InputDecoration(
+                                      labelText: 'Valor Normal / Esperado *',
+                                      helperText:
+                                          'Cualquier resultado distinto a este marcará alerta médica (ANORMAL)',
+                                      prefixIcon: const Icon(Icons.check_circle_outline, size: 20),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    items: _qualitativeOptions.toSet().map((opt) {
+                                      return DropdownMenuItem<String>(
+                                        value: opt,
+                                        child: Text(opt),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _expectedQualitativeValue = val ?? '';
+                                      });
+                                    },
+                                    onSaved: (val) => _expectedQualitativeValue = val ?? '',
+                                  )
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.surfaceContainerLow,
                                       borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: theme.colorScheme.outlineVariant),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Defina al menos una opción de resultado en el campo superior para seleccionar el valor normal esperado.',
+                                            style: theme.textTheme.bodySmall?.copyWith(
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  onSaved: (val) => _expectedQualitativeValue = val ?? '',
-                                ),
                               ],
                             ],
                           ),

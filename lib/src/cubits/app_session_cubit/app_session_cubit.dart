@@ -31,8 +31,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   bool get hasMultipleBranches {
     final currentUser = state.currentUser;
     if (currentUser == null) return false;
-    final isAdmin = currentUser.role.toLowerCase() == 'admin';
-    return isAdmin || currentUser.branches.length > 1;
+    return currentUser.branches.length > 1 && state.branches.length > 1;
   }
 
   BranchInDb? getBranchById(String id) {
@@ -273,9 +272,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
 
     final isAdmin = user.role.toLowerCase() == 'admin';
-    final userBranches = isAdmin
-        ? allBranches
-        : allBranches.where((b) => user.branches.contains(b.id)).toList();
+    final userBranches = user.branches.isNotEmpty
+        ? allBranches.where((b) => user.branches.contains(b.id)).toList()
+        : (isAdmin ? allBranches : <BranchInDb>[]);
 
     final initBranchId = user.branches.firstOrNull ?? kOriginBranchId;
 
@@ -289,8 +288,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
     AppSerumConfig().setBranchId(selectedBranch.id);
 
-    final finalAvailableBranches =
-        userBranches.isNotEmpty ? userBranches : allBranches;
+    final finalAvailableBranches = userBranches.isNotEmpty
+        ? userBranches
+        : [defaultOriginBranch];
 
     emit(
       state.copyWith(

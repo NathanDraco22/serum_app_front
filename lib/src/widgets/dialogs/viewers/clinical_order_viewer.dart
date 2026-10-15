@@ -8,6 +8,7 @@ import '../../../../config/service_locator.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../tools/exports/pdf/templates/clinical_order_pdf_template.dart';
 import '../../../tools/exports/pdf_export_tool.dart';
+import 'order_envelope_viewer.dart';
 
 Future<void> showClinicalOrderViewerDialog(
   BuildContext context,
@@ -213,6 +214,16 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
             tooltip: 'Exportar PDF (A4)',
             onPressed: () => _exportPdf(context),
             icon: const Icon(Icons.picture_as_pdf),
+          ),
+          IconButton(
+            tooltip: 'Imprimir Sobre',
+            onPressed: () => showOrderEnvelopeViewerDialog(
+              context,
+              widget.order,
+              patientInfo: _patientInfo,
+              doctorInfo: _doctorInfo,
+            ),
+            icon: const Icon(Icons.mail_outline),
           ),
           IconButton(
             tooltip: 'Imprimir Informe',
@@ -553,198 +564,310 @@ class ClinicalOrderViewerContent extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // 3. Encabezado del Estudio Solicitado
+        // 3. Barra de acento teal superior
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade900,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'ESTUDIO: ${order.examName.toUpperCase()}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                'TOTAL ANÁLISIS: ${order.results.length}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ),
+          height: 3,
+          color: const Color(0xFF26A69A),
         ),
+        const SizedBox(height: 6),
 
-        const SizedBox(height: 12),
-
-        // 4. Tabla de Resultados Clínicos
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Table(
-            border: TableBorder(
-              horizontalInside: BorderSide(color: Colors.grey.shade200),
-            ),
-            columnWidths: const {
-              0: FlexColumnWidth(4.0), // Parámetro
-              1: FlexColumnWidth(2.5), // Resultado
-              2: FlexColumnWidth(1.8), // Unidades
-              3: FlexColumnWidth(3.2), // Referencia
-              4: FlexColumnWidth(2.0), // Alerta
-            },
-            children: [
-              TableRow(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                ),
-                children: [
-                  _buildTableCell('ANÁLISIS / PARÁMETRO',
-                      isHeader: true, align: TextAlign.left),
-                  _buildTableCell('RESULTADO',
-                      isHeader: true, align: TextAlign.center),
-                  _buildTableCell('UNIDADES',
-                      isHeader: true, align: TextAlign.center),
-                  _buildTableCell('VALOR REFERENCIAL',
-                      isHeader: true, align: TextAlign.center),
-                  _buildTableCell('ESTADO',
-                      isHeader: true, align: TextAlign.center),
-                ],
-              ),
-              ...order.results.map((r) {
-                final hasAlert = r.alertFlag != null && r.alertFlag!.isNotEmpty;
-                final isNumeric = r.dataType == 'numeric';
-
-                String referenceText = '—';
-                if (isNumeric && r.referenceValues.isNotEmpty) {
-                  final ref = r.referenceValues.first;
-                  referenceText = '${ref.minValue} - ${ref.maxValue}';
-                } else if (r.dataType == 'boolean' &&
-                    r.expectedQualitativeValue != null) {
-                  referenceText = 'Esperado: ${r.expectedQualitativeValue}';
+        // 4. Encabezado de Área Clínica y Cabecera de Tabla
+        Builder(
+          builder: (context) {
+            final titleUpper = order.examName.toUpperCase();
+            String clinicalArea = 'LABORATORIO CLÍNICO';
+            if (titleUpper.contains('HEMAT') ||
+                titleUpper.contains('HEMOGLOBINA') ||
+                titleUpper.contains('SANGRE') ||
+                titleUpper.contains('BIOMETR')) {
+              clinicalArea = 'HEMATOLOGÍA';
+            } else if (titleUpper.contains('QUIMIC') ||
+                titleUpper.contains('GLUCOSA') ||
+                titleUpper.contains('PERFIL') ||
+                titleUpper.contains('LIPID') ||
+                titleUpper.contains('COLESTEROL')) {
+              clinicalArea = 'QUÍMICA CLÍNICA';
+            } else if (titleUpper.contains('ORINA') ||
+                titleUpper.contains('URO') ||
+                titleUpper.contains('GENERAL DE ORINA')) {
+              clinicalArea = 'UROANÁLISIS';
+            } else if (titleUpper.contains('HECES') ||
+                titleUpper.contains('COPRO') ||
+                titleUpper.contains('PARASIT')) {
+              clinicalArea = 'COPROLOGÍA';
+            } else if (titleUpper.contains('INMUNO') ||
+                titleUpper.contains('SEROLOG') ||
+                titleUpper.contains('VIH') ||
+                titleUpper.contains('ANTIGEN')) {
+              clinicalArea = 'INMUNOLOGÍA / SEROLOGÍA';
+            } else {
+              for (final r in order.results) {
+                final mc = r.medicalClassification.trim().toUpperCase();
+                if (mc.contains('HEMAT')) {
+                  clinicalArea = 'HEMATOLOGÍA';
+                  break;
                 }
+                if (mc.contains('QUIMIC')) {
+                  clinicalArea = 'QUÍMICA CLÍNICA';
+                  break;
+                }
+              }
+            }
 
-                final alertLabel = hasAlert
-                    ? (r.alertFlag == 'HIGH'
-                        ? 'ALTO'
-                        : r.alertFlag == 'LOW'
-                            ? 'BAJO'
-                            : r.alertFlag == 'ABNORMAL'
-                                ? 'ANORMAL'
-                                : r.alertFlag!)
-                    : 'NORMAL';
+            final examTitle = order.examName.isNotEmpty
+                ? order.examName.toUpperCase()
+                : 'ESTUDIO CLÍNICO';
 
-                return TableRow(
-                  decoration: BoxDecoration(
-                    color: hasAlert
-                        ? Colors.red.shade50.withValues(alpha: 0.6)
-                        : Colors.white,
+            // Agrupar por series/clasificación médica
+            final Map<String, List<OrderTestResult>> groups = {};
+            for (final r in order.results) {
+              final classification = r.medicalClassification.trim();
+              final groupKey = classification.isNotEmpty
+                  ? classification.toUpperCase()
+                  : '';
+              groups.putIfAbsent(groupKey, () => []).add(r);
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  clinicalArea,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
+                ),
+                const SizedBox(height: 4),
+                const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                const SizedBox(height: 6),
+                const Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            r.parameterName,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: hasAlert
-                                  ? Colors.red.shade900
-                                  : Colors.black87,
-                            ),
-                          ),
-                          if (r.medicalClassification.isNotEmpty)
-                            Text(
-                              r.medicalClassification,
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey.shade600),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 8),
+                    Expanded(
+                      flex: 42,
                       child: Text(
-                        r.resultValue ?? '—',
-                        textAlign: TextAlign.center,
+                        'Nombre del Test',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color:
-                              hasAlert ? Colors.red.shade900 : Colors.black87,
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 8),
+                    Expanded(
+                      flex: 31,
                       child: Text(
-                        r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '—',
-                        textAlign: TextAlign.center,
+                        'Resultado',
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade800),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 8),
+                    Expanded(
+                      flex: 27,
                       child: Text(
-                        referenceText,
-                        textAlign: TextAlign.center,
+                        'Valores de Referencia',
+                        textAlign: TextAlign.right,
                         style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade700),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 8),
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: hasAlert
-                                ? Colors.red.shade100
-                                : Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: hasAlert
-                                  ? Colors.red.shade300
-                                  : Colors.green.shade300,
-                            ),
-                          ),
-                          child: Text(
-                            alertLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: hasAlert
-                                  ? Colors.red.shade900
-                                  : Colors.green.shade900,
-                            ),
-                          ),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ],
-                );
-              }),
-            ],
-          ),
+                ),
+                const SizedBox(height: 6),
+                const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    examTitle,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ...groups.entries.map((entry) {
+                  final groupTitle = entry.key;
+                  final items = entry.value;
+                  final bool hasGroupHeader =
+                      groupTitle.isNotEmpty && groupTitle != clinicalArea;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (hasGroupHeader) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 4, horizontal: 8),
+                          margin: const EdgeInsets.only(top: 6, bottom: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            groupTitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueGrey.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                      Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(4.2),
+                          1: FlexColumnWidth(1.8),
+                          2: FlexColumnWidth(1.3),
+                          3: FlexColumnWidth(2.7),
+                        },
+                        children: items.map((r) {
+                          final isNumeric = r.dataType == 'numeric';
+                          final numVal = isNumeric && r.resultValue != null
+                              ? double.tryParse(r.resultValue!
+                                  .replaceAll(',', '.')
+                                  .trim())
+                              : null;
+
+                          String? alertFlag = r.alertFlag;
+                          if (alertFlag == null &&
+                              numVal != null &&
+                              r.referenceValues.isNotEmpty) {
+                            final ref = r.referenceValues.first;
+                            if (numVal > ref.maxValue) {
+                              alertFlag = 'H';
+                            } else if (numVal < ref.minValue) {
+                              alertFlag = 'L';
+                            }
+                          } else if (alertFlag != null) {
+                            final f = alertFlag.toUpperCase();
+                            if (f == 'HIGH' || f == 'ALTO') alertFlag = 'H';
+                            if (f == 'LOW' || f == 'BAJO') alertFlag = 'L';
+                            if (f == 'ABNORMAL' || f == 'ANORMAL') alertFlag = '*';
+                          }
+
+                          final hasAlert =
+                              alertFlag != null && alertFlag.isNotEmpty;
+
+                          String referenceText = '—';
+                          if (isNumeric && r.referenceValues.isNotEmpty) {
+                            final ref = r.referenceValues.first;
+                            final unit = r.unitOfMeasure.isNotEmpty
+                                ? ' ${r.unitOfMeasure}'
+                                : '';
+                            referenceText =
+                                '${ref.minValue} - ${ref.maxValue}$unit';
+                          } else if (r.dataType == 'boolean' &&
+                              r.expectedQualitativeValue != null) {
+                            referenceText =
+                                'Esperado: ${r.expectedQualitativeValue}';
+                          } else if (r.expectedQualitativeValue != null) {
+                            referenceText = r.expectedQualitativeValue!;
+                          }
+
+                          final isTotalRow =
+                              r.parameterName.trim().toUpperCase() == 'TOTAL';
+
+                          return TableRow(
+                            decoration: isTotalRow
+                                ? BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(
+                                          color: Colors.grey.shade300,
+                                          width: 0.8),
+                                    ),
+                                  )
+                                : null,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  left: hasGroupHeader ? 12 : 4,
+                                  top: 4,
+                                  bottom: 4,
+                                  right: 4,
+                                ),
+                                child: Text(
+                                  r.parameterName,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: isTotalRow
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      r.resultValue ?? '—',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: hasAlert || isTotalRow
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    if (hasAlert) ...[
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        alertFlag,
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFD32F2F),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  r.unitOfMeasure.isNotEmpty
+                                      ? r.unitOfMeasure
+                                      : '',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4),
+                                child: Text(
+                                  referenceText,
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                  );
+                }),
+              ],
+            );
+          },
         ),
 
         const SizedBox(height: 20),
@@ -841,25 +964,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTableCell(
-    String text, {
-    bool isHeader = false,
-    TextAlign align = TextAlign.left,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-      child: Text(
-        text,
-        textAlign: align,
-        style: TextStyle(
-          fontSize: isHeader ? 11 : 12,
-          fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-          color: isHeader ? Colors.grey.shade800 : Colors.black87,
-        ),
       ),
     );
   }

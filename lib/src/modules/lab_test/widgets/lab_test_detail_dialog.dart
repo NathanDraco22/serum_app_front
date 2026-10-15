@@ -193,8 +193,9 @@ class LabTestDetailDialog extends StatelessWidget {
 
     String typeLabel;
     switch (labTest.dataType) {
+      case 'qualitative':
       case 'boolean':
-        typeLabel = 'Cualitativo / Booleano (Sí/No, Positivo/Negativo)';
+        typeLabel = 'Cualitativo (Opciones Múltiples, Positivo/Negativo)';
         break;
       case 'text':
         typeLabel = 'Texto Libre / Descriptivo';
@@ -316,7 +317,7 @@ class LabTestDetailDialog extends StatelessWidget {
             ),
         ],
 
-        if (labTest.dataType == 'boolean') ...[
+        if (labTest.dataType == 'qualitative' || labTest.dataType == 'boolean') ...[
           Text(
             'Configuración Cualitativa',
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),

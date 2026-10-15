@@ -150,5 +150,96 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye PDF correctamente con Biometría Hemática, subseries y alertas H/L', () async {
+      final branch = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Serum',
+        address: 'Calle Principal',
+        phone: 'PBX 2222',
+        createdAt: nowMs,
+      );
+
+      final hemogramOrder = OrderInDb(
+        id: 'ord-hemogram-full',
+        patientId: 'pat-1',
+        branchId: 'br-1',
+        items: [
+          OrderItem(
+            labTestId: 'lt-bh',
+            name: 'Biometría Hemática Completa',
+            salePriceApplied: 25000,
+          ),
+        ],
+        status: 'completed',
+        totalPrice: 25000,
+        paidAmount: 25000,
+        createdAt: nowMs,
+        patientInfo: PatientInfo(
+          name: 'Ana Martínez',
+          dateOfBirth: nowMs - (25 * 365 * 86400000),
+          gender: 'F',
+        ),
+        results: [
+          OrderTestResult(
+            labTestId: 'lt-bh',
+            parameterName: 'Eritrocitos',
+            medicalClassification: 'SERIE ROJA',
+            dataType: 'numeric',
+            unitOfMeasure: 'xmm3',
+            referenceValues: [
+              ReferenceValue(
+                patientType: 'general',
+                gender: 'f',
+                minAgeDays: 0,
+                maxAgeDays: 36500,
+                minValue: 3.78,
+                maxValue: 5.7,
+              ),
+            ],
+            resultValue: '5.000',
+          ),
+          OrderTestResult(
+            labTestId: 'lt-bh',
+            parameterName: 'Linfocitos',
+            medicalClassification: 'DIFERENCIAL',
+            dataType: 'numeric',
+            unitOfMeasure: '%',
+            referenceValues: [
+              ReferenceValue(
+                patientType: 'general',
+                gender: 'any',
+                minAgeDays: 0,
+                maxAgeDays: 36500,
+                minValue: 20.0,
+                maxValue: 40.0,
+              ),
+            ],
+            resultValue: '42',
+            alertFlag: 'HIGH', // Dispara 'H'
+          ),
+          OrderTestResult(
+            labTestId: 'lt-bh',
+            parameterName: 'TOTAL',
+            medicalClassification: 'DIFERENCIAL',
+            dataType: 'numeric',
+            unitOfMeasure: '',
+            referenceValues: [],
+            resultValue: '100',
+          ),
+        ],
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: hemogramOrder,
+        branch: branch,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }

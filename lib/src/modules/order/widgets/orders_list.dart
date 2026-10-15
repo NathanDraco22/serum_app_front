@@ -5,6 +5,7 @@ import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
+import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
 
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
@@ -223,43 +224,39 @@ class OrdersList extends StatelessWidget {
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
+                IconButton(
+                  icon: Icon(isCompleted ? Icons.visibility_outlined : Icons.assignment_outlined),
+                  tooltip: isCompleted ? 'Ver resultados' : 'Editar resultados',
+                  color: isCompleted ? theme.colorScheme.secondary : theme.colorScheme.primary,
                   onPressed: isCompleted
                       ? () => showClinicalOrderViewerDialog(context, order)
                       : () => onEditResults(order),
-                  icon: Icon(isCompleted ? Icons.visibility : Icons.assignment, size: 16),
-                  label: Text(isCompleted ? 'Ver Resultados' : (hasResults ? 'Editar Resultados' : 'Cargar Resultados')),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isCompleted
-                        ? theme.colorScheme.secondaryContainer
-                        : (hasResults ? theme.colorScheme.tertiaryContainer : theme.colorScheme.primary),
-                    foregroundColor: isCompleted
-                        ? theme.colorScheme.onSecondaryContainer
-                        : (hasResults ? theme.colorScheme.onTertiaryContainer : theme.colorScheme.onPrimary),
-                  ),
                 ),
                 if (hasResults || isCompleted) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     tooltip: 'Exportar / Imprimir PDF',
                     onPressed: () => showClinicalOrderViewerDialog(context, order),
                   ),
                 ],
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.mail_outline),
+                  tooltip: 'Imprimir Sobre',
+                  onPressed: () => showOrderEnvelopeViewerDialog(context, order),
+                ),
                 if (showPayButton) ...[
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.payments_outlined),
+                    tooltip: 'Pagar',
+                    color: Colors.green.shade700,
                     onPressed: () => onPayOrder(order),
-                    icon: const Icon(Icons.payments, size: 16),
-                    label: const Text('Pagar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
                   ),
                 ],
                 if (canDelete) ...[
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Eliminar Orden',

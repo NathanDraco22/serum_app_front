@@ -18,6 +18,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late List<OrderTestResult> _results;
   late Map<String, TextEditingController> _controllers;
   late Map<String, String> _qualitativeValues;
+  late List<FocusNode> _focusNodes;
   bool _isSubmitting = false;
 
   @override
@@ -28,20 +29,58 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     _qualitativeValues = {};
 
     for (var r in _results) {
-      if (r.dataType == 'boolean') {
+      if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
         final options = r.qualitativeOptions.isNotEmpty
             ? r.qualitativeOptions
             : ['Negativo', 'Positivo'];
-        _qualitativeValues[r.labTestId] =
-            r.resultValue ?? r.expectedQualitativeValue ?? options.first;
+        final initial = r.resultValue ?? r.expectedQualitativeValue;
+        _qualitativeValues[r.labTestId] = (initial != null && options.contains(initial))
+            ? initial
+            : options.first;
       } else {
         _controllers[r.labTestId] = TextEditingController(text: r.resultValue ?? '');
       }
+    }
+
+    _focusNodes = List.generate(_results.length, (index) {
+      final node = FocusNode();
+      node.addListener(() {
+        if (node.hasFocus) {
+          final r = _results[index];
+          final controller = _controllers[r.labTestId];
+          if (controller != null && controller.text.isNotEmpty) {
+            controller.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: controller.text.length,
+            );
+          }
+        }
+      });
+      return node;
+    });
+
+    if (widget.order.status != 'completed' && _focusNodes.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _focusNodes.isNotEmpty) {
+          _focusNodes.first.requestFocus();
+        }
+      });
+    }
+  }
+
+  void _onFieldSubmitted(int index) {
+    if (index + 1 < _focusNodes.length) {
+      _focusNodes[index + 1].requestFocus();
+    } else {
+      _submit();
     }
   }
 
   @override
   void dispose() {
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
     for (var controller in _controllers.values) {
       controller.dispose();
     }
@@ -50,7 +89,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
 
   /// Evalúa el flag de alerta médica de un resultado en tiempo real
   String? _getAlertFlag(OrderTestResult r) {
-    if (r.dataType == 'boolean') {
+    if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
       final val = _qualitativeValues[r.labTestId];
       if (val != null &&
           r.expectedQualitativeValue != null &&
@@ -89,7 +128,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         String? val;
         String? alert;
 
-        if (r.dataType == 'boolean') {
+        if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
           val = _qualitativeValues[r.labTestId];
           if (r.expectedQualitativeValue != null &&
               r.expectedQualitativeValue!.isNotEmpty &&
@@ -392,6 +431,9 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                         alert: alert,
                         isAlert: isAlert,
                         isReadOnly: isReadOnly,
+                        focusNode: _focusNodes[index],
+                        isLast: index == _results.length - 1,
+                        onFieldSubmitted: () => _onFieldSubmitted(index),
                         controller: _controllers[r.labTestId],
                         qualitativeValue: _qualitativeValues[r.labTestId],
                         onQualitativeChanged: (val) {
@@ -478,6 +520,9 @@ class _ParameterCard extends StatelessWidget {
   final String? alert;
   final bool isAlert;
   final bool isReadOnly;
+  final FocusNode? focusNode;
+  final bool isLast;
+  final VoidCallback? onFieldSubmitted;
   final TextEditingController? controller;
   final String? qualitativeValue;
   final ValueChanged<String> onQualitativeChanged;
@@ -488,6 +533,9 @@ class _ParameterCard extends StatelessWidget {
     required this.alert,
     required this.isAlert,
     required this.isReadOnly,
+    this.focusNode,
+    this.isLast = false,
+    this.onFieldSubmitted,
     required this.controller,
     required this.qualitativeValue,
     required this.onQualitativeChanged,
@@ -676,7 +724,7 @@ class _ParameterCard extends StatelessWidget {
         return '${ref.minValue} - ${ref.maxValue}$unit';
       }
       return 'No especificado';
-    } else if (result.dataType == 'boolean') {
+    } else if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
       return result.expectedQualitativeValue ?? 'Negativo';
     }
     return 'Texto libre';
@@ -696,13 +744,18 @@ class _ParameterCard extends StatelessWidget {
   }
 
   Widget _buildInput(ThemeData theme) {
-    if (result.dataType == 'boolean') {
+    if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
       final options = result.qualitativeOptions.isNotEmpty
           ? result.qualitativeOptions
           : ['Negativo', 'Positivo'];
+      final selectedValue =
+          (qualitativeValue != null && options.contains(qualitativeValue))
+              ? qualitativeValue
+              : options.first;
 
       return DropdownButtonFormField<String>(
-        initialValue: qualitativeValue ?? options.first,
+        focusNode: focusNode,
+        initialValue: selectedValue,
         isDense: true,
         decoration: InputDecoration(
           isDense: true,
@@ -723,14 +776,20 @@ class _ParameterCard extends StatelessWidget {
           );
         }).toList(),
         onChanged: isReadOnly ? null : (val) {
-          if (val != null) onQualitativeChanged(val);
+          if (val != null) {
+            onQualitativeChanged(val);
+            onFieldSubmitted?.call();
+          }
         },
       );
     } else if (result.dataType == 'text') {
       return TextFormField(
+        focusNode: focusNode,
         controller: controller,
         readOnly: isReadOnly,
         maxLines: 1,
+        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+        onFieldSubmitted: (_) => onFieldSubmitted?.call(),
         style: const TextStyle(fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Observación...',
@@ -748,9 +807,12 @@ class _ParameterCard extends StatelessWidget {
       );
     } else {
       return TextFormField(
+        focusNode: focusNode,
         controller: controller,
         readOnly: isReadOnly,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+        onFieldSubmitted: (_) => onFieldSubmitted?.call(),
         onChanged: onNumericChanged,
         style: TextStyle(
           fontSize: 15.5,

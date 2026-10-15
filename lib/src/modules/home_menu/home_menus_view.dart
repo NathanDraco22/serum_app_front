@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../config/get_it_config.dart';
 import '../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../widgets/dialogs/selectors/branch_selection_dialog.dart';
 import '../cash_shift/widgets/cash_shift_open_dialog.dart';
@@ -53,7 +52,8 @@ class _SideNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentIndex = navigationShell.currentIndex;
-    final sessionState = context.watch<AppSessionCubit>().state;
+    final sessionCubit = context.watch<AppSessionCubit>();
+    final sessionState = sessionCubit.state;
     final user = sessionState.currentUser;
     final activeShift = sessionState.activeShift;
 
@@ -164,14 +164,13 @@ class _SideNav extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (context.read<AppSessionCubit>().hasMultipleBranches)
+                      if (sessionCubit.hasMultipleBranches)
                         IconButton(
                           icon: const Icon(Icons.swap_horiz, size: 18),
                           tooltip: 'Cambiar Sucursal',
                           onPressed: () async {
-                            final authCubit = getIt<AppSessionCubit>();
-                            final filteredBranches = authCubit.branches
-                                .where((b) => b.id != authCubit.currentBranchId)
+                            final filteredBranches = sessionCubit.branches
+                                .where((b) => b.id != sessionCubit.currentBranchId)
                                 .toList();
                             final res = await showBranchSelectionDialog(
                               context,
@@ -179,7 +178,7 @@ class _SideNav extends StatelessWidget {
                             );
                             if (res == null) return;
                             if (!context.mounted) return;
-                            await authCubit.changeBranch(res.id);
+                            await sessionCubit.changeBranch(res.id);
                           },
                         ),
                     ],

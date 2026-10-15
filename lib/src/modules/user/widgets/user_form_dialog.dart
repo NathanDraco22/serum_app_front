@@ -4,6 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/branch_cubit/read_branches_cubit.dart';
 import '../../../cubits/user_cubit/write_users_cubit.dart';
+import 'user_branch_selector.dart';
 
 class UserFormDialog extends StatefulWidget {
   const UserFormDialog({super.key, this.user});
@@ -33,6 +34,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
 
   bool _obscurePassword = true;
   bool _isSaving = false;
+  bool _hasBranchError = false;
 
   bool get _isEditing => widget.user != null;
 
@@ -98,9 +100,10 @@ class _UserFormDialogState extends State<UserFormDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedBranches.isEmpty) {
+      setState(() => _hasBranchError = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Debes asignar al menos una sucursal al usuario.'),
+          content: Text('Debes autorizar al menos una sucursal para el usuario.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -454,28 +457,13 @@ class _UserFormDialogState extends State<UserFormDialog> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Selección de Sucursales
-                  Text(
-                    'Sucursales Autorizadas *',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Selecciona las sedes en las que este usuario tiene autorización para laborar:',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
+                  // Selección Institucional de Sucursales
                   BlocBuilder<ReadBranchCubit, ReadBranchState>(
                     builder: (context, branchState) {
                       if (branchState is ReadBranchLoading) {
                         return const Center(
                           child: Padding(
-                            padding: EdgeInsets.all(12),
+                            padding: EdgeInsets.all(24),
                             child: CircularProgressIndicator(),
                           ),
                         );
@@ -488,32 +476,18 @@ class _UserFormDialogState extends State<UserFormDialog> {
                           );
                         }
 
-                        return Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: branches.map((b) {
-                            final isSelected =
-                                _selectedBranches.contains(b.id);
-                            return FilterChip(
-                              avatar: Icon(
-                                isSelected
-                                    ? Icons.check
-                                    : Icons.storefront_outlined,
-                                size: 16,
-                              ),
-                              label: Text(b.name),
-                              selected: isSelected,
-                              onSelected: (selected) {
-                                setState(() {
-                                  if (selected) {
-                                    _selectedBranches.add(b.id);
-                                  } else {
-                                    _selectedBranches.remove(b.id);
-                                  }
-                                });
-                              },
-                            );
-                          }).toList(),
+                        return UserBranchSelector(
+                          branches: branches,
+                          selectedBranchIds: _selectedBranches,
+                          hasError: _hasBranchError,
+                          onChanged: (updated) {
+                            setState(() {
+                              _selectedBranches = updated;
+                              if (updated.isNotEmpty) {
+                                _hasBranchError = false;
+                              }
+                            });
+                          },
                         );
                       }
                       return const SizedBox.shrink();
