@@ -16,6 +16,7 @@ import '../src/modules/quotation/view/quotation_screen.dart';
 import '../src/modules/quotation/view/create_quotation_screen.dart';
 import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
+import '../src/modules/receipt/view/receipts_screen.dart';
 import '../src/modules/administration/view/administration_screen.dart';
 import '../src/modules/branch/view/branch_screen.dart';
 import '../src/modules/user/view/user_screen.dart';
@@ -54,6 +55,7 @@ class AppRouter {
   static const String createQuotation = '/quotations/new';
   static const String cashShifts = '/cash-shifts';
   static const String cashTransactions = '/cash-transactions';
+  static const String receipts = '/receipts';
   static const String reports = '/reports';
   static const String administration = '/admin';
   static const String adminBranches = '/admin/branches';
@@ -78,6 +80,8 @@ class AppRouter {
       GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
   static final _cashTransactionsNavKey =
       GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
+  static final _receiptsNavKey =
+      GlobalKey<NavigatorState>(debugLabel: 'receipts');
   static final _reportsNavKey = GlobalKey<NavigatorState>(debugLabel: 'reports');
   static final _adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
 
@@ -241,7 +245,17 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 8: Reportes Analíticos
+            // Branch 8: Recibos de Caja
+            StatefulShellBranch(
+              navigatorKey: _receiptsNavKey,
+              routes: [
+                GoRoute(
+                  path: receipts,
+                  builder: (context, state) => const ReceiptsScreen(),
+                ),
+              ],
+            ),
+            // Branch 9: Reportes Analíticos
             StatefulShellBranch(
               navigatorKey: _reportsNavKey,
               routes: [
@@ -251,7 +265,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 9: Administración
+            // Branch 10: Administración
             StatefulShellBranch(
               navigatorKey: _adminNavKey,
               routes: [

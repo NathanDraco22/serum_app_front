@@ -3,7 +3,13 @@ import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
+import '../../../tools/calculators/clinical_formulas_registry.dart';
+import 'order_results_dialogs/order_results_header.dart';
+import 'order_results_dialogs/order_results_summary_bar.dart';
+import 'order_results_dialogs/parameter_card.dart';
+import 'order_results_dialogs/order_results_footer.dart';
 
+/// Diálogo principal orquestador para la captura, cálculo reactivo y guardado de resultados de laboratorio.
 class OrderResultsDialog extends StatefulWidget {
   final OrderInDb order;
 
@@ -19,6 +25,10 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late Map<String, TextEditingController> _controllers;
   late Map<String, String> _qualitativeValues;
   late List<FocusNode> _focusNodes;
+  final Set<String> _autoCalculatedFieldIds = {};
+  final Map<String, String> _autoCalculatedFormulas = {};
+  final Set<String> _manuallyOverriddenFieldIds = {};
+  bool _isEvaluatingCalculations = false;
   bool _isSubmitting = false;
 
   @override
@@ -38,8 +48,23 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             ? initial
             : options.first;
       } else {
-        _controllers[r.labTestId] = TextEditingController(text: r.resultValue ?? '');
+        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        final initial = r.resultValue?.trim() ?? '';
+        // Serie Blanca: los 7 parámetros diferenciales tienen valor por defecto 0 si están vacíos
+        if (canonical != null &&
+            ClinicalFormulasRegistry.differentialKeys.contains(canonical) &&
+            initial.isEmpty &&
+            widget.order.status != 'completed') {
+          _controllers[r.labTestId] = TextEditingController(text: '0');
+        } else {
+          _controllers[r.labTestId] = TextEditingController(text: initial);
+        }
       }
+    }
+
+    // Evaluación inicial preventiva si la orden tiene valores precargados
+    if (widget.order.status != 'completed') {
+      _evaluateCalculations();
     }
 
     _focusNodes = List.generate(_results.length, (index) {
@@ -68,6 +93,165 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     }
   }
 
+  /// Evalúa en tiempo real las fórmulas clínicas aplicables según los parámetros presentes
+  void _evaluateCalculations({String? triggeredTestId}) {
+    if (_isEvaluatingCalculations || widget.order.status == 'completed') return;
+    _isEvaluatingCalculations = true;
+
+    try {
+      final available = <String, double>{};
+      OrderTestResult? htcResult;
+      OrderTestResult? hbResult;
+      OrderTestResult? eriResult;
+      OrderTestResult? vcmResult;
+      OrderTestResult? hcmResult;
+      OrderTestResult? chcmResult;
+
+      for (var r in _results) {
+        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        if (canonical != null) {
+          if (canonical == 'HTC') htcResult = r;
+          if (canonical == 'HB') hbResult = r;
+          if (canonical == 'ERI') eriResult = r;
+          if (canonical == 'VCM') vcmResult = r;
+          if (canonical == 'HCM') hcmResult = r;
+          if (canonical == 'CHCM') chcmResult = r;
+
+          final text = _controllers[r.labTestId]?.text.trim() ?? '';
+          final val = double.tryParse(text);
+          if (val != null) {
+            available[canonical] = val;
+          }
+        }
+      }
+
+      // Identificar si el campo disparador es Hematocrito, Hemoglobina, Eritrocitos, etc.
+      String? triggeredCanonical;
+      if (triggeredTestId != null) {
+        final triggeredResult = _results.cast<OrderTestResult?>().firstWhere(
+              (r) => r?.labTestId == triggeredTestId,
+              orElse: () => null,
+            );
+        if (triggeredResult != null) {
+          triggeredCanonical = ClinicalFormulasRegistry.resolveCanonicalKey(triggeredResult.parameterName);
+        }
+      }
+
+      // =========================================================================
+      // 1. CASCADA DE LA SERIE ROJA (DISPARADOR PRINCIPAL: HEMATOCRITO)
+      // =========================================================================
+      if (triggeredCanonical == 'HTC' && htcResult != null) {
+        final htcVal = available['HTC'];
+        if (htcVal != null && htcVal > 0) {
+          // A) Hemoglobina = Hematocrito / 3 (1 decimal)
+          if (hbResult != null) {
+            final isHbManual = _manuallyOverriddenFieldIds.contains(hbResult.labTestId);
+            if (!isHbManual) {
+              final approxHb = htcVal / 3.0;
+              final formattedHb = ClinicalFormulasRegistry.formatClinicalValue(approxHb, 1);
+              _controllers[hbResult.labTestId]?.text = formattedHb;
+              available['HB'] = approxHb;
+              _autoCalculatedFieldIds.add(hbResult.labTestId);
+              _autoCalculatedFormulas[hbResult.labTestId] = 'Hematocrito / 3';
+            }
+          }
+
+          // B) Eritrocitos = Hemoglobina / 3 (o Hematocrito / 9) (3 decimales en millones)
+          if (eriResult != null) {
+            final isEriManual = _manuallyOverriddenFieldIds.contains(eriResult.labTestId);
+            if (!isEriManual) {
+              final currentHb = available['HB'] ?? (htcVal / 3.0);
+              final approxEri = currentHb / 3.0;
+              final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
+              _controllers[eriResult.labTestId]?.text = formattedEri;
+              available['ERI'] = approxEri;
+              _autoCalculatedFieldIds.add(eriResult.labTestId);
+              _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
+            }
+          }
+        }
+      }
+
+      // =========================================================================
+      // 2. RECÁLCULO DINÁMICO DE ÍNDICES DE WINTROBE (VCM, HCM, CHCM)
+      // =========================================================================
+      // Aplica tanto si cambió HTC, como si se sobreescribió manualmente HB o ERI.
+      final computedResults = ClinicalFormulasRegistry.evaluateAll(available);
+
+      final wintrobeKeys = [
+        ?vcmResult,
+        ?hcmResult,
+        ?chcmResult,
+      ];
+
+      for (var r in wintrobeKeys) {
+        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        if (canonical == null) continue;
+        if (r.labTestId == triggeredTestId) continue;
+
+        // Solo sobreescribir si no fue modificado manualmente por el usuario
+        if (!_manuallyOverriddenFieldIds.contains(r.labTestId) && computedResults.containsKey(canonical)) {
+          final calc = computedResults[canonical]!;
+          final controller = _controllers[r.labTestId];
+          if (controller != null) {
+            if (controller.text != calc.formattedValue) {
+              controller.text = calc.formattedValue;
+            }
+            _autoCalculatedFieldIds.add(r.labTestId);
+            _autoCalculatedFormulas[r.labTestId] = calc.formulaDisplay;
+          }
+        }
+      }
+
+      // =========================================================================
+      // 3. EVALUACIÓN DE OTRAS FÓRMULAS DEL SISTEMA (Ej. Bilirrubinas)
+      // =========================================================================
+      for (var r in _results) {
+        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        if (canonical == null) continue;
+        if (r.labTestId == triggeredTestId) continue;
+        if (canonical == 'HTC' || canonical == 'HB' || canonical == 'ERI' ||
+            canonical == 'VCM' || canonical == 'HCM' || canonical == 'CHCM') {
+          continue; // Ya gestionados por la Serie Roja
+        }
+
+        if (computedResults.containsKey(canonical)) {
+          final calc = computedResults[canonical]!;
+          final controller = _controllers[r.labTestId];
+          if (controller != null) {
+            final currentText = controller.text.trim();
+            final wasAuto = _autoCalculatedFieldIds.contains(r.labTestId);
+
+            if (currentText.isEmpty || wasAuto) {
+              if (controller.text != calc.formattedValue) {
+                controller.text = calc.formattedValue;
+              }
+              _autoCalculatedFieldIds.add(r.labTestId);
+              _autoCalculatedFormulas[r.labTestId] = calc.formulaDisplay;
+            }
+          }
+        }
+      }
+    } finally {
+      _isEvaluatingCalculations = false;
+    }
+  }
+
+  void _onNumericFieldChanged(OrderTestResult r, String val) {
+    final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+    if (val.trim().isEmpty) {
+      _manuallyOverriddenFieldIds.remove(r.labTestId);
+    } else if (canonical != 'HTC') {
+      // Si el usuario teclea en HB, ERI o índices de Wintrobe, se registra sobreescritura manual
+      _manuallyOverriddenFieldIds.add(r.labTestId);
+    }
+    _autoCalculatedFieldIds.remove(r.labTestId);
+    _autoCalculatedFormulas.remove(r.labTestId);
+
+    _evaluateCalculations(triggeredTestId: r.labTestId);
+    setState(() {});
+  }
+
   void _onFieldSubmitted(int index) {
     if (index + 1 < _focusNodes.length) {
       _focusNodes[index + 1].requestFocus();
@@ -87,7 +271,27 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     super.dispose();
   }
 
-  /// Evalúa el flag de alerta médica de un resultado en tiempo real
+  /// Busca el valor de referencia apropiado según el sexo del paciente
+  ReferenceValue? _findReferenceValueForPatient(OrderTestResult r) {
+    if (r.referenceValues.isEmpty) return null;
+    final patientInfo = widget.order.patientInfo;
+    if (patientInfo == null || r.referenceValues.length == 1) {
+      return r.referenceValues.first;
+    }
+    final normalizedGender = (patientInfo.gender).toLowerCase();
+    for (final ref in r.referenceValues) {
+      final refGender = ref.gender.toLowerCase();
+      final matchesGender = refGender.isEmpty ||
+          refGender == 'both' ||
+          refGender == 'todos' ||
+          (refGender.startsWith('m') && normalizedGender.startsWith('m')) ||
+          (refGender.startsWith('f') && normalizedGender.startsWith('f'));
+      if (matchesGender) return ref;
+    }
+    return r.referenceValues.first;
+  }
+
+  /// Evalúa el flag de alerta médica de un resultado en tiempo real (H, L o null)
   String? _getAlertFlag(OrderTestResult r) {
     if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
       final val = _qualitativeValues[r.labTestId];
@@ -97,29 +301,63 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           val != r.expectedQualitativeValue) {
         return 'ABNORMAL';
       }
-      return val != null ? 'NORMAL' : null;
+      return null;
     } else if (r.dataType == 'numeric') {
       final text = _controllers[r.labTestId]?.text.trim() ?? '';
       if (text.isEmpty) return null;
       final valDouble = double.tryParse(text);
       if (valDouble == null) return null;
 
-      if (r.referenceValues.isNotEmpty) {
-        final ref = r.referenceValues.first;
-        if (valDouble < ref.minValue) return 'LOW';
-        if (valDouble > ref.maxValue) return 'HIGH';
-        return 'NORMAL';
+      final ref = _findReferenceValueForPatient(r);
+      if (ref != null) {
+        return ClinicalFormulasRegistry.evaluateAlertFlag(
+          value: valDouble,
+          minValue: ref.minValue,
+          maxValue: ref.maxValue,
+        );
       }
-      return 'NORMAL';
+      return null;
     } else {
-      final text = _controllers[r.labTestId]?.text.trim() ?? '';
-      return text.isNotEmpty ? 'NORMAL' : null;
+      return null;
     }
   }
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
+
+    // Calcular en vivo la suma del diferencial leucocitario
+    final availableCanonicalInputs = <String, double>{};
+    for (var r in _results) {
+      if (r.dataType != 'qualitative' && r.dataType != 'boolean') {
+        final text = _controllers[r.labTestId]?.text.trim() ?? '';
+        if (text.isNotEmpty) {
+          final val = double.tryParse(text);
+          if (val != null) {
+            final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+            if (canonical != null) {
+              availableCanonicalInputs[canonical] = val;
+            }
+          }
+        }
+      }
+    }
+    final differentialSum =
+        ClinicalFormulasRegistry.calculateLeukocyteDifferentialSum(availableCanonicalInputs);
+
+    // Validación de Negocio Estricta: Si se ingresó el diferencial, debe sumar exactamente 100%
+    if (differentialSum != null && !ClinicalFormulasRegistry.isDifferentialValid(differentialSum)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'El conteo diferencial debe sumar exactamente 100% (actualmente suma ${ClinicalFormulasRegistry.formatClinicalValue(differentialSum, 1)}%). Corrija los valores antes de guardar.',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -137,14 +375,16 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           }
         } else {
           val = _controllers[r.labTestId]?.text.trim();
-          if (r.dataType == 'numeric' && val != null && r.referenceValues.isNotEmpty) {
+          if (r.dataType == 'numeric' && val != null && val.isNotEmpty && r.referenceValues.isNotEmpty) {
             final valDouble = double.tryParse(val);
             if (valDouble != null) {
-              final ref = r.referenceValues.first;
-              if (valDouble < ref.minValue) {
-                alert = 'LOW';
-              } else if (valDouble > ref.maxValue) {
-                alert = 'HIGH';
+              final ref = _findReferenceValueForPatient(r);
+              if (ref != null) {
+                alert = ClinicalFormulasRegistry.evaluateAlertFlag(
+                  value: valDouble,
+                  minValue: ref.minValue,
+                  maxValue: ref.maxValue,
+                );
               }
             }
           }
@@ -226,7 +466,6 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isReadOnly = widget.order.status == 'completed';
 
     final patientName = widget.order.patientInfo?.name ?? 'Paciente #${widget.order.patientId}';
@@ -237,17 +476,31 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     // Contadores en tiempo real
     int filledCount = 0;
     int alertCount = 0;
+    final availableCanonicalInputs = <String, double>{};
     for (var r in _results) {
       final alert = _getAlertFlag(r);
       if (r.dataType == 'boolean') {
         if (_qualitativeValues[r.labTestId]?.isNotEmpty ?? false) filledCount++;
       } else {
-        if (_controllers[r.labTestId]?.text.trim().isNotEmpty ?? false) filledCount++;
+        final text = _controllers[r.labTestId]?.text.trim() ?? '';
+        if (text.isNotEmpty) {
+          filledCount++;
+          final val = double.tryParse(text);
+          if (val != null) {
+            final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+            if (canonical != null) {
+              availableCanonicalInputs[canonical] = val;
+            }
+          }
+        }
       }
-      if (alert == 'HIGH' || alert == 'LOW' || alert == 'ABNORMAL') {
+      if (alert == 'H' || alert == 'HIGH' || alert == 'L' || alert == 'LOW' || alert == 'ABNORMAL') {
         alertCount++;
       }
     }
+    final differentialSum =
+        ClinicalFormulasRegistry.calculateLeukocyteDifferentialSum(availableCanonicalInputs);
+    final isDiffValid = differentialSum == null || ClinicalFormulasRegistry.isDifferentialValid(differentialSum);
 
     return PopScope(
       canPop: !_isSubmitting,
@@ -264,152 +517,24 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Cabecera Visual con Icono y Contexto
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
-                  border: Border(
-                    bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      child: const Icon(Icons.science_outlined, size: 22),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  widget.order.examName,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '#$shortId',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Paciente: $patientName',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      tooltip: 'Cerrar',
-                      onPressed: _isSubmitting
-                          ? null
-                          : () {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.pop(context);
-                              }
-                            },
-                    ),
-                  ],
-                ),
+              OrderResultsHeader(
+                examName: widget.order.examName,
+                shortId: shortId,
+                patientName: patientName,
+                isSubmitting: _isSubmitting,
+                onClose: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
+                },
               ),
 
               // 2. Barra de Resumen / Métricas Compacta
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                color: theme.colorScheme.surfaceContainerLowest,
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.checklist,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '$filledCount de ${_results.length} análisis capturados',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (alertCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.red.shade200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.warning_amber_rounded, size: 12, color: Colors.red.shade800),
-                            const SizedBox(width: 4),
-                            Text(
-                              '$alertCount fuera de rango',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else if (filledCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 12, color: Colors.green.shade800),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Valores normales',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+              OrderResultsSummaryBar(
+                filledCount: filledCount,
+                totalCount: _results.length,
+                alertCount: alertCount,
+                differentialSum: differentialSum,
               ),
               const Divider(height: 1),
 
@@ -424,9 +549,9 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                     itemBuilder: (context, index) {
                       final r = _results[index];
                       final alert = _getAlertFlag(r);
-                      final isAlert = alert == 'HIGH' || alert == 'LOW' || alert == 'ABNORMAL';
+                      final isAlert = alert == 'H' || alert == 'HIGH' || alert == 'L' || alert == 'LOW' || alert == 'ABNORMAL';
 
-                      return _ParameterCard(
+                      return ParameterCard(
                         result: r,
                         alert: alert,
                         isAlert: isAlert,
@@ -435,12 +560,14 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                         isLast: index == _results.length - 1,
                         onFieldSubmitted: () => _onFieldSubmitted(index),
                         controller: _controllers[r.labTestId],
+                        isAutoCalculated: _autoCalculatedFieldIds.contains(r.labTestId),
+                        formulaDisplay: _autoCalculatedFormulas[r.labTestId],
                         qualitativeValue: _qualitativeValues[r.labTestId],
                         onQualitativeChanged: (val) {
                           setState(() => _qualitativeValues[r.labTestId] = val);
                         },
-                        onNumericChanged: (_) {
-                          setState(() {});
+                        onNumericChanged: (val) {
+                          _onNumericFieldChanged(r, val);
                         },
                       );
                     },
@@ -449,433 +576,28 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
               ),
 
               // 4. Footer de Acciones
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
-                  border: Border(
-                    top: BorderSide(color: theme.colorScheme.outlineVariant),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    if (isReadOnly || widget.order.results.isNotEmpty)
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.picture_as_pdf, size: 16),
-                        label: const Text('Ver Informe'),
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        onPressed: _isSubmitting
-                            ? null
-                            : () {
-                                if (Navigator.of(context).canPop()) {
-                                  Navigator.pop(context);
-                                }
-                                showClinicalOrderViewerDialog(context, widget.order);
-                              },
-                      ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () {
-                              if (Navigator.of(context).canPop()) {
-                                Navigator.pop(context);
-                              }
-                            },
-                      child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),
-                    ),
-                    if (!isReadOnly) ...[
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        icon: _isSubmitting
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.check, size: 16),
-                        label: Text(
-                          filledCount == _results.length && widget.order.paidAmount >= widget.order.totalPrice
-                              ? 'Completar y Guardar'
-                              : 'Guardar Resultados',
-                        ),
-                        onPressed: _isSubmitting ? null : _submit,
-                      ),
-                    ],
-                  ],
-                ),
+              OrderResultsFooter(
+                isReadOnly: isReadOnly,
+                hasResults: widget.order.results.isNotEmpty,
+                isSubmitting: _isSubmitting,
+                canComplete: filledCount == _results.length &&
+                    widget.order.paidAmount >= widget.order.totalPrice &&
+                    isDiffValid,
+                onViewReport: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
+                  showClinicalOrderViewerDialog(context, widget.order);
+                },
+                onCancel: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
+                },
+                onSubmit: _submit,
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ParameterCard extends StatelessWidget {
-  final OrderTestResult result;
-  final String? alert;
-  final bool isAlert;
-  final bool isReadOnly;
-  final FocusNode? focusNode;
-  final bool isLast;
-  final VoidCallback? onFieldSubmitted;
-  final TextEditingController? controller;
-  final String? qualitativeValue;
-  final ValueChanged<String> onQualitativeChanged;
-  final ValueChanged<String> onNumericChanged;
-
-  const _ParameterCard({
-    required this.result,
-    required this.alert,
-    required this.isAlert,
-    required this.isReadOnly,
-    this.focusNode,
-    this.isLast = false,
-    this.onFieldSubmitted,
-    required this.controller,
-    required this.qualitativeValue,
-    required this.onQualitativeChanged,
-    required this.onNumericChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Decoración de borde reactivo
-    final borderColor = isAlert
-        ? Colors.red.shade300
-        : (alert == 'NORMAL' ? Colors.green.shade200 : theme.colorScheme.outlineVariant);
-
-    final cardBg = isAlert
-        ? Colors.red.shade50.withValues(alpha: 0.3)
-        : theme.colorScheme.surfaceContainerLowest;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor, width: isAlert ? 1.4 : 1.0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fila 1: Nombre del Parámetro y Badge de Estado
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        result.parameterName,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    if (result.medicalClassification.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          result.medicalClassification,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildStatusBadge(theme),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Fila 2: Valor de Referencia destacado + Input
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Caja de Referencia
-              Container(
-                constraints: const BoxConstraints(minWidth: 160),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.4,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      _getReferenceText(),
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Control de Entrada
-              Expanded(
-                child: _buildInput(theme),
-              ),
-            ],
-          ),
-
-          // Alerta contextual explicativa
-          if (isAlert) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.info_outline, size: 13, color: Colors.red.shade800),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    _getAlertExplanation(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.red.shade800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(ThemeData theme) {
-    if (alert == 'HIGH') {
-      return _BadgePill(
-        label: 'ALTO ▲',
-        bgColor: Colors.red.shade50,
-        textColor: Colors.red.shade900,
-        borderColor: Colors.red.shade200,
-      );
-    } else if (alert == 'LOW') {
-      return _BadgePill(
-        label: 'BAJO ▼',
-        bgColor: Colors.blue.shade50,
-        textColor: Colors.blue.shade900,
-        borderColor: Colors.blue.shade200,
-      );
-    } else if (alert == 'ABNORMAL') {
-      return _BadgePill(
-        label: 'ANORMAL',
-        bgColor: Colors.orange.shade50,
-        textColor: Colors.orange.shade900,
-        borderColor: Colors.orange.shade200,
-      );
-    } else if (alert == 'NORMAL') {
-      return _BadgePill(
-        label: 'NORMAL',
-        bgColor: Colors.green.shade50,
-        textColor: Colors.green.shade800,
-        borderColor: Colors.green.shade200,
-      );
-    }
-    return _BadgePill(
-      label: 'PENDIENTE',
-      bgColor: theme.colorScheme.surfaceContainerHigh,
-      textColor: theme.colorScheme.onSurfaceVariant,
-      borderColor: theme.colorScheme.outlineVariant,
-    );
-  }
-
-  String _getReferenceText() {
-    if (result.dataType == 'numeric') {
-      if (result.referenceValues.isNotEmpty) {
-        final ref = result.referenceValues.first;
-        final unit = result.unitOfMeasure.isNotEmpty ? ' ${result.unitOfMeasure}' : '';
-        return '${ref.minValue} - ${ref.maxValue}$unit';
-      }
-      return 'No especificado';
-    } else if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
-      return result.expectedQualitativeValue ?? 'Negativo';
-    }
-    return 'Texto libre';
-  }
-
-  String _getAlertExplanation() {
-    if (alert == 'HIGH' && result.referenceValues.isNotEmpty) {
-      final ref = result.referenceValues.first;
-      return 'El valor está por encima del límite máximo (${ref.maxValue} ${result.unitOfMeasure})';
-    } else if (alert == 'LOW' && result.referenceValues.isNotEmpty) {
-      final ref = result.referenceValues.first;
-      return 'El valor está por debajo del límite mínimo (${ref.minValue} ${result.unitOfMeasure})';
-    } else if (alert == 'ABNORMAL') {
-      return 'El resultado difiere del valor esperado (${result.expectedQualitativeValue ?? "Normal"})';
-    }
-    return 'Valor fuera de los parámetros estándar';
-  }
-
-  Widget _buildInput(ThemeData theme) {
-    if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
-      final options = result.qualitativeOptions.isNotEmpty
-          ? result.qualitativeOptions
-          : ['Negativo', 'Positivo'];
-      final selectedValue =
-          (qualitativeValue != null && options.contains(qualitativeValue))
-              ? qualitativeValue
-              : options.first;
-
-      return DropdownButtonFormField<String>(
-        focusNode: focusNode,
-        initialValue: selectedValue,
-        isDense: true,
-        decoration: InputDecoration(
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-        ),
-        items: options.map((opt) {
-          return DropdownMenuItem(
-            value: opt,
-            child: Text(opt, style: const TextStyle(fontSize: 14)),
-          );
-        }).toList(),
-        onChanged: isReadOnly ? null : (val) {
-          if (val != null) {
-            onQualitativeChanged(val);
-            onFieldSubmitted?.call();
-          }
-        },
-      );
-    } else if (result.dataType == 'text') {
-      return TextFormField(
-        focusNode: focusNode,
-        controller: controller,
-        readOnly: isReadOnly,
-        maxLines: 1,
-        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
-        onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-        style: const TextStyle(fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Observación...',
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-        ),
-      );
-    } else {
-      return TextFormField(
-        focusNode: focusNode,
-        controller: controller,
-        readOnly: isReadOnly,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
-        onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-        onChanged: onNumericChanged,
-        style: TextStyle(
-          fontSize: 15.5,
-          fontWeight: FontWeight.bold,
-          color: isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface,
-        ),
-        decoration: InputDecoration(
-          hintText: '0.00',
-          hintStyle: TextStyle(
-            fontSize: 15,
-            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45),
-          ),
-          suffixText: result.unitOfMeasure.isNotEmpty ? result.unitOfMeasure : null,
-          suffixStyle: TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-        ),
-        validator: (val) => val == null || val.trim().isEmpty ? 'Requerido' : null,
-      );
-    }
-  }
-}
-
-class _BadgePill extends StatelessWidget {
-  final String label;
-  final Color bgColor;
-  final Color textColor;
-  final Color borderColor;
-
-  const _BadgePill({
-    required this.label,
-    required this.bgColor,
-    required this.textColor,
-    required this.borderColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: textColor,
         ),
       ),
     );

@@ -20,6 +20,9 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<ApiKeysDataSource>(() => ApiKeysDataSource());
   getIt.registerLazySingleton<LabTestAccountsDataSource>(
       () => LabTestAccountsDataSource());
+  getIt.registerLazySingleton<ReceiptsDataSource>(() => ReceiptsDataSource());
+  getIt.registerLazySingleton<CashMovementsDataSource>(
+      () => CashMovementsDataSource());
 
   // Repositories
   getIt.registerLazySingleton<AuthRepository>(
@@ -48,6 +51,12 @@ Future<void> setupServiceLocator() async {
   );
   getIt.registerLazySingleton<LabTestAccountsRepository>(
     () => LabTestAccountsRepository(dataSource: getIt<LabTestAccountsDataSource>()),
+  );
+  getIt.registerLazySingleton<ReceiptsRepository>(
+    () => ReceiptsRepository(getIt<ReceiptsDataSource>()),
+  );
+  getIt.registerLazySingleton<CashMovementsRepository>(
+    () => CashMovementsRepository(getIt<CashMovementsDataSource>()),
   );
 
   // Cubits (Global App Session)

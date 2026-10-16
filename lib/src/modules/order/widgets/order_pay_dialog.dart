@@ -7,6 +7,7 @@ import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../cash_shift/widgets/cash_shift_open_dialog.dart';
+import 'order_receipts_history_dialog.dart';
 
 class OrderPayDialog extends StatefulWidget {
   final OrderInDb order;
@@ -190,6 +191,25 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () => OrderReceiptsHistoryDialog.show(
+                          context,
+                          widget.order,
+                        ),
+                        icon: const Icon(Icons.history_edu, size: 16),
+                        label: const Text('Historial de Recibos / Abonos'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
                     ),
                   ],
                 ),

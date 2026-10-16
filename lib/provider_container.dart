@@ -5,6 +5,8 @@ import 'package:serum_business/serum_business.dart';
 import 'config/app_serum_config.dart';
 import 'config/service_locator.dart';
 import 'src/cubits/app_session_cubit/app_session_cubit.dart';
+import 'src/cubits/cash_movement_cubit/read_cash_movements_cubit.dart';
+import 'src/cubits/cash_movement_cubit/write_cash_movements_cubit.dart';
 import 'src/cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
 import 'src/cubits/cash_shift_cubit/write_cash_shifts_cubit.dart';
 
@@ -65,6 +67,12 @@ class ProviderContainer extends StatelessWidget {
         RepositoryProvider(
           create: (_) => QuotationsRepository(quotationsDataSource),
         ),
+        RepositoryProvider<ReceiptsRepository>.value(
+          value: sl<ReceiptsRepository>(),
+        ),
+        RepositoryProvider<CashMovementsRepository>.value(
+          value: sl<CashMovementsRepository>(),
+        ),
         RepositoryProvider(
           create: (_) => CashTransactionsRepository(cashTransactionsDataSource),
         ),
@@ -96,6 +104,16 @@ class GlobalCubitProvider extends StatelessWidget {
         BlocProvider<WriteCashShiftCubit>(
           create: (ctx) => WriteCashShiftCubit(
             cashShiftsRepository: ctx.read<CashShiftsRepository>(),
+          ),
+        ),
+        BlocProvider<ReadCashMovementCubit>(
+          create: (ctx) => ReadCashMovementCubit(
+            cashMovementsRepository: ctx.read<CashMovementsRepository>(),
+          ),
+        ),
+        BlocProvider<WriteCashMovementCubit>(
+          create: (ctx) => WriteCashMovementCubit(
+            cashMovementsRepository: ctx.read<CashMovementsRepository>(),
           ),
         ),
       ],

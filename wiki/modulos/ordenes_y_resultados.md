@@ -22,7 +22,16 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - `PatientSelectionDialog` y `DoctorSelectionDialog` (`lib/src/widgets/dialogs/selectors/`): Modales dedicados (Pickers) con búsqueda reactiva debounced para miles de registros.
   - `OrdersList` (`widgets/orders_list.dart`): Listado de órdenes activas con badges de estado clínico y financiero.
   - `OrderPayDialog` (`widgets/order_pay_dialog.dart`): Modal de procesamiento de pago directo a caja activa.
-  - `OrderResultsDialog` (`widgets/order_results_dialog.dart`): Interfaz para captura, validación y entrega de resultados médicos.
+  - `OrderResultsDialog` (`widgets/order_results_dialog.dart`): Orquestador principal de captura, autocalculado reactivo y guardado de resultados médicos.
+  - Subwidgets especializados en `widgets/order_results_dialogs/`:
+    - `ParameterCard`: Tarjeta analítica con valores de referencia, selector cualitativo, input numérico reactivo y badge `Auto ⚡`.
+    - `ParameterBadgePill`: Pill visual de alertas médicas (`ALTO ▲`, `BAJO ▼`, `NORMAL`, `ANORMAL`, `PENDIENTE`).
+    - `OrderResultsHeader`: Cabecera visual con icono de laboratorio, nombre del examen, `#ID` de orden, paciente y botón de cierre.
+    - `OrderResultsSummaryBar`: Barra métrica de progreso, chip de balance diferencial leucocitario al 100% y conteo de alertas.
+    - `OrderResultsFooter`: Acciones de pie para visualización de informe clínico PDF, cancelar y guardar/completar con spinner animado.
+- **Herramientas de Soporte (`lib/src/tools/calculators/`)**:
+  - `ClinicalFormula`: Modelo inmutable de definición de fórmulas y resultados formateados.
+  - `ClinicalFormulasRegistry`: Catálogo maestro de fórmulas médicas estándar y resolución canónica por alias.
 - **Cubits**:
   - `ReadOrderCubit`: Gestión de la lista de órdenes y estados en caché.
   - `WriteOrderCubit`: Creación, abonos y captura de resultados.
@@ -49,12 +58,39 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - Incrementa automáticamente el saldo correspondiente en la caja registradora activa (`activeCashRegister`).
   - Genera una transacción de auditoría en el Kardex.
 
-### C. Captura y Validación de Resultados (`OrderResultsDialog`)
-- Lee los parámetros requeridos de cada prueba incluida en la orden:
-  - **Campos Numéricos**: Valida el valor ingresado contra el rango de referencia del paciente (considerando sexo y edad). Si está fuera de rango, lo resalta visualmente en color de alerta (rojo o naranja).
-  - **Campos Cualitativos**: Selector desplegable con las opciones clínicas configuradas.
-  - **Observaciones**: Campo de texto para notas patológicas.
-- Permite guardar resultados parciales o marcar la orden como completada (`completed`).
+### C. Captura Reactiva de Resultados y Motor de Fórmulas Clínicas (`OrderResultsDialog`)
+
+La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src/tools/calculators/`), permitiendo el autocalculado reactivo e instantáneo en el frontend sin latencia ni roundtrips al servidor:
+
+#### 1. Fórmulas Médicas Integradas (Estándares Internacionales)
+- **Serie Roja / Hematología (Regla de los 3 e Índices de Wintrobe, 1929)**:
+  - **Hematocrito (`HTC` / `HTO`) — Disparador Principal**: Medición física en centrífuga. Al capturarse, dispara en cascada:
+    - **Hemoglobina (`HB`)**: $\text{HB} = \frac{\text{HTC}}{3}$ (redondeo a 1 decimal, g/dL).
+    - **Eritrocitos (`ERI`)**: $\text{ERI} = \frac{\text{HB}}{3} = \frac{\text{HTC}}{9}$ (redondeo a 3 decimales en escala millones, x mm³).
+    - **VCM (Volumen Corpuscular Medio)**: $\text{VCM} = \frac{\text{HTC (\%)} \times 10}{\text{ERI (millones/mm}^3)}$ en $\mu\text{m}^3$ (fL) (constante 90 si deriva estrictamente de regla de los 3).
+    - **HCM (Hemoglobina Corpuscular Media)**: $\text{HCM} = \frac{\text{HB (g/dL)} \times 10}{\text{ERI (millones/mm}^3)}$ en $\text{pg}$ (constante 30).
+    - **CHCM (Concentración de Hb Corpuscular Media)**: $\text{CHCM} = \frac{\text{HB (g/dL)} \times 100}{\text{HTC (\%)}}$ en $\text{g/dL}$ (constante 33).
+  - **Recálculo Dinámico (Sobreescritura Manual)**: Si el bioanalista edita manualmente la hemoglobina o los eritrocitos en casos patológicos, **NO** se recalcula el hematocrito, pero **SÍ** se recalculan en tiempo real los índices `VCM`, `HCM` y `CHCM` usando los valores en pantalla.
+  - **Normalización de Escala**: `normalizeErythrocytesToMillions(eri)` garantiza que los eritrocitos ingresados en millones (5.000), miles (5000) o enteros absolutos siempre se calculen sobre base de millones.
+- **Bioquímica / Perfil Hepático**:
+  - **Bilirrubina Indirecta**: $\text{BIL-I} = \text{BIL-T} - \text{BIL-D}$ en $\text{mg/dL}$.
+- **Serie Blanca / Diferencial Leucocitario**:
+  - Parámetros de entrada directa: Leucocitos (`LEU`) y Plaquetas (`PLAQ`).
+  - 7 parámetros diferenciales porcentuales con valor por defecto `0`: $\text{SEG} + \text{LINF} + \text{EOS} + \text{MON} + \text{BAN} + \text{BAS} + \text{LINF-ATIP} = 100\%$.
+  - Validación Bloqueante de Negocio: Si se ingresan datos en el diferencial, la suma debe ser **estrictamente igual a 100%**. Si es menor o mayor a 100%, se muestra una alerta visual y se **impide el cierre o guardado** del resultado.
+
+#### 2. Detección Inteligente y Resolución Canónica de Parámetros
+- `ClinicalFormulasRegistry.resolveCanonicalKey(text)` analiza el parámetro examinando códigos oficiales (`VCM`, `HCM`, `CHCM`, `HB`, `HTC`, `ERI`, `LEU`, `PLAQ`, `BIL-T`, `BIL-D`, `BIL-I`) y alias textuales en español (`"Volumen Corpuscular Medio"`, `"Hemoglobina"`, `"Hematocrito"`, etc.).
+- Utiliza una lista de alias ordenada por **longitud descendente**, garantizando que frases compuestas (ej. `"hemoglobina corpuscular media"`) se evalúen antes que términos más generales (`"hemoglobina"`), evitando falsos positivos.
+
+#### 3. Control Clínico, Flags H/L y Transparencia
+- **Badge `"Auto ⚡"`**: Los campos autocalculados despliegan una insignia distintiva con un tooltip que expone la fórmula matemática utilizada.
+- **Sobreescritura Manual Respetada**: Si el laboratorio cuenta con analizadores hematológicos automatizados (Sysmex/Mindray) o mide parámetros por separado, el usuario puede teclear sobre cualquier campo autocalculado; el sistema respetará su captura manual.
+- **Indicadores Fuera de Rango (Flags H / L)**: Cada resultado numérico se valida contra los límites normales (`minValue` y `maxValue` para la demografía del paciente):
+  - $\text{Resultado} > \text{maxValue} \to$ Flag **`H`** (`ALTO ▲ (H)`).
+  - $\text{Resultado} < \text{minValue} \to$ Flag **`L`** (`BAJO ▼ (L)`).
+  - Dentro de rango normal $\to$ Sin flag (`null` / badge verde `NORMAL`).
+  - Pruebas cualitativas que difieren del esperado $\to$ Flag **`ABNORMAL`** (`ANORMAL`).
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
 - **Informe Clínico PDF (`ClinicalOrderViewer` y `SingleClinicalOrderTemplate`)**:

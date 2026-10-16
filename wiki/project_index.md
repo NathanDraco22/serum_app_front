@@ -46,13 +46,16 @@ serum_app_front/
 │       ├── cubits/                     # Cubits de alcance global o transversal
 │       │   ├── app_session_cubit/      # Sesión de usuario activo y caja registradora en operación
 │       │   ├── branch_cubit/           # Sucursal activa
+│       │   ├── cash_movement_cubit/    # Movimientos libres de caja (Read, Write)
 │       │   ├── cash_register_cubit/    # Operaciones y lectura de cajas
+│       │   ├── cash_shift_cubit/       # Turnos de caja (Read, Write)
 │       │   ├── cash_transaction_cubit/ # Kardex financiero
 │       │   ├── doctor_cubit/           # Médicos (Read, Write, Search)
 │       │   ├── lab_test_cubit/         # Análisis y Packs (Read, Write, Search)
 │       │   ├── order_cubit/            # Órdenes médicas (Read, Write, Search)
 │       │   ├── patient_cubit/          # Pacientes (Read, Write, Search)
 │       │   ├── quotation_cubit/        # Cotizaciones (Read, Write, Search)
+│       │   ├── receipt_cubit/          # Recibos de cobro y abonos (Read, Write)
 │       │   ├── report_cubit/           # Reportes analíticos y métricas de negocio
 │       │   └── user_cubit/             # Usuarios y colaboradores
 │       ├── modules/                    # Módulos de pantalla (UI)
@@ -75,6 +78,7 @@ serum_app_front/
 │       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
 │       ├── services/                   # Implementaciones de servicios locales (Secure storage)
 │       ├── tools/                      # Formateadores, helpers y utilidades de UI
+│       │   ├── calculators/            # Motor de fórmulas clínicas (ClinicalFormula, ClinicalFormulasRegistry: Wintrobe, Bioquímica, Diferencial)
 │       │   └── exports/                # Exportadores PDF (PdfExportTool, sobres 10.5x24cm, templates/reports/)
 │       └── widgets/                    # Widgets y selectores transversales compartidos
 ├── packages/
@@ -205,7 +209,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 ### 📦 3.9 Módulo `order` (Órdenes Clínicas, Pagos y Resultados)
 * **Ubicación**: `lib/src/modules/order/`
 * **Vistas**: `view/order_screen.dart`, `view/create_order_screen.dart`
-* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`, visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart` y plantilla `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`
+* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`, subwidgets en `widgets/order_results_dialogs/` (`parameter_card.dart`, `parameter_badge_pill.dart`, `order_results_header.dart`, `order_results_summary_bar.dart`, `order_results_footer.dart`), motor de fórmulas en `lib/src/tools/calculators/` (`clinical_formula.dart`, `clinical_formulas_registry.dart`), visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart` y plantilla `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`
 * **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `ReadLabTestCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
 * **Funciones Clave**:
   1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
@@ -216,10 +220,12 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
      - Permite abonar o liquidar el saldo de la orden.
      - Permite seleccionar el método de pago (`cash`, `card`, `transfer`).
      - Afecta de inmediato la caja registradora activa y genera un movimiento en el Kardex.
-  6. **Captura y Validación de Resultados Clínicos (`OrderResultsDialog`)**:
-     - Despliega formulario adaptativo según el tipo de dato de cada prueba (campo numérico, selector cualitativo o área de texto).
-     - Compara automáticamente los valores numéricos contra los rangos de referencia y alerta visualmente si un resultado está fuera de límites.
-     - Permite marcar la orden como completada para su entrega al paciente.
+  6. **Captura Reactiva de Resultados y Motor de Fórmulas Clínicas (`OrderResultsDialog`)**:
+     - **Motor de Fórmulas en `tools/calculators/`**: Autocalcula en tiempo real los Índices Eritrocitarios de Wintrobe (VCM, HCM, CHCM a partir de Eritrocitos, Hemoglobina y Hematocrito), estimación de HTC ($\text{HB} \times 3$), Bilirrubina Indirecta ($\text{BIL-T} - \text{BIL-D}$) y suma del Diferencial Leucocitario al 100%.
+     - **Resolución Canónica**: Reconoce códigos mnemónicos internacionales (`VCM`, `HCM`, `CHCM`, `HB`, `HTC`, `ERI`, etc.) y alias textuales en español ordenados por longitud descendente para evitar colisiones.
+     - **Transparencia y Control**: Despliega el badge visual `"Auto ⚡"` con tooltip explicativo de la fórmula, permitiendo la sobreescritura manual del bioanalista.
+     - **Modularización**: Dividido en subwidgets especializados en `widgets/order_results_dialogs/` para máxima legibilidad y aislamiento.
+     - Compara automáticamente los valores numéricos contra los rangos de referencia demográficos del paciente y alerta visualmente si un resultado está fuera de límites.
   7. **Emisión de Informes Clínicos y Sobres Físicos de Entrega**:
      - Emisión de informe oficial PDF A4 con membrete, subseries clínicas y alertas discretas `H`/`L`.
      - Rotulación directa de sobres físicos comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) con alimentación vertical para la bandeja manual de la impresora, recuadro de atención con médico condicional (se oculta si es nulo), datos de paciente y pie de página con marco redondeado (ver especificación completa en **[Impresión de Sobres Clínicos](modulos/impresion_sobres_clinicos.md)**).

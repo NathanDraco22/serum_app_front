@@ -4,6 +4,8 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../widgets/cash_movement_dialog.dart';
+import '../widgets/cash_movements_list_dialog.dart';
 import '../widgets/cash_shift_close_dialog.dart';
 
 class CashShiftCard extends StatelessWidget {
@@ -135,8 +137,45 @@ class CashShiftCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                // If open and is current user, action to close
-                if (isOpen && isCurrentUser)
+                // Ver movimientos (disponible para consultar y auditar cualquier turno)
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                  label: const Text('Movimientos'),
+                  onPressed: () async {
+                    final res = await CashMovementsListDialog.show(
+                      context,
+                      shift: shift,
+                    );
+                    if (res == true) {
+                      onShiftUpdated?.call();
+                    }
+                  },
+                ),
+                // Acciones adicionales si el turno está abierto y es del usuario actual
+                if (isOpen && isCurrentUser) ...[
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Nuevo Mov.'),
+                    onPressed: () async {
+                      final res =
+                          await CashMovementDialog.show(context, shift: shift);
+                      if (res != null) {
+                        onShiftUpdated?.call();
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 8),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: theme.colorScheme.error,
@@ -155,6 +194,7 @@ class CashShiftCard extends StatelessWidget {
                       }
                     },
                   ),
+                ],
               ],
             ),
             const SizedBox(height: 14),

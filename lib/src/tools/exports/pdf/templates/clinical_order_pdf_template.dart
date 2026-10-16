@@ -267,11 +267,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               children: [
                 pw.Text(
                   'Serum LIS - Sistema de Gestión de Laboratorio Clínico',
-                  style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
                 ),
                 pw.Text(
                   'Página ${context.pageNumber} de ${context.pagesCount}',
-                  style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
                 ),
               ],
             ),
@@ -317,7 +317,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                       pw.Text(
                         branch.address,
                         style: const pw.TextStyle(
-                            fontSize: 7.5, color: PdfColors.grey700),
+                            fontSize: 8.5, color: PdfColors.grey700),
                       ),
                     pw.Row(
                       children: [
@@ -325,7 +325,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                           pw.Text(
                             'Tel: ${branch.phone}',
                             style: const pw.TextStyle(
-                                fontSize: 7.5, color: PdfColors.grey700),
+                                fontSize: 8.5, color: PdfColors.grey700),
                           ),
                         if (branch.phone.isNotEmpty &&
                             branch.email != null &&
@@ -333,13 +333,13 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                           pw.Text(
                             ' | ',
                             style: const pw.TextStyle(
-                                fontSize: 7.5, color: PdfColors.grey500),
+                                fontSize: 8.5, color: PdfColors.grey500),
                           ),
                         if (branch.email != null && branch.email!.isNotEmpty)
                           pw.Text(
                             branch.email!,
                             style: const pw.TextStyle(
-                                fontSize: 7.5, color: PdfColors.grey700),
+                                fontSize: 8.5, color: PdfColors.grey700),
                           ),
                       ],
                     ),
@@ -363,7 +363,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                           pw.Text(
                             branch.name.toUpperCase(),
                             style: pw.TextStyle(
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: pw.FontWeight.bold,
                               color: PdfColors.blueGrey900,
                             ),
@@ -372,19 +372,19 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                             pw.Text(
                               branch.address,
                               style: const pw.TextStyle(
-                                  fontSize: 8, color: PdfColors.grey700),
+                                  fontSize: 8.5, color: PdfColors.grey700),
                             ),
                           if (branch.phone.isNotEmpty)
                             pw.Text(
                               'Teléfono: ${branch.phone}',
                               style: const pw.TextStyle(
-                                  fontSize: 8, color: PdfColors.grey700),
+                                  fontSize: 8.5, color: PdfColors.grey700),
                             ),
                           if (branch.email != null && branch.email!.isNotEmpty)
                             pw.Text(
                               'Email: ${branch.email!}',
                               style: const pw.TextStyle(
-                                  fontSize: 8, color: PdfColors.grey700),
+                                  fontSize: 8.5, color: PdfColors.grey700),
                             ),
                         ],
                       ),
@@ -400,7 +400,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               pw.Text(
                 'INFORME DE RESULTADOS',
                 style: pw.TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.blueGrey800,
                 ),
@@ -408,11 +408,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               pw.SizedBox(height: 2),
               pw.Text(
                 'Folio: #$shortId',
-                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
               ),
               pw.Text(
                 'Fecha: $formattedDate',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
               ),
             ],
           ),
@@ -484,22 +484,22 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   pw.Widget _buildCompactInfoLine(String label, String value,
       {bool isBold = false}) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 1),
+      padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.SizedBox(
-            width: 70,
+            width: 76,
             child: pw.Text(
               label,
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
             ),
           ),
           pw.Expanded(
             child: pw.Text(
               value,
               style: pw.TextStyle(
-                fontSize: 8,
+                fontSize: 9,
                 fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
               ),
             ),
@@ -537,7 +537,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         pw.Text(
           clinicalArea,
           style: pw.TextStyle(
-            fontSize: 10.5,
+            fontSize: 12,
             fontWeight: pw.FontWeight.bold,
             color: PdfColors.black,
             letterSpacing: 0.5,
@@ -560,7 +560,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               child: pw.Text(
                 'Nombre del Test',
                 style: pw.TextStyle(
-                  fontSize: 8.5,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.black,
                 ),
@@ -571,7 +571,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               child: pw.Text(
                 'Resultado',
                 style: pw.TextStyle(
-                  fontSize: 8.5,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.black,
                 ),
@@ -583,7 +583,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 'Valores de Referencia',
                 textAlign: pw.TextAlign.right,
                 style: pw.TextStyle(
-                  fontSize: 8.5,
+                  fontSize: 10,
                   fontWeight: pw.FontWeight.bold,
                   color: PdfColors.black,
                 ),
@@ -606,7 +606,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           child: pw.Text(
             examTitle,
             style: pw.TextStyle(
-              fontSize: 9.5,
+              fontSize: 11,
               fontWeight: pw.FontWeight.bold,
               color: PdfColors.black,
             ),
@@ -625,8 +625,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               if (hasGroupHeader) ...[
                 pw.Container(
                   width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 4),
-                  margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
+                  padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+                  margin: const pw.EdgeInsets.only(top: 5, bottom: 3),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromHex('#F4F6F6'),
                     borderRadius: pw.BorderRadius.circular(2),
@@ -634,7 +634,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   child: pw.Text(
                     groupTitle,
                     style: pw.TextStyle(
-                      fontSize: 8,
+                      fontSize: 9.5,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.blueGrey900,
                     ),
@@ -667,14 +667,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                       pw.Padding(
                         padding: pw.EdgeInsets.only(
                           left: hasGroupHeader ? 10 : 2,
-                          top: 2.5,
-                          bottom: 2.5,
+                          top: 3.0,
+                          bottom: 3.0,
                           right: 4,
                         ),
                         child: pw.Text(
                           r.parameterName,
                           style: pw.TextStyle(
-                            fontSize: 8,
+                            fontSize: 9.5,
                             fontWeight: isTotalRow ? pw.FontWeight.bold : pw.FontWeight.normal,
                             color: PdfColors.black,
                           ),
@@ -683,14 +683,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
                       // Resultado con letra H / L en rojo
                       pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
                         child: pw.Row(
                           mainAxisSize: pw.MainAxisSize.min,
                           children: [
                             pw.Text(
                               r.resultValue ?? '-',
                               style: pw.TextStyle(
-                                fontSize: 8,
+                                fontSize: 10,
                                 fontWeight: hasAlert || isTotalRow
                                     ? pw.FontWeight.bold
                                     : pw.FontWeight.normal,
@@ -702,7 +702,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                               pw.Text(
                                 alertFlag,
                                 style: pw.TextStyle(
-                                  fontSize: 8,
+                                  fontSize: 10,
                                   fontWeight: pw.FontWeight.bold,
                                   color: PdfColor.fromHex('#D32F2F'),
                                 ),
@@ -714,11 +714,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
                       // Unidad de medida
                       pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
                         child: pw.Text(
                           r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
                           style: const pw.TextStyle(
-                            fontSize: 7.5,
+                            fontSize: 8.5,
                             color: PdfColors.grey800,
                           ),
                         ),
@@ -726,12 +726,12 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
                       // Valores de referencia (alineados a la derecha)
                       pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 2),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
                         child: pw.Text(
                           refText,
                           textAlign: pw.TextAlign.right,
                           style: const pw.TextStyle(
-                            fontSize: 7.5,
+                            fontSize: 9,
                             color: PdfColors.grey700,
                           ),
                         ),
@@ -760,7 +760,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           ),
           child: pw.Text(
             'Nota: Los resultados aquí expresados corresponden única y exclusivamente a la muestra recibida y procesada en nuestras instalaciones. Todo resultado debe ser correlacionado clínicamente por el médico tratante.',
-            style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
             textAlign: pw.TextAlign.justify,
           ),
         ),
@@ -776,11 +776,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               pw.SizedBox(height: 4),
               pw.Text(
                 'Responsable de Laboratorio',
-                style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
               ),
               pw.Text(
                 'Firma y Sello de Validación',
-                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600),
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
               ),
             ],
           ),

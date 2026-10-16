@@ -4,6 +4,8 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
+import '../widgets/cash_movement_dialog.dart';
+import '../widgets/cash_movements_list_dialog.dart';
 import '../widgets/cash_shift_card.dart';
 import '../widgets/cash_shift_close_dialog.dart';
 import '../widgets/cash_shift_open_dialog.dart';
@@ -114,7 +116,43 @@ class _BodyState extends State<_Body> {
               ),
               const Spacer(),
               // Action Button (Abrir o Cerrar Turno)
-              if (activeShift != null)
+              if (activeShift != null) ...[
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                  label: const Text('Ver Movimientos'),
+                  onPressed: () async {
+                    final res = await CashMovementsListDialog.show(
+                      context,
+                      shift: activeShift,
+                    );
+                    if (res == true) {
+                      _loadShifts();
+                    }
+                  },
+                ),
+                const SizedBox(width: 10),
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  icon: const Icon(Icons.sync_alt_rounded, size: 18),
+                  label: const Text('Nuevo Movimiento'),
+                  onPressed: () async {
+                    final res =
+                        await CashMovementDialog.show(context, shift: activeShift);
+                    if (res != null) {
+                      _loadShifts();
+                    }
+                  },
+                ),
+                const SizedBox(width: 10),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.error,
@@ -132,8 +170,8 @@ class _BodyState extends State<_Body> {
                       _loadShifts();
                     }
                   },
-                )
-              else
+                ),
+              ] else
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
