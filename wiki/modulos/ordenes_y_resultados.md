@@ -100,3 +100,32 @@ La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src
   - Recuadro central delimitado con línea negra que incluye médico tratante (condicional: solo si existe), paciente y fecha.
   - Pie de sobre con marco redondeado azul y datos de contacto de la sede.
   - Para detalles de hardware, alimentación e implementación, ver **[Impresión de Sobres Clínicos](impresion_sobres_clinicos.md)**.
+
+### E. Modificación Arbitraria de Precios, Bloqueo de Órdenes (`isBlocked`) y Aprobación por Supervisor
+
+Para facilitar acuerdos comerciales en ventanilla sin perder el control de auditoría interna:
+
+#### 1. Edición de Precios en el Carrito (`OrderCartSection`)
+- **Interacción por Pulsación Prolongada (`onLongPress`)**: Al mantener presionado cualquier examen o paquete seleccionado en el carrito de `CreateOrderScreen`, se abre el diálogo [`EditItemPriceDialog`](file:///c:/Users/sytru/Developer/Projects/lab_project/serum_app_front/lib/src/modules/order/widgets/edit_item_price_dialog.dart).
+- **Control de Precio Base y Aviso**: El diálogo muestra el precio original del catálogo (`originalPrice`, Precio 1) y permite capturar el nuevo valor.
+- **Indicadores Visuales en Carrito**:
+  - Badge `"Modificado"` sobre el precio del ítem.
+  - Banner informativo amarillo al final del carrito advirtiendo al personal que la orden requerirá autorización de un supervisor para poder procesarse.
+
+#### 2. Detección de Bloqueo al Emitir la Orden
+- **Creación por Operador (`accessLevel <= 3`)**: Si cualquier examen tiene un precio diferente a su precio de lista, la orden se emite con `isBlocked: true` y `approval.requiresApproval: true`.
+- **Creación por Supervisor (`accessLevel > 3`)**: Si quien está creando la orden en ventanilla es un usuario con nivel mayor a 3, el sistema pre-autoriza la orden automáticamente con sus datos, permitiendo su cobro inmediato sin pasos adicionales.
+
+#### 3. Restricciones Visuales y Preventivas en el Listado (`OrdersList`)
+- **Avatar con Candado**: Las órdenes bloqueadas despliegan un avatar de candado rojo (`Icons.lock`).
+- **Badges de Auditoría**: Despliega el badge ámbar `BLOQUEADA (REQ. AUTORIZACIÓN)` o, tras autorizarse, el badge verde `AUTORIZADO: <Nombre del Supervisor>`.
+- **Acciones Protegidas**:
+  - El botón de **Pagar** (`Icons.payments_outlined`) y el de **Capturar Resultados** (`Icons.assignment_outlined`) se deshabilitan preventivamente en color atenuado. Al hacer clic, muestran un SnackBar explicativo recordando que la orden requiere desbloqueo previo.
+  - El botón de **Eliminar** se mantiene activo siempre y cuando `paidAmount == 0`, permitiendo desechar órdenes bloqueadas emitidas por error.
+
+#### 4. Flujo de Desbloqueo y Autorización (`Icons.lock_open`)
+Al pulsar el botón de candado abierto, la interfaz se adapta dinámicamente según el usuario en sesión:
+- **Modalidad Presencial (Operador $\le 3$)**: Se abre [`SupervisorAuthDialog`](file:///c:/Users/sytru/Developer/Projects/lab_project/serum_app_front/lib/src/modules/order/widgets/supervisor_auth_dialog.dart), solicitando usuario, contraseña y motivo al supervisor.
+- **Modalidad Directa (Supervisor $> 3$)**: Se muestra un diálogo de confirmación de 1 solo clic aprovechando la sesión activa.
+- **Invocación y Reactividad**: Ambos flujos llaman a `WriteOrderCubit.approveOrder(order.id, request)`. Tras la respuesta del servidor (`POST /api/v1/orders/{id}/approve`), se emite `OrderApproved`, se notifica al usuario con un SnackBar y se refresca la lista con `ReadOrderCubit.getAll()`.
+

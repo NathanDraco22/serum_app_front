@@ -9,6 +9,7 @@ class OrderCartSection extends StatelessWidget {
   final DoctorInDb? selectedDoctor;
   final List<LabTestInDb> selectedItems;
   final Map<String, int> itemPriceLevels;
+  final Map<String, int> itemCustomPrices;
   final int defaultPriceLevel;
   final bool isSubmitting;
   final VoidCallback onSelectPatient;
@@ -18,6 +19,7 @@ class OrderCartSection extends StatelessWidget {
   final void Function(LabTestInDb) onRemoveItem;
   final void Function(LabTestInDb, int) onPriceLevelChanged;
   final void Function(int) onDefaultPriceLevelChanged;
+  final void Function(LabTestInDb) onEditItemPrice;
   final VoidCallback onClearItems;
   final VoidCallback onSubmitOrder;
 
@@ -27,6 +29,7 @@ class OrderCartSection extends StatelessWidget {
     required this.selectedDoctor,
     required this.selectedItems,
     this.itemPriceLevels = const {},
+    this.itemCustomPrices = const {},
     this.defaultPriceLevel = 1,
     required this.isSubmitting,
     required this.onSelectPatient,
@@ -36,6 +39,7 @@ class OrderCartSection extends StatelessWidget {
     required this.onRemoveItem,
     required this.onPriceLevelChanged,
     required this.onDefaultPriceLevelChanged,
+    required this.onEditItemPrice,
     required this.onClearItems,
     required this.onSubmitOrder,
   });
@@ -44,11 +48,19 @@ class OrderCartSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalCents = selectedItems.fold<int>(0, (sum, item) {
+      if (itemCustomPrices.containsKey(item.id)) {
+        return sum + itemCustomPrices[item.id]!;
+      }
       final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
       final price = (level == 2 && item.salePrice2 > 0) ? item.salePrice2 : item.salePrice;
       return sum + price;
     });
     final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
+
+    final hasModifiedPrices = selectedItems.any((item) {
+      final custom = itemCustomPrices[item.id];
+      return custom != null && custom != item.salePrice;
+    });
 
     // Calculate total individual clinical tests that will result from packs + items
     int totalParameters = 0;
@@ -203,14 +215,18 @@ class OrderCartSection extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final item = selectedItems[index];
                         final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
-                        final appliedPrice = (level == 2 && item.salePrice2 > 0)
-                            ? item.salePrice2
-                            : item.salePrice;
+                        final customPrice = itemCustomPrices[item.id];
+                        final isPriceModified = customPrice != null && customPrice != item.salePrice;
+                        final appliedPrice = customPrice ??
+                            ((level == 2 && item.salePrice2 > 0)
+                                ? item.salePrice2
+                                : item.salePrice);
                         final priceStr = NumberFormatter.convertToMoneyLike(appliedPrice);
 
                         return ListTile(
                           dense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          onLongPress: isSubmitting ? null : () => onEditItemPrice(item),
                           leading: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
@@ -227,9 +243,33 @@ class OrderCartSection extends StatelessWidget {
                                   : theme.colorScheme.onPrimaryContainer,
                             ),
                           ),
-                          title: Text(
-                            item.name,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                ),
+                              ),
+                              if (isPriceModified)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.shade100,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.amber.shade300),
+                                  ),
+                                  child: Text(
+                                    'Modificado',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber.shade900,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           subtitle: Text(
                             item.isPack
@@ -243,86 +283,35 @@ class OrderCartSection extends StatelessWidget {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
-                              // Selector compacto P1 / P2
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHigh,
+                              Tooltip(
+                                message: 'Modificar precio (mantén presionado)',
+                                child: InkWell(
+                                  onTap: isSubmitting ? null : () => onEditItemPrice(item),
                                   borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          priceStr,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: isPriceModified
+                                                ? Colors.amber.shade900
+                                                : (level == 2 ? theme.colorScheme.tertiary : theme.colorScheme.primary),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.edit_outlined,
+                                          size: 14,
+                                          color: isPriceModified ? Colors.amber.shade900 : theme.colorScheme.outline,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    InkWell(
-                                      onTap: isSubmitting ? null : () => onPriceLevelChanged(item, 1),
-                                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: level == 1 ? theme.colorScheme.primary : Colors.transparent,
-                                          borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
-                                        ),
-                                        child: Text(
-                                          'P1',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: level == 1
-                                                ? theme.colorScheme.onPrimary
-                                                : theme.colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    InkWell(
-                                      onTap: isSubmitting
-                                          ? null
-                                          : () {
-                                              if (item.salePrice2 <= 0) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text(
-                                                      'Este análisis no tiene Precio 2 configurado. Se cobrará el precio regular.',
-                                                    ),
-                                                    duration: Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              }
-                                              onPriceLevelChanged(item, 2);
-                                            },
-                                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: level == 2 ? theme.colorScheme.tertiary : Colors.transparent,
-                                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
-                                        ),
-                                        child: Text(
-                                          'P2',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: level == 2
-                                                ? theme.colorScheme.onTertiary
-                                                : theme.colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              */
-                              Text(
-                                priceStr,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: level == 2 ? theme.colorScheme.tertiary : theme.colorScheme.primary,
                                 ),
                               ),
                               const SizedBox(width: 2),
@@ -356,7 +345,7 @@ class OrderCartSection extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total de Análisis Clí­nicos a Evaluar:',
+                        'Total de Análisis Clínicos a Evaluar:',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -388,6 +377,33 @@ class OrderCartSection extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (hasModifiedPrices) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock_outline, size: 15, color: Colors.amber.shade900),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Precios modificados: La orden se creará con requerimiento de autorización de supervisor.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.amber.shade900,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -75,4 +75,18 @@ class OrdersRepository with ReactiveRepository<OrderInDb> {
     }
     return paidOrder;
   }
+
+  Future<OrderInDb> approveOrder(
+    String orderId,
+    OrderApproveRequest approveRequest,
+  ) async {
+    final result = await ordersDataSource.approveOrder(orderId, approveRequest.toJson());
+    final approvedOrder = OrderInDb.fromJson(result);
+    final index = _orders.indexWhere((o) => o.id == orderId);
+    if (index != -1) {
+      _orders[index] = approvedOrder;
+      notifyItemUpdated(approvedOrder);
+    }
+    return approvedOrder;
+  }
 }

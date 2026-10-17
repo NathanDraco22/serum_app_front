@@ -58,4 +58,14 @@ class OrdersDataSource with HttpService {
     final res = await postQuery(uri, body, headers: headers);
     return res;
   }
+
+  Future<Map<String, dynamic>> approveOrder(
+    String orderId,
+    Map<String, dynamic> body,
+  ) async {
+    final uri = HttpTools.generateUri("$_endpoint/$orderId/approve");
+    final headers = HttpTools.generateAuthHeaders();
+    final res = await postQuery(uri, body, headers: headers);
+    return res;
+  }
 }

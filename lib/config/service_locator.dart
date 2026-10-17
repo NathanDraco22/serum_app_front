@@ -1,6 +1,7 @@
 import 'package:serum_business/serum_business.dart';
 
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
+import '../src/cubits/app_settings/app_settings_cubit.dart';
 import 'get_it_config.dart';
 
 final sl = getIt;
@@ -10,6 +11,8 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<TokenStorage>(() => HiveTokenStorage());
 
   // DataSources
+  getIt.registerLazySingleton<AppSettingsDataSource>(
+      () => AppSettingsDataSource());
   getIt.registerLazySingleton<AuthsDataSource>(() => AuthsDataSource());
   getIt.registerLazySingleton<UsersDataSource>(() => UsersDataSource());
   getIt.registerLazySingleton<BranchesDataSource>(() => BranchesDataSource());
@@ -25,6 +28,9 @@ Future<void> setupServiceLocator() async {
       () => CashMovementsDataSource());
 
   // Repositories
+  getIt.registerLazySingleton<AppSettingsRepository>(
+    () => AppSettingsRepository(getIt<AppSettingsDataSource>()),
+  );
   getIt.registerLazySingleton<AuthRepository>(
     () => AuthRepository(
       dataSource: getIt<AuthsDataSource>(),
@@ -59,7 +65,10 @@ Future<void> setupServiceLocator() async {
     () => CashMovementsRepository(getIt<CashMovementsDataSource>()),
   );
 
-  // Cubits (Global App Session)
+  // Cubits (Global)
+  getIt.registerSingleton<AppSettingsCubit>(
+    AppSettingsCubit(getIt<AppSettingsRepository>()),
+  );
   getIt.registerSingleton<AppSessionCubit>(
     AppSessionCubit(
       authRepository: getIt<AuthRepository>(),

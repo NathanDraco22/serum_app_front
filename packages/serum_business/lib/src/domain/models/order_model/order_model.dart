@@ -85,6 +85,7 @@ class OrderItem {
   final String labTestId;
   final String name;
   final int salePriceApplied;
+  final int originalPrice;
   final bool isPack;
   final int priceLevel;
 
@@ -92,15 +93,18 @@ class OrderItem {
     required this.labTestId,
     required this.name,
     required this.salePriceApplied,
+    this.originalPrice = 0,
     this.isPack = false,
     this.priceLevel = 1,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
+    final salePrice = (json['salePriceApplied'] as num?)?.toInt() ?? 0;
     return OrderItem(
       labTestId: json['labTestId'] as String? ?? json['examId'] as String? ?? '',
       name: json['name'] as String? ?? json['examName'] as String? ?? '',
-      salePriceApplied: (json['salePriceApplied'] as num?)?.toInt() ?? 0,
+      salePriceApplied: salePrice,
+      originalPrice: (json['originalPrice'] as num?)?.toInt() ?? salePrice,
       isPack: json['isPack'] as bool? ?? false,
       priceLevel: (json['priceLevel'] as num?)?.toInt() ?? 1,
     );
@@ -111,8 +115,47 @@ class OrderItem {
       'labTestId': labTestId,
       'name': name,
       'salePriceApplied': salePriceApplied,
+      'originalPrice': originalPrice > 0 ? originalPrice : salePriceApplied,
       'isPack': isPack,
       'priceLevel': priceLevel,
+    };
+  }
+}
+
+class OrderApproval {
+  final bool requiresApproval;
+  final bool isApproved;
+  final UserInfo? approvedBy;
+  final int? approvedAt;
+  final String? reason;
+
+  OrderApproval({
+    this.requiresApproval = false,
+    this.isApproved = false,
+    this.approvedBy,
+    this.approvedAt,
+    this.reason,
+  });
+
+  factory OrderApproval.fromJson(Map<String, dynamic> json) {
+    return OrderApproval(
+      requiresApproval: json['requiresApproval'] as bool? ?? false,
+      isApproved: json['isApproved'] as bool? ?? false,
+      approvedBy: json['approvedBy'] != null
+          ? UserInfo.fromJson(json['approvedBy'] as Map<String, dynamic>)
+          : null,
+      approvedAt: (json['approvedAt'] as num?)?.toInt(),
+      reason: json['reason'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'requiresApproval': requiresApproval,
+      'isApproved': isApproved,
+      if (approvedBy != null) 'approvedBy': approvedBy!.toJson(),
+      if (approvedAt != null) 'approvedAt': approvedAt,
+      if (reason != null) 'reason': reason,
     };
   }
 }
@@ -129,6 +172,8 @@ class BaseOrder {
   final int paidAmount;
   final String status;
   final List<OrderTestResult> results;
+  final bool isBlocked;
+  final OrderApproval? approval;
 
   // Backward compatibility getters
   String get examId => items.isNotEmpty ? items.first.labTestId : '';
@@ -147,6 +192,8 @@ class BaseOrder {
     this.paidAmount = 0,
     this.status = "pending",
     this.results = const [],
+    this.isBlocked = false,
+    this.approval,
   });
 }
 
@@ -163,6 +210,8 @@ class CreateOrder extends BaseOrder {
     super.paidAmount = 0,
     super.status = "pending",
     super.results = const [],
+    super.isBlocked = false,
+    super.approval,
   });
 
   Map<String, dynamic> toJson() {
@@ -178,6 +227,8 @@ class CreateOrder extends BaseOrder {
       'paidAmount': paidAmount,
       'status': status,
       'results': results.map((e) => e.toJson()).toList(),
+      'isBlocked': isBlocked,
+      if (approval != null) 'approval': approval!.toJson(),
     };
   }
 }
@@ -194,6 +245,8 @@ class UpdateOrder {
   final String? status;
   final List<OrderTestResult>? results;
   final String? branchId;
+  final bool? isBlocked;
+  final OrderApproval? approval;
 
   UpdateOrder({
     this.patientId,
@@ -207,6 +260,8 @@ class UpdateOrder {
     this.status,
     this.results,
     this.branchId,
+    this.isBlocked,
+    this.approval,
   });
 
   Map<String, dynamic> toJson() {
@@ -223,6 +278,31 @@ class UpdateOrder {
       if (results != null)
         'results': results!.map((e) => e.toJson()).toList(),
       if (branchId != null) 'branchId': branchId,
+      if (isBlocked != null) 'isBlocked': isBlocked,
+      if (approval != null) 'approval': approval!.toJson(),
+    };
+  }
+}
+
+class OrderApproveRequest {
+  final String? supervisorUsername;
+  final String? supervisorPassword;
+  final UserInfo? approvedBy;
+  final String? reason;
+
+  OrderApproveRequest({
+    this.supervisorUsername,
+    this.supervisorPassword,
+    this.approvedBy,
+    this.reason,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (supervisorUsername != null) 'supervisorUsername': supervisorUsername,
+      if (supervisorPassword != null) 'supervisorPassword': supervisorPassword,
+      if (approvedBy != null) 'approvedBy': approvedBy!.toJson(),
+      if (reason != null) 'reason': reason,
     };
   }
 }
@@ -272,6 +352,8 @@ class OrderInDb extends BaseOrder {
     super.paidAmount = 0,
     super.status = "pending",
     super.results = const [],
+    super.isBlocked = false,
+    super.approval,
     required this.createdAt,
     this.updatedAt,
     this.isDeleted = false,
@@ -299,6 +381,7 @@ class OrderInDb extends BaseOrder {
 
     final patientInfoRaw = json['patientInfo'];
     final doctorInfoRaw = json['doctorInfo'];
+    final approvalRaw = json['approval'];
 
     return OrderInDb(
       id: json['id'] as String,
@@ -320,6 +403,10 @@ class OrderInDb extends BaseOrder {
               ?.map((e) => OrderTestResult.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      isBlocked: json['isBlocked'] as bool? ?? false,
+      approval: approvalRaw != null
+          ? OrderApproval.fromJson(approvalRaw as Map<String, dynamic>)
+          : null,
       createdAt: json['createdAt'] as int,
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,

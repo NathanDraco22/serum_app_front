@@ -14,6 +14,7 @@ import '../../doctor/widgets/doctor_form_dialog.dart';
 import '../../../widgets/common/app_buttons.dart';
 import '../widgets/order_catalog_section.dart';
 import '../widgets/order_cart_section.dart';
+import '../widgets/edit_item_price_dialog.dart';
 
 class CreateOrderScreen extends StatelessWidget {
   const CreateOrderScreen({super.key});
@@ -50,6 +51,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   DoctorInDb? _selectedDoctor;
   final List<LabTestInDb> _selectedItems = [];
   final Map<String, int> _itemPriceLevels = {};
+  final Map<String, int> _customPrices = {};
   int _defaultPriceLevel = 1;
   bool _isSubmitting = false;
 
@@ -117,6 +119,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       if (index >= 0) {
         _selectedItems.removeAt(index);
         _itemPriceLevels.remove(test.id);
+        _customPrices.remove(test.id);
       } else {
         _selectedItems.add(test);
         _itemPriceLevels[test.id] = _defaultPriceLevel;
@@ -128,7 +131,27 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     setState(() {
       _selectedItems.removeWhere((i) => i.id == test.id);
       _itemPriceLevels.remove(test.id);
+      _customPrices.remove(test.id);
     });
+  }
+
+  Future<void> _editItemPrice(LabTestInDb test) async {
+    final current = _customPrices[test.id] ?? test.salePrice;
+    final newPrice = await EditItemPriceDialog.show(
+      context,
+      testName: test.name,
+      catalogPrice: test.salePrice,
+      currentPrice: current,
+    );
+    if (newPrice != null && mounted) {
+      setState(() {
+        if (newPrice == test.salePrice) {
+          _customPrices.remove(test.id);
+        } else {
+          _customPrices[test.id] = newPrice;
+        }
+      });
+    }
   }
 
   void _changeItemPriceLevel(LabTestInDb test, int level) {
@@ -163,6 +186,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               setState(() {
                 _selectedItems.clear();
                 _itemPriceLevels.clear();
+                _customPrices.clear();
               });
             },
             child: const Text('Vaciar', style: TextStyle(color: Colors.red)),
@@ -217,14 +241,17 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
     setState(() => _isSubmitting = true);
 
-    // 1. Construir lista de OrderItem congelando precio según su priceLevel
+    // 1. Construir lista de OrderItem congelando precio según su priceLevel o precio personalizado
     final orderItems = _selectedItems.map((test) {
       final level = _itemPriceLevels[test.id] ?? _defaultPriceLevel;
-      final price = (level == 2 && test.salePrice2 > 0) ? test.salePrice2 : test.salePrice;
+      final customPrice = _customPrices[test.id];
+      final price = customPrice ??
+          ((level == 2 && test.salePrice2 > 0) ? test.salePrice2 : test.salePrice);
       return OrderItem(
         labTestId: test.id,
         name: test.name,
         salePriceApplied: price,
+        originalPrice: test.salePrice,
         isPack: test.isPack,
         priceLevel: level,
       );
@@ -278,6 +305,36 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     final totalInCents = orderItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
     final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
+    // 3. Evaluar si algún ítem tiene precio diferente de su precio de catálogo (Precio 1)
+    final hasModifiedPrice = orderItems.any((i) => i.salePriceApplied != i.originalPrice);
+    final currentUser = context.read<AppSessionCubit>().user;
+    final hasSupervisorLevel = (currentUser?.accessLevel ?? 0) > 3;
+
+    bool isBlocked = false;
+    OrderApproval? approval;
+
+    if (hasModifiedPrice) {
+      if (hasSupervisorLevel && currentUser != null) {
+        // Creado por un supervisor o admin -> se aprueba automáticamente
+        isBlocked = false;
+        approval = OrderApproval(
+          requiresApproval: true,
+          isApproved: true,
+          approvedBy: UserInfo(id: currentUser.id, name: currentUser.name),
+          approvedAt: DateTime.now().millisecondsSinceEpoch,
+          reason: 'Precio especial autorizado al formular orden por supervisor (${currentUser.name})',
+        );
+      } else {
+        // Creado por un operador -> nace bloqueada
+        isBlocked = true;
+        approval = OrderApproval(
+          requiresApproval: true,
+          isApproved: false,
+          reason: 'Precio modificado respecto al catálogo',
+        );
+      }
+    }
+
     final newOrder = CreateOrder(
       patientId: _selectedPatient!.id,
       doctorId: _selectedDoctor?.id,
@@ -304,6 +361,8 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       totalPrice: totalInCents,
       status: 'pending',
       results: resultsMap.values.toList(),
+      isBlocked: isBlocked,
+      approval: approval,
     );
 
     context.read<WriteOrderCubit>().create(newOrder);
@@ -449,6 +508,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
                           itemPriceLevels: _itemPriceLevels,
+                          itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
@@ -458,6 +518,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onRemoveItem: _removeItem,
                           onPriceLevelChanged: _changeItemPriceLevel,
                           onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
+                          onEditItemPrice: _editItemPrice,
                           onClearItems: _clearItems,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
@@ -487,6 +548,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
                           itemPriceLevels: _itemPriceLevels,
+                          itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
@@ -496,6 +558,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onRemoveItem: _removeItem,
                           onPriceLevelChanged: _changeItemPriceLevel,
                           onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
+                          onEditItemPrice: _editItemPrice,
                           onClearItems: _clearItems,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),

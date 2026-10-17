@@ -18,6 +18,7 @@ import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
 import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
 import '../src/modules/receipt/view/receipts_screen.dart';
 import '../src/modules/administration/view/administration_screen.dart';
+import '../src/modules/administration/view/app_settings/app_settings_screen.dart';
 import '../src/modules/branch/view/branch_screen.dart';
 import '../src/modules/user/view/user_screen.dart';
 import '../src/modules/role/view/role_screen.dart';
@@ -62,6 +63,7 @@ class AppRouter {
   static const String adminUsers = '/admin/users';
   static const String adminRoles = '/admin/roles';
   static const String adminApiKeys = '/admin/api-keys';
+  static const String adminAppSettings = '/admin/settings';
 
   // Navigator keys para cada branch
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -155,6 +157,11 @@ class AppRouter {
           path: adminApiKeys,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (context, state) => const ApiKeysScreen(),
+        ),
+        GoRoute(
+          path: adminAppSettings,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (context, state) => const AppSettingsScreen(),
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {

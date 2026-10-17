@@ -56,4 +56,14 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
       emit(WriteOrderError(e.toString()));
     }
   }
+
+  Future<void> approveOrder(String orderId, OrderApproveRequest request) async {
+    emit(WritingOrder());
+    try {
+      final item = await ordersRepository.approveOrder(orderId, request);
+      emit(OrderApproved(item));
+    } catch (e) {
+      emit(WriteOrderError(e.toString()));
+    }
+  }
 }

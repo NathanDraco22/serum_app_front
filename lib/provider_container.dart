@@ -5,6 +5,7 @@ import 'package:serum_business/serum_business.dart';
 import 'config/app_serum_config.dart';
 import 'config/service_locator.dart';
 import 'src/cubits/app_session_cubit/app_session_cubit.dart';
+import 'src/cubits/app_settings/app_settings_cubit.dart';
 import 'src/cubits/cash_movement_cubit/read_cash_movements_cubit.dart';
 import 'src/cubits/cash_movement_cubit/write_cash_movements_cubit.dart';
 import 'src/cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
@@ -28,6 +29,9 @@ class ProviderContainer extends StatelessWidget {
 
     return MultiRepositoryProvider(
       providers: [
+        RepositoryProvider<AppSettingsRepository>.value(
+          value: sl<AppSettingsRepository>(),
+        ),
         RepositoryProvider<AuthRepository>.value(
           value: sl<AuthRepository>(),
         ),
@@ -93,6 +97,9 @@ class GlobalCubitProvider extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider<AppSettingsCubit>.value(
+          value: sl<AppSettingsCubit>()..loadSettings(),
+        ),
         BlocProvider<AppSessionCubit>.value(
           value: sl<AppSessionCubit>(),
         ),

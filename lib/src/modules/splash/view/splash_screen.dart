@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../config/app_assets.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -29,11 +30,16 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 40,
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
-              child: const Icon(Icons.biotech, size: 48),
+            Image.asset(
+              AppAssets.serumLogo,
+              height: 96,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                radius: 40,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
+                child: const Icon(Icons.biotech, size: 48),
+              ),
             ),
             const SizedBox(height: 24),
             Text(

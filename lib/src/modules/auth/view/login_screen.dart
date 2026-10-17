@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../config/app_assets.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -99,11 +100,16 @@ class _BodyState extends State<_Body> {
                         children: [
                           // Encabezado / Logo
                           Center(
-                            child: CircleAvatar(
-                              radius: 36,
-                              backgroundColor: theme.colorScheme.primary,
-                              foregroundColor: theme.colorScheme.onPrimary,
-                              child: const Icon(Icons.biotech, size: 40),
+                            child: Image.asset(
+                              AppAssets.serumLogo,
+                              height: 80,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                                radius: 36,
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                child: const Icon(Icons.biotech, size: 40),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),

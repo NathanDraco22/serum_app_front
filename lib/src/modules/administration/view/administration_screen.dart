@@ -150,6 +150,20 @@ class AdministrationScreen extends StatelessWidget {
                             badgeText: 'Integraciones',
                             onTap: () => context.push(AppRouter.adminApiKeys),
                           ),
+
+                          // 5. Configuración del Sistema
+                          AdminModuleCard(
+                            title: 'Configuración del sistema',
+                            description:
+                                'Parámetros comerciales y reglas operativas de mostrador: uso de costos, lista de Precio 2 y permisos de edición de precios.',
+                            icon: Icons.tune_rounded,
+                            iconColor: theme.colorScheme.primary,
+                            iconBackgroundColor:
+                                theme.colorScheme.primaryContainer.withAlpha(90),
+                            badgeText: 'Sistema',
+                            onTap: () =>
+                                context.push(AppRouter.adminAppSettings),
+                          ),
                         ],
                       );
                     },

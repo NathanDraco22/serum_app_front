@@ -209,7 +209,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 ### 📦 3.9 Módulo `order` (Órdenes Clínicas, Pagos y Resultados)
 * **Ubicación**: `lib/src/modules/order/`
 * **Vistas**: `view/order_screen.dart`, `view/create_order_screen.dart`
-* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`, subwidgets en `widgets/order_results_dialogs/` (`parameter_card.dart`, `parameter_badge_pill.dart`, `order_results_header.dart`, `order_results_summary_bar.dart`, `order_results_footer.dart`), motor de fórmulas en `lib/src/tools/calculators/` (`clinical_formula.dart`, `clinical_formulas_registry.dart`), visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart` y plantilla `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`
+* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/order_results_dialog.dart`, `widgets/edit_item_price_dialog.dart`, `widgets/supervisor_auth_dialog.dart`, subwidgets en `widgets/order_results_dialogs/` (`parameter_card.dart`, `parameter_badge_pill.dart`, `order_results_header.dart`, `order_results_summary_bar.dart`, `order_results_footer.dart`), motor de fórmulas en `lib/src/tools/calculators/` (`clinical_formula.dart`, `clinical_formulas_registry.dart`), visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart` y plantilla `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`
 * **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `ReadLabTestCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
 * **Funciones Clave**:
   1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
@@ -229,6 +229,11 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   7. **Emisión de Informes Clínicos y Sobres Físicos de Entrega**:
      - Emisión de informe oficial PDF A4 con membrete, subseries clínicas y alertas discretas `H`/`L`.
      - Rotulación directa de sobres físicos comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) con alimentación vertical para la bandeja manual de la impresora, recuadro de atención con médico condicional (se oculta si es nulo), datos de paciente y pie de página con marco redondeado (ver especificación completa en **[Impresión de Sobres Clínicos](modulos/impresion_sobres_clinicos.md)**).
+  8. **Modificación Arbitraria de Precios, Bloqueo (`isBlocked`) y Aprobación de Supervisor**:
+     - Modificación de precio mediante pulsación prolongada (`onLongPress`) en el carrito con [`EditItemPriceDialog`](file:///c:/Users/sytru/Developer/Projects/lab_project/serum_app_front/lib/src/modules/order/widgets/edit_item_price_dialog.dart).
+     - Auditoría con `originalPrice` y bloqueo preventivo automático si difiere del catálogo y quien emite tiene `accessLevel <= 3`.
+     - Restricciones automáticas: Prohíbe cobros y captura de resultados; permite borrado si `paidAmount == 0`.
+     - Desbloqueo mediante botón `Icons.lock_open`: diálogo [`SupervisorAuthDialog`](file:///c:/Users/sytru/Developer/Projects/lab_project/serum_app_front/lib/src/modules/order/widgets/supervisor_auth_dialog.dart) para credenciales presenciales de supervisor en ventanilla, o confirmación de 1 clic para supervisores en su propia sesión (`POST /api/v1/orders/{id}/approve`).
 
 ---
 

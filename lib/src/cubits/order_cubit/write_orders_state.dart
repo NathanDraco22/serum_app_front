@@ -27,6 +27,10 @@ final class OrderPaid extends WriteOrderSuccess {
   OrderPaid(super.item);
 }
 
+final class OrderApproved extends WriteOrderSuccess {
+  OrderApproved(super.item);
+}
+
 final class WriteOrderError extends WriteOrderState {
   final String message;
   WriteOrderError(this.message);

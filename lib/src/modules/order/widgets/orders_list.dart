@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
+import 'supervisor_auth_dialog.dart';
 
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
@@ -42,6 +44,7 @@ class OrdersList extends StatelessWidget {
       itemCount: orders.length,
       itemBuilder: (context, index) {
         final order = orders[index];
+        final isBlocked = order.isBlocked;
         final patientName =
             order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
         final totalPrice =
@@ -57,7 +60,7 @@ class OrdersList extends StatelessWidget {
             order.status != 'completed' &&
             order.status != 'paid' &&
             order.status != 'cancelled';
-        final canDelete = order.status == 'pending' && order.paidAmount == 0;
+        final canDelete = (order.status == 'pending' || isBlocked) && order.paidAmount == 0;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -72,28 +75,34 @@ class OrdersList extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: isCompleted
-                      ? Colors.green.shade100
-                      : isFullyPaid
-                          ? Colors.blue.shade100
-                          : hasResults
-                              ? Colors.amber.shade100
-                              : theme.colorScheme.primaryContainer,
-                  foregroundColor: isCompleted
-                      ? Colors.green.shade800
-                      : isFullyPaid
-                          ? Colors.blue.shade800
-                          : hasResults
-                              ? Colors.amber.shade900
-                              : theme.colorScheme.onPrimaryContainer,
+                  backgroundColor: isBlocked
+                      ? Colors.red.shade100
+                      : (isCompleted
+                          ? Colors.green.shade100
+                          : isFullyPaid
+                              ? Colors.blue.shade100
+                              : hasResults
+                                  ? Colors.amber.shade100
+                                  : theme.colorScheme.primaryContainer),
+                  foregroundColor: isBlocked
+                      ? Colors.red.shade800
+                      : (isCompleted
+                          ? Colors.green.shade800
+                          : isFullyPaid
+                              ? Colors.blue.shade800
+                              : hasResults
+                                  ? Colors.amber.shade900
+                                  : theme.colorScheme.onPrimaryContainer),
                   child: Icon(
-                    isCompleted
-                        ? Icons.check_circle
-                        : isFullyPaid
-                            ? Icons.paid
-                            : hasResults
-                                ? Icons.assignment_turned_in
-                                : Icons.pending_actions,
+                    isBlocked
+                        ? Icons.lock
+                        : (isCompleted
+                            ? Icons.check_circle
+                            : isFullyPaid
+                                ? Icons.paid
+                                : hasResults
+                                    ? Icons.assignment_turned_in
+                                    : Icons.pending_actions),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -135,6 +144,55 @@ class OrdersList extends StatelessWidget {
                               Text(NumberFormatter.convertToMoneyLike(totalPrice), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
+                          // Badge de Bloqueo
+                          if (isBlocked)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.red.shade300),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.lock, size: 11, color: Colors.red.shade900),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'BLOQUEADA (REQ. AUTORIZACIÓN)',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (order.approval?.isApproved == true && order.approval?.approvedBy != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.teal.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.teal.shade300),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.verified_user_outlined, size: 11, color: Colors.teal.shade800),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'AUTORIZADO: ${order.approval!.approvedBy!.name}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.teal.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           // Badge Clínico
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -224,13 +282,88 @@ class OrdersList extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Botón de Desbloqueo / Autorización
+                if (isBlocked) ...[
+                  IconButton(
+                    icon: const Icon(Icons.lock_open),
+                    tooltip: 'Autorizar y Desbloquear Orden',
+                    color: Colors.amber.shade900,
+                    onPressed: () async {
+                      final currentUser = context.read<AppSessionCubit>().user;
+                      final isSupervisor = (currentUser?.accessLevel ?? 0) > 3;
+
+                      if (isSupervisor) {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogCtx) => AlertDialog(
+                            title: const Text('Autorizar Orden'),
+                            content: Text(
+                              '¿Deseas autorizar la orden #${order.id} con precio modificado como supervisor (${currentUser?.name})?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx, false),
+                                child: const Text('Cancelar'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(dialogCtx, true),
+                                child: const Text('Autorizar'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true && context.mounted) {
+                          final req = OrderApproveRequest(
+                            reason: 'Autorizado directamente por supervisor (${currentUser?.name})',
+                          );
+                          context.read<WriteOrderCubit>().approveOrder(order.id, req).then((_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Orden autorizada y desbloqueada')),
+                              );
+                              context.read<ReadOrderCubit>().getAll();
+                            }
+                          });
+                        }
+                      } else {
+                        // En ventanilla: pedir credenciales de supervisor
+                        final req = await SupervisorAuthDialog.show(context, order.id);
+                        if (req != null && context.mounted) {
+                          context.read<WriteOrderCubit>().approveOrder(order.id, req).then((_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Orden autorizada y desbloqueada exitosamente')),
+                              );
+                              context.read<ReadOrderCubit>().getAll();
+                            }
+                          });
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 IconButton(
                   icon: Icon(isCompleted ? Icons.visibility_outlined : Icons.assignment_outlined),
-                  tooltip: isCompleted ? 'Ver resultados' : 'Editar resultados',
-                  color: isCompleted ? theme.colorScheme.secondary : theme.colorScheme.primary,
-                  onPressed: isCompleted
-                      ? () => showClinicalOrderViewerDialog(context, order)
-                      : () => onEditResults(order),
+                  tooltip: isBlocked
+                      ? 'Orden bloqueada: Requiere autorización para capturar resultados'
+                      : (isCompleted ? 'Ver resultados' : 'Editar resultados'),
+                  color: isBlocked
+                      ? theme.colorScheme.outline
+                      : (isCompleted ? theme.colorScheme.secondary : theme.colorScheme.primary),
+                  onPressed: isBlocked
+                      ? () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Esta orden está bloqueada por precio especial. Requiere autorización antes de registrar resultados.',
+                              ),
+                            ),
+                          );
+                        }
+                      : (isCompleted
+                          ? () => showClinicalOrderViewerDialog(context, order)
+                          : () => onEditResults(order)),
                 ),
                 if (hasResults || isCompleted) ...[
                   const SizedBox(width: 4),
@@ -250,9 +383,21 @@ class OrdersList extends StatelessWidget {
                   const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.payments_outlined),
-                    tooltip: 'Pagar',
-                    color: Colors.green.shade700,
-                    onPressed: () => onPayOrder(order),
+                    tooltip: isBlocked
+                        ? 'Orden bloqueada: Requiere autorización para cobrar'
+                        : 'Pagar',
+                    color: isBlocked ? theme.colorScheme.outline : Colors.green.shade700,
+                    onPressed: isBlocked
+                        ? () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Esta orden está bloqueada por precio especial. Requiere autorización antes de cobrar.',
+                                ),
+                              ),
+                            );
+                          }
+                        : () => onPayOrder(order),
                   ),
                 ],
                 if (canDelete) ...[

@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 export 'api_keys_repository.dart';
+export 'app_settings_repository.dart';
 export 'auth_repository.dart';
 export 'branches_repository.dart';
 export 'cash_movements_repository.dart';
