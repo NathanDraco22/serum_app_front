@@ -50,7 +50,7 @@ class _RootScaffold extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.logout_rounded, size: 18),
-                label: const Text('Cambiar Negocio'),
+                label: const Text(''),
               ),
             ),
         ],
@@ -95,7 +95,8 @@ class _BodyState extends State<_Body> {
     setState(() => _isLoading = false);
 
     if (!success) {
-      final errorMsg = context.read<AppSessionCubit>().state.errorMessage ??
+      final errorMsg =
+          context.read<AppSessionCubit>().state.errorMessage ??
           'Error al iniciar sesión. Verifique sus credenciales.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -254,9 +255,7 @@ class _BodyState extends State<_Body> {
                               prefixIcon: const Icon(Icons.lock),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
+                                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -408,9 +407,7 @@ class _ExitBusinessDialogState extends State<_ExitBusinessDialog> {
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
-          onPressed: _secondsRemaining > 0
-              ? null
-              : () => Navigator.of(context).pop(true),
+          onPressed: _secondsRemaining > 0 ? null : () => Navigator.of(context).pop(true),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.red.shade800,
             foregroundColor: Colors.white,
