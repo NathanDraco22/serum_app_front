@@ -4,5 +4,7 @@ abstract class SerumClientConfig {
   set authToken(String token);
   String? get branchId;
   set branchId(String? id);
+  String? get servinNickname;
+  set servinNickname(String? nickname);
 }
 

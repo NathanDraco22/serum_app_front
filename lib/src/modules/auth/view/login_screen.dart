@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,8 +20,42 @@ class _RootScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: _Body(),
+    final sessionCubit = context.watch<AppSessionCubit>();
+    final servin = sessionCubit.servin;
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          if (servin != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.outline,
+                ),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => _ExitBusinessDialog(
+                      businessName: servin.name,
+                    ),
+                  );
+
+                  if (confirmed == true && context.mounted) {
+                    await context.read<AppSessionCubit>().exitBusiness();
+                  }
+                },
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('Cambiar Negocio'),
+              ),
+            ),
+        ],
+      ),
+      body: const _Body(),
     );
   }
 }
@@ -76,6 +112,8 @@ class _BodyState extends State<_Body> {
 
     return BlocBuilder<AppSessionCubit, AppSessionState>(
       builder: (context, sessionState) {
+        final servinName = sessionState.servin?.name;
+
         return Container(
           width: double.infinity,
           height: double.infinity,
@@ -121,6 +159,45 @@ class _BodyState extends State<_Body> {
                               color: theme.colorScheme.primary,
                             ),
                           ),
+                          if (servinName != null && servinName.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer.withAlpha(50),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: theme.colorScheme.primaryContainer,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.business,
+                                    size: 14,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      servinName,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 4),
                           Text(
                             'Sistema de Información de Laboratorio',
@@ -237,6 +314,110 @@ class _BodyState extends State<_Body> {
           ),
         );
       },
+    );
+  }
+}
+
+class _ExitBusinessDialog extends StatefulWidget {
+  final String businessName;
+
+  const _ExitBusinessDialog({required this.businessName});
+
+  @override
+  State<_ExitBusinessDialog> createState() => _ExitBusinessDialogState();
+}
+
+class _ExitBusinessDialogState extends State<_ExitBusinessDialog> {
+  int _secondsRemaining = 5;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        _timer?.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Salir del Negocio'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('¿Deseas desvincular esta terminal de "${widget.businessName}"?'),
+          const SizedBox(height: 16),
+          if (_secondsRemaining > 0)
+            Row(
+              children: [
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Espera $_secondsRemaining segundos...',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            )
+          else
+            const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Ya puedes confirmar la salida.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _secondsRemaining > 0
+              ? null
+              : () => Navigator.of(context).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade800,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Aceptar y Salir'),
+        ),
+      ],
     );
   }
 }

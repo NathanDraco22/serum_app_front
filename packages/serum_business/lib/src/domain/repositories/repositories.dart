@@ -17,4 +17,5 @@ export 'quotations_repository.dart';
 export 'receipts_repository.dart';
 export 'reports_repository.dart';
 export 'roles_repository.dart';
+export 'servin_repository.dart';
 export 'users_repository.dart';

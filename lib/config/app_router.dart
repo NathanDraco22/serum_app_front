@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
 import '../src/modules/splash/view/splash_screen.dart';
+import '../src/modules/activation/view/activation_screen.dart';
+import '../src/modules/inactive/view/inactive_screen.dart';
 import '../src/modules/auth/view/login_screen.dart';
 import '../src/modules/home_menu/home_menus_view.dart';
 import '../src/modules/dashboard/view/dashboard_screen.dart';
@@ -45,6 +47,8 @@ class AppRouter {
 
   // Constantes de rutas
   static const String splash = '/splash';
+  static const String activation = '/activation';
+  static const String inactive = '/inactive';
   static const String login = '/login';
   static const String dashboard = '/';
   static const String patients = '/patients';
@@ -97,9 +101,15 @@ class AppRouter {
 
         final isInitial = sessionState.status == AppSessionStatus.initial ||
             sessionState.status == AppSessionStatus.authenticating;
+        final isUnactivated =
+            sessionState.status == AppSessionStatus.unactivated;
+        final isInstanceInactive =
+            sessionState.status == AppSessionStatus.instanceInactive;
         final isAuthenticated = sessionState.isAuthenticated;
 
         final isSplashing = state.matchedLocation == splash;
+        final isActivating = state.matchedLocation == activation;
+        final isInactive = state.matchedLocation == inactive;
         final isLoggingIn = state.matchedLocation == login;
 
         // 1. Inicialización en progreso -> Redirigir a /splash
@@ -107,13 +117,23 @@ class AppRouter {
           return isSplashing ? null : splash;
         }
 
-        // 2. No autenticado -> Redirigir a /login
+        // 2. Terminal sin activar (no hay Servin configurado) -> Redirigir a /activation
+        if (isUnactivated) {
+          return isActivating ? null : activation;
+        }
+
+        // 3. Terminal con instancia desactivada/bloqueada -> Redirigir a /inactive
+        if (isInstanceInactive) {
+          return isInactive ? null : inactive;
+        }
+
+        // 4. Instancia activa pero usuario no autenticado -> Redirigir a /login
         if (!isAuthenticated) {
           return isLoggingIn ? null : login;
         }
 
-        // 3. Autenticado -> Redirigir a Dashboard si intenta estar en /splash o /login
-        if (isSplashing || isLoggingIn) {
+        // 5. Autenticado -> Redirigir a Dashboard si intenta acceder a pantallas de onboarding o auth
+        if (isSplashing || isLoggingIn || isActivating || isInactive) {
           return dashboard;
         }
 
@@ -123,6 +143,14 @@ class AppRouter {
         GoRoute(
           path: splash,
           builder: (context, state) => const SplashScreen(),
+        ),
+        GoRoute(
+          path: activation,
+          builder: (context, state) => const ActivationScreen(),
+        ),
+        GoRoute(
+          path: inactive,
+          builder: (context, state) => const InactiveScreen(),
         ),
         GoRoute(
           path: login,

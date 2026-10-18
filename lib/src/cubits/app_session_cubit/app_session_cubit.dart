@@ -2,18 +2,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../config/app_serum_config.dart';
+import '../../core/app_config_manager.dart';
 
 part 'app_session_state.dart';
 
 class AppSessionCubit extends Cubit<AppSessionState> {
   final AuthRepository authRepository;
   final BranchesRepository branchesRepository;
+  final ServinRepository servinRepository;
   final CashShiftsRepository? cashShiftsRepository;
   final UsersDataSource usersDataSource;
 
   AppSessionCubit({
     required this.authRepository,
     required this.branchesRepository,
+    required this.servinRepository,
     this.cashShiftsRepository,
     UsersDataSource? usersDataSource,
   })  : usersDataSource = usersDataSource ?? UsersDataSource(),
@@ -25,6 +28,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   String get currentBranchName =>
       state.currentBranch?.name ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
   UserInDb? get user => state.currentUser;
+  Servin? get servin => state.servin;
   CashShiftInDb? get activeShift => state.activeShift;
   bool get hasActiveShift => state.hasActiveShift;
 
@@ -42,14 +46,53 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
-  /// Inicializa la sesión usando los tokens guardados.
-  /// Si el token de sesión está a menos de 10 minutos de vencer (o ya venció),
-  /// se refresca automáticamente antes de continuar.
-  /// Posteriormente ejecuta `checkUser()` para confirmar si el usuario no fue desactivado/eliminado.
+  /// Inicializa la sesión comprobando primero la activación de la instancia (Servin).
+  /// Si no hay Servin configurado localmente, emite `unactivated`.
+  /// Si existe Servin, actualiza configuración de red y consulta `/auths/servin-status`.
+  /// Si la instancia está inactiva (`isActive == false`), emite `instanceInactive`.
+  /// Luego verifica la sesión con tokens guardados y `checkUser()`.
   Future<void> initSession() async {
     emit(state.copyWith(status: AppSessionStatus.initial, clearError: true));
 
     try {
+      final currentServin = await servinRepository.getCurrentServinFromLocal();
+      if (currentServin == null) {
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.unactivated,
+            clearUser: true,
+            clearBranch: true,
+            clearActiveShift: true,
+            clearServin: true,
+          ),
+        );
+        return;
+      }
+
+      // Configurar red con los datos de la instancia local
+      _updateNetworkConfig(servin: currentServin);
+      final savedBranchId = await AppConfigManager().getSelectedBranchId();
+      if (savedBranchId != null && savedBranchId.isNotEmpty) {
+        AppSerumConfig().setBranchId(savedBranchId);
+      }
+
+      // Refrescar y validar estado de la instancia con el backend tenant
+      final refreshedServin = await servinRepository.refreshServinStatus();
+      final activeServin = refreshedServin ?? currentServin;
+
+      if (!activeServin.isActive) {
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.instanceInactive,
+            servin: activeServin,
+            clearUser: true,
+            clearBranch: true,
+            clearActiveShift: true,
+          ),
+        );
+        return;
+      }
+
       // Garantizar que contemos con un token válido (refresca si le quedan <= 10 min)
       final token = await authRepository.ensureValidToken(
         threshold: const Duration(minutes: 10),
@@ -59,6 +102,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         emit(
           state.copyWith(
             status: AppSessionStatus.unauthenticated,
+            servin: activeServin,
             clearUser: true,
             clearBranch: true,
             clearActiveShift: true,
@@ -70,24 +114,38 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       // Llamado liviano para validar el estado actual del usuario en la BD
       final check = await authRepository.checkUser();
       if (check.isUnactive) {
-        emit(state.copyWith(
-            status: AppSessionStatus.accountInactive, clearUser: true));
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.accountInactive,
+            servin: activeServin,
+            clearUser: true,
+          ),
+        );
         return;
       }
       if (check.isDeleted) {
-        emit(state.copyWith(
-            status: AppSessionStatus.accountDeleted, clearUser: true));
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.accountDeleted,
+            servin: activeServin,
+            clearUser: true,
+          ),
+        );
         return;
       }
 
       // Sesión activa y válida
-      await _fetchAndSetCurrentUser();
+      await _fetchAndSetCurrentUser(servin: activeServin);
     } catch (e) {
       await authRepository.logout();
       AppSerumConfig().setBranchId(null);
+      final currentServin = await servinRepository.getCurrentServinFromLocal();
       emit(
         state.copyWith(
-          status: AppSessionStatus.unauthenticated,
+          status: currentServin == null
+              ? AppSessionStatus.unactivated
+              : AppSessionStatus.unauthenticated,
+          servin: currentServin,
           clearUser: true,
           clearBranch: true,
           clearActiveShift: true,
@@ -97,21 +155,49 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
-  /// Autentica al usuario con username, email o teléfono y contraseña
+  /// Autentica al usuario con username, email o teléfono y contraseña.
+  /// Paralelamente valida el estado del Servin; si fue desactivado, redirige a inactivo.
   Future<bool> login(String identifier, String password) async {
     emit(state.copyWith(
         status: AppSessionStatus.authenticating, clearError: true));
 
     try {
-      final response = await authRepository.login(
-        identifier: identifier,
-        password: password,
-      );
+      final currentServin = await servinRepository.getCurrentServinFromLocal();
+      if (currentServin == null) {
+        emit(state.copyWith(status: AppSessionStatus.unactivated));
+        return false;
+      }
+
+      _updateNetworkConfig(servin: currentServin);
+
+      // Ejecutar login y refresco de estado de instancia en paralelo
+      final [responseObj, servinObj] = await Future.wait([
+        authRepository.login(
+          identifier: identifier,
+          password: password,
+        ),
+        servinRepository.refreshServinStatus(),
+      ]);
+
+      final response = responseObj as LoginResponse;
+      final refreshedServin = (servinObj as Servin?) ?? currentServin;
+
+      if (!refreshedServin.isActive) {
+        emit(
+          state.copyWith(
+            status: AppSessionStatus.instanceInactive,
+            servin: refreshedServin,
+            clearUser: true,
+          ),
+        );
+        return false;
+      }
 
       if (!response.user.isActive) {
         emit(
           state.copyWith(
             status: AppSessionStatus.accountInactive,
+            servin: refreshedServin,
             errorMessage: 'Esta cuenta se encuentra desactivada.',
           ),
         );
@@ -122,13 +208,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         emit(
           state.copyWith(
             status: AppSessionStatus.accountDeleted,
+            servin: refreshedServin,
             errorMessage: 'Esta cuenta ha sido eliminada.',
           ),
         );
         return false;
       }
 
-      await _setupBranchesAndUser(response.user);
+      await _setupBranchesAndUser(response.user, servin: refreshedServin);
       return true;
     } on UnauthorizedException {
       emit(
@@ -147,6 +234,40 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       );
       return false;
     }
+  }
+
+  /// Configura una instancia recién activada y pasa a estado no autenticado (para hacer login)
+  void initServinUnauthenticated(Servin servin) {
+    _updateNetworkConfig(servin: servin);
+    emit(
+      state.copyWith(
+        status: AppSessionStatus.unauthenticated,
+        servin: servin,
+        clearUser: true,
+        clearBranch: true,
+        clearActiveShift: true,
+        clearError: true,
+      ),
+    );
+  }
+
+  /// Desvincula la instancia localmente y limpia la sesión completa para reconfigurar la app
+  Future<void> exitBusiness() async {
+    await servinRepository.clearCurrentServin();
+    await authRepository.logout();
+    await AppConfigManager().clearSelectedBranchId();
+    AppSerumConfig().setBranchId(null);
+    AppSerumConfig().setServinNickname(null);
+    emit(
+      state.copyWith(
+        status: AppSessionStatus.unactivated,
+        clearServin: true,
+        clearUser: true,
+        clearBranch: true,
+        clearActiveShift: true,
+        clearError: true,
+      ),
+    );
   }
 
   /// Cambia la sucursal activa y actualiza la configuración de red
@@ -170,6 +291,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       }
 
       AppSerumConfig().setBranchId(branch.id);
+      await AppConfigManager().saveSelectedBranchId(branch.id);
 
       emit(
         state.copyWith(
@@ -182,7 +304,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
-  /// Cierra la sesión activa y limpia los tokens guardados
+  /// Cierra la sesión activa y limpia los tokens guardados (permaneciendo en el mismo negocio)
   Future<void> logout() async {
     await authRepository.logout();
     AppSerumConfig().setBranchId(null);
@@ -222,19 +344,50 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     emit(state.copyWith(clearActiveShift: true));
   }
 
-  Future<void> _fetchAndSetCurrentUser() async {
+  void _updateNetworkConfig({
+    required Servin servin,
+    BranchInDb? branch,
+  }) {
+    AppSerumConfig().setBaseUrl(servin.url);
+    AppSerumConfig().setServinNickname(servin.nickname);
+    if (branch != null) {
+      AppSerumConfig().setBranchId(branch.id);
+    }
+  }
+
+  Future<void> _fetchAndSetCurrentUser({Servin? servin}) async {
     try {
-      final res = await usersDataSource.getAllUsers();
-      final list = (res['items'] as List<dynamic>?) ??
-          (res['data'] as List<dynamic>?) ??
-          [];
-      if (list.isNotEmpty) {
-        final user = UserInDb.fromJson(list.first as Map<String, dynamic>);
-        await _setupBranchesAndUser(user);
+      final token = SerumClient.instance.authToken;
+      final payload = TokenManager.decodePayload(token);
+      final userId = payload?['userId'] as String?;
+
+      UserInDb? user;
+      if (userId != null && userId.isNotEmpty) {
+        try {
+          final userMap = await usersDataSource.getUserById(userId);
+          if (userMap != null) {
+            user = UserInDb.fromJson(userMap);
+          }
+        } catch (_) {}
+      }
+
+      if (user == null) {
+        final res = await usersDataSource.getAllUsers();
+        final list = (res['items'] as List<dynamic>?) ??
+            (res['data'] as List<dynamic>?) ??
+            [];
+        if (list.isNotEmpty) {
+          user = UserInDb.fromJson(list.first as Map<String, dynamic>);
+        }
+      }
+
+      if (user != null) {
+        await _setupBranchesAndUser(user, servin: servin);
       } else {
         emit(
           state.copyWith(
             status: AppSessionStatus.authenticated,
+            servin: servin,
             clearError: true,
           ),
         );
@@ -243,13 +396,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       emit(
         state.copyWith(
           status: AppSessionStatus.authenticated,
+          servin: servin,
           clearError: true,
         ),
       );
     }
   }
 
-  Future<void> _setupBranchesAndUser(UserInDb user) async {
+  Future<void> _setupBranchesAndUser(UserInDb user, {Servin? servin}) async {
     List<BranchInDb> allBranches = [];
     try {
       allBranches = await branchesRepository.getAllBranches();
@@ -276,10 +430,13 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         ? allBranches.where((b) => user.branches.contains(b.id)).toList()
         : (isAdmin ? allBranches : <BranchInDb>[]);
 
-    final initBranchId = user.branches.firstOrNull ?? kOriginBranchId;
+    final savedBranchId = await AppConfigManager().getSelectedBranchId();
+    final candidateBranchId = (savedBranchId != null && allBranches.any((b) => b.id == savedBranchId))
+        ? savedBranchId
+        : (user.branches.firstOrNull ?? kOriginBranchId);
 
     BranchInDb selectedBranch = allBranches.firstWhere(
-      (b) => b.id == initBranchId,
+      (b) => b.id == candidateBranchId,
       orElse: () => allBranches.firstWhere(
         (b) => b.id == kOriginBranchId,
         orElse: () => allBranches.first,
@@ -287,6 +444,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     );
 
     AppSerumConfig().setBranchId(selectedBranch.id);
+    await AppConfigManager().saveSelectedBranchId(selectedBranch.id);
 
     final finalAvailableBranches = userBranches.isNotEmpty
         ? userBranches
@@ -295,6 +453,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     emit(
       state.copyWith(
         status: AppSessionStatus.authenticated,
+        servin: servin ?? state.servin,
         currentUser: user,
         currentBranch: selectedBranch,
         branches: finalAvailableBranches,

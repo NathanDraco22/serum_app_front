@@ -4,6 +4,7 @@ export 'src/domain/models/models.dart';
 export 'src/domain/query_params/export.dart';
 export 'src/domain/repositories/repositories.dart';
 export 'src/domain/responses/list_response.dart';
+export 'src/domain/responses/servin_status_response.dart';
 
 export 'src/services/services.dart';
 

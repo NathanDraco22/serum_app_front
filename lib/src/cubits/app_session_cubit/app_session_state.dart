@@ -2,6 +2,8 @@ part of 'app_session_cubit.dart';
 
 enum AppSessionStatus {
   initial,
+  unactivated,
+  instanceInactive,
   authenticating,
   authenticated,
   unauthenticated,
@@ -12,6 +14,7 @@ enum AppSessionStatus {
 
 class AppSessionState {
   final AppSessionStatus status;
+  final Servin? servin;
   final UserInDb? currentUser;
   final BranchInDb? currentBranch;
   final List<BranchInDb> branches;
@@ -20,6 +23,7 @@ class AppSessionState {
 
   const AppSessionState({
     this.status = AppSessionStatus.initial,
+    this.servin,
     this.currentUser,
     this.currentBranch,
     this.branches = const [],
@@ -34,6 +38,8 @@ class AppSessionState {
 
   AppSessionState copyWith({
     AppSessionStatus? status,
+    Servin? servin,
+    bool clearServin = false,
     UserInDb? currentUser,
     bool clearUser = false,
     BranchInDb? currentBranch,
@@ -46,6 +52,7 @@ class AppSessionState {
   }) {
     return AppSessionState(
       status: status ?? this.status,
+      servin: clearServin ? null : (servin ?? this.servin),
       currentUser: clearUser ? null : (currentUser ?? this.currentUser),
       currentBranch: clearBranch ? null : (currentBranch ?? this.currentBranch),
       branches: branches ?? this.branches,

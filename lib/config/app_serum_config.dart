@@ -40,4 +40,18 @@ class AppSerumConfig implements SerumClientConfig {
   void setBranchId(String? id) {
     _branchId = id;
   }
+
+  String? _servinNickname;
+
+  @override
+  String? get servinNickname => _servinNickname;
+
+  @override
+  set servinNickname(String? nickname) {
+    _servinNickname = nickname;
+  }
+
+  void setServinNickname(String? nickname) {
+    _servinNickname = nickname;
+  }
 }

@@ -24,14 +24,25 @@ class HttpTools {
     }
   }
 
+  static Map<String, String> generateTenantHeaders() {
+    final config = SerumClient.instance;
+    final servinNickname = config.servinNickname;
+    final branchId = config.branchId;
+    return {
+      "X-Agent": "Serum",
+      if (servinNickname != null && servinNickname.isNotEmpty)
+        "x-servin": servinNickname,
+      if (branchId != null && branchId.isNotEmpty)
+        "x-branch": branchId,
+    };
+  }
+
   static Map<String, String> generateAuthHeaders() {
     final config = SerumClient.instance;
     final token = config.authToken;
-    final branchId = config.branchId;
     return {
+      ...generateTenantHeaders(),
       "Authorization": "Bearer $token",
-      "X-Agent": "Serum",
-      if (branchId != null && branchId.isNotEmpty) "X-Branch": branchId,
     };
   }
 }

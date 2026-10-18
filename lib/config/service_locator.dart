@@ -1,5 +1,6 @@
 import 'package:serum_business/serum_business.dart';
 
+import '../src/core/app_config_manager.dart';
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
 import '../src/cubits/app_settings/app_settings_cubit.dart';
 import 'get_it_config.dart';
@@ -9,11 +10,13 @@ final sl = getIt;
 Future<void> setupServiceLocator() async {
   // Storage
   getIt.registerLazySingleton<TokenStorage>(() => HiveTokenStorage());
+  getIt.registerLazySingleton<AppConfigStore>(() => AppConfigManager());
 
   // DataSources
   getIt.registerLazySingleton<AppSettingsDataSource>(
       () => AppSettingsDataSource());
   getIt.registerLazySingleton<AuthsDataSource>(() => AuthsDataSource());
+  getIt.registerLazySingleton<ServinDataSource>(() => ServinDataSource());
   getIt.registerLazySingleton<UsersDataSource>(() => UsersDataSource());
   getIt.registerLazySingleton<BranchesDataSource>(() => BranchesDataSource());
   getIt.registerLazySingleton<CashShiftsDataSource>(
@@ -35,6 +38,12 @@ Future<void> setupServiceLocator() async {
     () => AuthRepository(
       dataSource: getIt<AuthsDataSource>(),
       tokenStorage: getIt<TokenStorage>(),
+    ),
+  );
+  getIt.registerLazySingleton<ServinRepository>(
+    () => ServinRepository(
+      servinDataSource: getIt<ServinDataSource>(),
+      appConfigStore: getIt<AppConfigStore>(),
     ),
   );
   getIt.registerLazySingleton<BranchesRepository>(
@@ -73,6 +82,7 @@ Future<void> setupServiceLocator() async {
     AppSessionCubit(
       authRepository: getIt<AuthRepository>(),
       branchesRepository: getIt<BranchesRepository>(),
+      servinRepository: getIt<ServinRepository>(),
       cashShiftsRepository: getIt<CashShiftsRepository>(),
       usersDataSource: getIt<UsersDataSource>(),
     ),

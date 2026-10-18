@@ -12,19 +12,22 @@ class AuthsDataSource with HttpService {
 
   Future<Map<String, dynamic>> login(Map<String, dynamic> data) async {
     final uri = HttpTools.generateUri("$_endpoint/login");
-    final res = await postQuery(uri, data);
+    final headers = HttpTools.generateTenantHeaders();
+    final res = await postQuery(uri, data, headers: headers);
     return res;
   }
 
   Future<Map<String, dynamic>> refreshToken(Map<String, dynamic> data) async {
     final uri = HttpTools.generateUri("$_endpoint/refresh-token");
-    final res = await postQuery(uri, data);
+    final headers = HttpTools.generateTenantHeaders();
+    final res = await postQuery(uri, data, headers: headers);
     return res;
   }
 
   Future<Map<String, dynamic>> checkUser(Map<String, dynamic> data) async {
     final uri = HttpTools.generateUri("$_endpoint/check-user");
-    final res = await postQuery(uri, data);
+    final headers = HttpTools.generateTenantHeaders();
+    final res = await postQuery(uri, data, headers: headers);
     return res;
   }
 }
