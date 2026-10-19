@@ -1,7 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
@@ -70,22 +69,14 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
 
   Future<void> _pickLogo() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (file == null) return;
 
-      final file = result.files.first;
-      Uint8List? bytes = file.bytes;
-
-      if (bytes == null && file.path != null && !kIsWeb) {
-        bytes = await File(file.path!).readAsBytes();
-      }
-
-      if (bytes == null) return;
+      final bytes = await file.readAsBytes();
 
       setState(() {
         _selectedLogoBytes = bytes;
@@ -112,22 +103,14 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
 
   Future<void> _pickIsoLogo() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png'],
-        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (file == null) return;
 
-      final file = result.files.first;
-      Uint8List? bytes = file.bytes;
-
-      if (bytes == null && file.path != null && !kIsWeb) {
-        bytes = await File(file.path!).readAsBytes();
-      }
-
-      if (bytes == null) return;
+      final bytes = await file.readAsBytes();
 
       setState(() {
         _selectedIsoLogoBytes = bytes;

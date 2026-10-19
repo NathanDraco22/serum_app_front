@@ -2,7 +2,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../config/app_serum_config.dart';
+import '../../../config/service_locator.dart';
 import '../../core/app_config_manager.dart';
+import '../app_settings/app_settings_cubit.dart';
 
 part 'app_session_state.dart';
 
@@ -299,6 +301,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
           clearError: true,
         ),
       );
+
+      await fetchActiveShift();
     } catch (error) {
       emit(state.copyWith(errorMessage: error.toString()));
     }
@@ -371,35 +375,13 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         } catch (_) {}
       }
 
-      if (user == null) {
-        final res = await usersDataSource.getAllUsers();
-        final list = (res['items'] as List<dynamic>?) ??
-            (res['data'] as List<dynamic>?) ??
-            [];
-        if (list.isNotEmpty) {
-          user = UserInDb.fromJson(list.first as Map<String, dynamic>);
-        }
-      }
-
       if (user != null) {
         await _setupBranchesAndUser(user, servin: servin);
       } else {
-        emit(
-          state.copyWith(
-            status: AppSessionStatus.authenticated,
-            servin: servin,
-            clearError: true,
-          ),
-        );
+        await logout();
       }
     } catch (_) {
-      emit(
-        state.copyWith(
-          status: AppSessionStatus.authenticated,
-          servin: servin,
-          clearError: true,
-        ),
-      );
+      await logout();
     }
   }
 
@@ -430,25 +412,23 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         ? allBranches.where((b) => user.branches.contains(b.id)).toList()
         : (isAdmin ? allBranches : <BranchInDb>[]);
 
-    final savedBranchId = await AppConfigManager().getSelectedBranchId();
-    final candidateBranchId = (savedBranchId != null && allBranches.any((b) => b.id == savedBranchId))
-        ? savedBranchId
-        : (user.branches.firstOrNull ?? kOriginBranchId);
+    final allowedBranches = userBranches.isNotEmpty
+        ? userBranches
+        : (isAdmin ? allBranches : [defaultOriginBranch]);
 
-    BranchInDb selectedBranch = allBranches.firstWhere(
+    final savedBranchId = await AppConfigManager().getSelectedBranchId();
+    final candidateBranchId = (savedBranchId != null &&
+            allowedBranches.any((b) => b.id == savedBranchId))
+        ? savedBranchId
+        : (user.branches.firstOrNull ?? allowedBranches.first.id);
+
+    BranchInDb selectedBranch = allowedBranches.firstWhere(
       (b) => b.id == candidateBranchId,
-      orElse: () => allBranches.firstWhere(
-        (b) => b.id == kOriginBranchId,
-        orElse: () => allBranches.first,
-      ),
+      orElse: () => allowedBranches.first,
     );
 
     AppSerumConfig().setBranchId(selectedBranch.id);
     await AppConfigManager().saveSelectedBranchId(selectedBranch.id);
-
-    final finalAvailableBranches = userBranches.isNotEmpty
-        ? userBranches
-        : [defaultOriginBranch];
 
     emit(
       state.copyWith(
@@ -456,10 +436,17 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         servin: servin ?? state.servin,
         currentUser: user,
         currentBranch: selectedBranch,
-        branches: finalAvailableBranches,
+        branches: allowedBranches,
         clearError: true,
       ),
     );
+
+    // Cargar configuraciones del sistema ahora que el tenant y la sesión están activos
+    try {
+      if (sl.isRegistered<AppSettingsCubit>()) {
+        sl<AppSettingsCubit>().loadSettings();
+      }
+    } catch (_) {}
 
     // Consultar turno activo tras configurar usuario
     await fetchActiveShift();

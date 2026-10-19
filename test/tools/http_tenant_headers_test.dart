@@ -63,5 +63,23 @@ void main() {
       expect(headers['Authorization'], equals('Bearer my-jwt-session-token'));
       expect(headers['X-Agent'], equals('Serum'));
     });
+
+    test('generateUri genera URIs correctas para HTTP con puerto, sin puerto y HTTPS', () {
+      mockConfig.baseUrl = 'http://localhost:8000';
+      final uriWithPort = HttpTools.generateUri('/patients');
+      expect(uriWithPort.toString(), equals('http://localhost:8000/api/v1/patients'));
+
+      mockConfig.baseUrl = 'http://api.laboratorio.com';
+      final uriHttpNoPort = HttpTools.generateUri('/orders');
+      expect(uriHttpNoPort.scheme, equals('http'));
+      expect(uriHttpNoPort.host, equals('api.laboratorio.com'));
+      expect(uriHttpNoPort.path, equals('/api/v1/orders'));
+
+      mockConfig.baseUrl = 'https://cloud.serumlis.com';
+      final uriHttps = HttpTools.generateUri('/lab-tests');
+      expect(uriHttps.scheme, equals('https'));
+      expect(uriHttps.host, equals('cloud.serumlis.com'));
+      expect(uriHttps.path, equals('/api/v1/lab-tests'));
+    });
   });
 }

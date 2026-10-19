@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_assets.dart';
@@ -40,8 +39,6 @@ class _RootScaffold extends StatelessWidget {
         }
 
         if (state is ActivationSuccess) {
-          context.read<AppSessionCubit>().initServinUnauthenticated(state.servin);
-
           await showDialog<void>(
             context: context,
             barrierDismissible: false,
@@ -67,7 +64,7 @@ class _RootScaffold extends StatelessWidget {
           );
 
           if (!context.mounted) return;
-          context.go('/login');
+          context.read<AppSessionCubit>().initServinUnauthenticated(state.servin);
         }
       },
       child: const Scaffold(
@@ -88,20 +85,25 @@ class _BodyState extends State<_Body> {
   final _formKey = GlobalKey<FormState>();
   final _nicknameController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _serverUrlController = TextEditingController();
   bool _obscureApiKey = true;
+  bool _showAdvancedServer = false;
 
   @override
   void dispose() {
     _nicknameController.dispose();
     _apiKeyController.dispose();
+    _serverUrlController.dispose();
     super.dispose();
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    final serverUrl = _serverUrlController.text.trim();
     context.read<ActivationCubit>().activate(
           _apiKeyController.text,
           _nicknameController.text,
+          originServerUrl: serverUrl.isNotEmpty ? serverUrl : null,
         );
   }
 
@@ -213,7 +215,48 @@ class _BodyState extends State<_Body> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 12),
+
+                      // Configuración opcional de servidor
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedServer = !_showAdvancedServer;
+                            });
+                          },
+                          icon: Icon(
+                            _showAdvancedServer
+                                ? Icons.keyboard_arrow_up
+                                : Icons.tune_rounded,
+                            size: 16,
+                          ),
+                          label: Text(
+                            _showAdvancedServer
+                                ? 'Ocultar servidor'
+                                : 'Ajustes de servidor (opcional)',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      if (_showAdvancedServer) ...[
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _serverUrlController,
+                          decoration: const InputDecoration(
+                            labelText: 'URL del Servidor de Activación',
+                            hintText: 'ej. http://localhost:8000',
+                            prefixIcon: Icon(Icons.dns_outlined),
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'Opcional. Por defecto usa la URL del cliente',
+                          ),
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _submit(),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
 
                       // Botón Activar
                       BlocBuilder<ActivationCubit, ActivationState>(

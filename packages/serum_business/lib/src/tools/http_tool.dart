@@ -12,15 +12,16 @@ class HttpTools {
     final decodedBase = Uri.parse(baseUrl);
     final fullPath = "$_api/v$version$path";
 
+    final authority = decodedBase.authority.isNotEmpty
+        ? decodedBase.authority
+        : (decodedBase.hasPort
+            ? "${decodedBase.host}:${decodedBase.port}"
+            : decodedBase.host);
+
     if (decodedBase.scheme == "https") {
-      return Uri.https(decodedBase.authority, fullPath, queryParameters);
+      return Uri.https(authority, fullPath, queryParameters);
     } else {
-      final result = Uri.http(
-        "${decodedBase.host}:${decodedBase.port}",
-        fullPath,
-        queryParameters,
-      );
-      return result;
+      return Uri.http(authority, fullPath, queryParameters);
     }
   }
 

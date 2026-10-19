@@ -8,9 +8,14 @@ class ActivationCubit extends Cubit<ActivationState> {
 
   final ServinRepository servinRepository;
 
-  Future<void> activate(String apiKey, String nickname) async {
+  Future<void> activate(
+    String apiKey,
+    String nickname, {
+    String? originServerUrl,
+  }) async {
     final cleanNickname = nickname.trim();
     final cleanApiKey = apiKey.trim();
+    final cleanServerUrl = originServerUrl?.trim();
 
     if (cleanNickname.isEmpty) {
       emit(ActivationError('Por favor ingresa el alias del negocio.'));
@@ -23,7 +28,13 @@ class ActivationCubit extends Cubit<ActivationState> {
 
     emit(ActivationLoading());
     try {
-      final servin = await servinRepository.getActiveServin(cleanApiKey, cleanNickname);
+      final servin = await servinRepository.getActiveServin(
+        cleanApiKey,
+        cleanNickname,
+        originServerUrl: (cleanServerUrl != null && cleanServerUrl.isNotEmpty)
+            ? cleanServerUrl
+            : null,
+      );
       emit(ActivationSuccess(servin));
     } catch (error) {
       emit(ActivationError(error.toString().replaceAll('Exception: ', '')));

@@ -7,6 +7,7 @@ class OrderResultsHeader extends StatelessWidget {
   final String patientName;
   final bool isSubmitting;
   final VoidCallback onClose;
+  final VoidCallback? onShowPatientInfo;
 
   const OrderResultsHeader({
     super.key,
@@ -15,6 +16,7 @@ class OrderResultsHeader extends StatelessWidget {
     required this.patientName,
     required this.isSubmitting,
     required this.onClose,
+    this.onShowPatientInfo,
   });
 
   @override
@@ -72,12 +74,37 @@ class OrderResultsHeader extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  'Paciente: $patientName',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                InkWell(
+                  onTap: onShowPatientInfo,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'Paciente: $patientName',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (onShowPatientInfo != null) ...[
+                          const SizedBox(width: 4),
+                          Tooltip(
+                            message: 'Ver y copiar datos del paciente',
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

@@ -51,6 +51,7 @@ serum_app_front/
 │       │   ├── cash_shift_cubit/       # Turnos de caja (Read, Write)
 │       │   ├── cash_transaction_cubit/ # Kardex financiero
 │       │   ├── doctor_cubit/           # Médicos (Read, Write, Search)
+│       │   ├── imports_cubit/          # Importaciones del catálogo maestro
 │       │   ├── lab_test_cubit/         # Análisis y Packs (Read, Write, Search)
 │       │   ├── order_cubit/            # Órdenes médicas (Read, Write, Search)
 │       │   ├── patient_cubit/          # Pacientes (Read, Write, Search)
@@ -69,6 +70,7 @@ serum_app_front/
 │       │   ├── dashboard/              # Panel principal y bienvenida
 │       │   ├── doctor/                 # Directorio de médicos referentes
 │       │   ├── home_menu/              # Shell interactivo con barra lateral (StatefulNavigationShell)
+│       │   ├── imports/                # Consola de Importaciones del Sistema (sub-módulo admin)
 │       │   ├── lab_test/               # Catálogo de pruebas clínicas y packs
 │       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados
 │       │   ├── patient/                # Padrón de pacientes y expediente
@@ -320,6 +322,19 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   2. **Ciclo de Vida de Credenciales**: Generación de llaves para Power BI, E-commerce, ERPs, LIS externos y servicios personalizados, alternado dinámico de estado activo/pausado (`toggleApiKeyStatus`) y revocación con diálogo de confirmación.
   3. **Seguridad y Enmascaramiento**: Despliegue de llaves con máscara (`srm_live_k9X2...4hJ1`), copiado al portapapeles y visualización de la llave completa (`rawKey`) exclusivamente por única vez en un modal oscuro monoespaciado al momento de su creación.
   4. **Trazabilidad y Auditoría**: Monitoreo de fecha de creación y timestamp del último acceso/consumo (`lastUsedAt`).
+
+---
+
+### 📥 3.16 Submódulo `imports` (Importaciones del Sistema y Catálogo Maestro)
+* **Ubicación**: `lib/src/modules/imports/`
+* **Vistas**: `view/imports_screen.dart` (`/admin/imports`, sub-módulo de Administración montado sobre `_rootNavigatorKey`)
+* **Cubits Asociados**: `ImportsCubit` (inyectando `ImportsRepository` e `ImportsDataSource` de `serum_business`)
+* **Funciones Clave**:
+  1. **Consola Centralizada de Importaciones**: Vista en pantalla completa con botón de regreso al panel administrativo y control de acceso jerárquico (`PermissionGate` requiriendo nivel 4+ de Supervisor/Admin).
+  2. **Inicialización del Catálogo Maestro Oficial**: Dispara `POST /api/v1/imports/default-catalog` para poblar el catálogo clínico con pruebas atómicas de Química, Hematología (BHC con índices de Wintrobe), Urianálisis (EGO), Coprología, Packs de diagnóstico y Cuentas Contables.
+  3. **Idempotencia Garantizada**: Las pruebas clínicas preexistentes se preservan íntegramente por su código sin duplicar registros ni alterar configuraciones personalizadas del laboratorio.
+  4. **Confirmación y KPIs Post-Ejecución**: Modal de confirmación previa para evitar ejecuciones involuntarias y panel analítico con métricas en tiempo real (`totalProcessed`, `atomicCreated`, `packsCreated`, `accountsCreated`, `alreadyExisting`).
+  5. **Arquitectura Extensible**: Scaffolding preparado con tarjetas para futuras importaciones masivas (pacientes por Excel/CSV, listas de precios externas).
 
 ---
 

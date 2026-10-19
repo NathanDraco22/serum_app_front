@@ -16,5 +16,6 @@ export 'auth_model/auth_models.dart';
 export 'report_model/report_models.dart';
 export 'receipt_model/receipt_model.dart';
 export 'app_setting/app_setting_model.dart';
+export 'import_catalog_result/import_catalog_result.dart';
 export 'servin/servin.dart';
 export 'shared/export.dart';

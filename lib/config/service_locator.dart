@@ -29,6 +29,7 @@ Future<void> setupServiceLocator() async {
   getIt.registerLazySingleton<ReceiptsDataSource>(() => ReceiptsDataSource());
   getIt.registerLazySingleton<CashMovementsDataSource>(
       () => CashMovementsDataSource());
+  getIt.registerLazySingleton<ImportsDataSource>(() => ImportsDataSource());
 
   // Repositories
   getIt.registerLazySingleton<AppSettingsRepository>(
@@ -72,6 +73,9 @@ Future<void> setupServiceLocator() async {
   );
   getIt.registerLazySingleton<CashMovementsRepository>(
     () => CashMovementsRepository(getIt<CashMovementsDataSource>()),
+  );
+  getIt.registerLazySingleton<ImportsRepository>(
+    () => ImportsRepository(getIt<ImportsDataSource>()),
   );
 
   // Cubits (Global)

@@ -7,6 +7,7 @@ import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
+import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import 'supervisor_auth_dialog.dart';
 
 class OrdersList extends StatelessWidget {
@@ -110,11 +111,40 @@ class OrdersList extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Paciente: $patientName',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+                      InkWell(
+                        borderRadius: BorderRadius.circular(6),
+                        onTap: () {
+                          showOrderPatientInfoDialog(
+                            context,
+                            order,
+                            patientsState is ReadPatientSuccess ? patientsState.items : null,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Paciente: $patientName',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: 'Ver y copiar datos del paciente',
+                                child: Icon(
+                                  Icons.info_outline,
+                                  size: 17,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -378,6 +408,18 @@ class OrdersList extends StatelessWidget {
                   icon: const Icon(Icons.mail_outline),
                   tooltip: 'Imprimir Sobre',
                   onPressed: () => showOrderEnvelopeViewerDialog(context, order),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.person_outline),
+                  tooltip: 'Información del Paciente',
+                  onPressed: () {
+                    showOrderPatientInfoDialog(
+                      context,
+                      order,
+                      patientsState is ReadPatientSuccess ? patientsState.items : null,
+                    );
+                  },
                 ),
                 if (showPayButton) ...[
                   const SizedBox(width: 4),

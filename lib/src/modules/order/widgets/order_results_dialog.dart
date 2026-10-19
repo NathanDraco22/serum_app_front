@@ -3,6 +3,7 @@ import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
+import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import '../../../tools/calculators/clinical_formulas_registry.dart';
 import 'order_results_dialogs/order_results_header.dart';
 import 'order_results_dialogs/order_results_summary_bar.dart';
@@ -522,6 +523,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                 shortId: shortId,
                 patientName: patientName,
                 isSubmitting: _isSubmitting,
+                onShowPatientInfo: () => showOrderPatientInfoDialog(context, widget.order),
                 onClose: () {
                   if (Navigator.of(context).canPop()) {
                     Navigator.pop(context);

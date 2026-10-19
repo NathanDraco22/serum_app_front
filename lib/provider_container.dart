@@ -80,6 +80,9 @@ class ProviderContainer extends StatelessWidget {
         RepositoryProvider<CashMovementsRepository>.value(
           value: sl<CashMovementsRepository>(),
         ),
+        RepositoryProvider<ImportsRepository>.value(
+          value: sl<ImportsRepository>(),
+        ),
         RepositoryProvider(
           create: (_) => CashTransactionsRepository(cashTransactionsDataSource),
         ),
@@ -101,7 +104,7 @@ class GlobalCubitProvider extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AppSettingsCubit>.value(
-          value: sl<AppSettingsCubit>()..loadSettings(),
+          value: sl<AppSettingsCubit>(),
         ),
         BlocProvider<AppSessionCubit>.value(
           value: sl<AppSessionCubit>(),

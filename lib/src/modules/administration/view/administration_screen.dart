@@ -164,6 +164,19 @@ class AdministrationScreen extends StatelessWidget {
                             onTap: () =>
                                 context.push(AppRouter.adminAppSettings),
                           ),
+
+                          // 6. Importaciones del Sistema
+                          AdminModuleCard(
+                            title: 'Importaciones del Sistema',
+                            description:
+                                'Carga e inicialización de catálogos maestros y datos por defecto (pruebas clínicas, perfiles y cuentas).',
+                            icon: Icons.cloud_download_rounded,
+                            iconColor: Colors.teal.shade700,
+                            iconBackgroundColor:
+                                Colors.teal.shade700.withAlpha(30),
+                            badgeText: 'Catálogos / Datos',
+                            onTap: () => context.push(AppRouter.adminImports),
+                          ),
                         ],
                       );
                     },
