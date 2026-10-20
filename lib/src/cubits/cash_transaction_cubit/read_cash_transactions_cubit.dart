@@ -9,7 +9,7 @@ class ReadCashTransactionCubit extends Cubit<ReadCashTransactionState> {
   ReadCashTransactionCubit({required this.cashTransactionsRepository})
       : super(ReadCashTransactionInitial());
 
-  Future<void> getAll() async {
+  Future<void> getAll([CashTransactionQueryParams? queryParams]) async {
     final currentState = state;
     if (currentState is ReadCashTransactionSuccess) {
       emit(ReadCashTransactionRefreshing.fromSuccess(currentState));
@@ -17,7 +17,9 @@ class ReadCashTransactionCubit extends Cubit<ReadCashTransactionState> {
       emit(ReadCashTransactionLoading());
     }
     try {
-      final items = await cashTransactionsRepository.getAllCashTransactions();
+      final items = await cashTransactionsRepository.getAllCashTransactions(
+        queryParams: queryParams,
+      );
       if (isClosed) return;
       emit(ReadCashTransactionSuccess(items));
     } catch (e) {

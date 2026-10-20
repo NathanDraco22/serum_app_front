@@ -22,7 +22,10 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - `PatientSelectionDialog` y `DoctorSelectionDialog` (`lib/src/widgets/dialogs/selectors/`): Modales dedicados (Pickers) con búsqueda reactiva debounced para miles de registros.
   - `OrdersList` (`widgets/orders_list.dart`): Listado de órdenes activas con badges de estado clínico y financiero.
   - `OrderPayDialog` (`widgets/order_pay_dialog.dart`): Modal de procesamiento de pago directo a caja activa.
+  - `AddServiceDialog` (`widgets/add_service_dialog.dart`): Modal con atajos rápidos para agregar y editar servicios adicionales libres (ej. servicio a domicilio, toma especial de muestra).
   - `OrderResultsDialog` (`widgets/order_results_dialog.dart`): Orquestador principal de captura, autocalculado reactivo y guardado de resultados médicos.
+  - `OrderInvoiceViewer` (`lib/src/widgets/dialogs/viewers/order_invoice_viewer.dart`): Visor interactivo para el Comprobante de Factura de la orden con soporte para impresión directa, exportación y envío de PDF.
+  - `OrderInvoicePdfTemplate` (`lib/src/tools/exports/pdf/templates/order_invoice_pdf_template.dart`): Plantilla PDF oficial A4 para comprobantes de factura con desglose de pruebas, servicios y recibos.
   - Subwidgets especializados en `widgets/order_results_dialogs/`:
     - `ParameterCard`: Tarjeta analítica con valores de referencia, selector cualitativo, input numérico reactivo y badge `Auto ⚡`.
     - `ParameterBadgePill`: Pill visual de alertas médicas (`ALTO ▲`, `BAJO ▼`, `NORMAL`, `ANORMAL`, `PENDIENTE`).
@@ -128,4 +131,53 @@ Al pulsar el botón de candado abierto, la interfaz se adapta dinámicamente seg
 - **Modalidad Presencial (Operador $\le 3$)**: Se abre [`SupervisorAuthDialog`](file:///c:/Users/sytru/Developer/Projects/lab_project/serum_app_front/lib/src/modules/order/widgets/supervisor_auth_dialog.dart), solicitando usuario, contraseña y motivo al supervisor.
 - **Modalidad Directa (Supervisor $> 3$)**: Se muestra un diálogo de confirmación de 1 solo clic aprovechando la sesión activa.
 - **Invocación y Reactividad**: Ambos flujos llaman a `WriteOrderCubit.approveOrder(order.id, request)`. Tras la respuesta del servidor (`POST /api/v1/orders/{id}/approve`), se emite `OrderApproved`, se notifica al usuario con un SnackBar y se refresca la lista con `ReadOrderCubit.getAll()`.
+
+---
+
+### F. Servicios Adicionales en la Orden (Servicio a Domicilio y Otros)
+
+Para cubrir las atenciones auxiliares no analíticas del laboratorio (ej. recargos por desplazamiento, tomas domiciliarias o urgencias):
+
+1. **Captura con Atajos Rápidos (`AddServiceDialog`)**:
+   - Botón `+ Agregar Servicio` en el carrito de formulación.
+   - Proporciona botones de atajo rápido de un solo toque:
+     - *"Servicio a Domicilio"*
+     - *"Toma Especial de Muestra"*
+     - *"Atención de Urgencia"*
+     - *"Transporte de Muestras"*
+     - *"Honorario Clínico Extra"*
+   - Admite nombre libre y precio en moneda regular (convertido internamente a centavos enteros).
+2. **Gestión en el Carrito (`OrderCartSection`)**:
+   - Cada servicio se lista con icono distintivo, precio editable al vuelo y botón para remover.
+   - Desglose contable en tiempo real:
+     - *Subtotal Análisis:* Monto de las pruebas y perfiles.
+     - *Subtotal Servicios:* Sumatoria de los servicios agregados.
+     - *Total a Cobrar:* Consolidación global para la caja registradora.
+3. **Persistencia e Integración**:
+   - Se serializa en el arreglo `services: List<OrderService>` de la orden médica, impactando el `totalPrice` oficial.
+
+---
+
+### G. Comprobante de Factura y Estado de Cuenta Oficial (`OrderInvoiceViewer`)
+
+Documento formal para el paciente y la administración que unifica el aspecto clínico y financiero:
+
+1. **Contenido Estructurado**:
+   - **Membrete Corporativo**: Nombre de la sede, dirección, teléfonos y correo del laboratorio.
+   - **Datos de Paciente y Médico**: Nombre, cédula/ID, edad calculada, sexo y médico remitente.
+   - **Tabla de Análisis Clínicos**: Listado de pruebas individuales y perfiles con su precio aplicado.
+   - **Tabla de Servicios Adicionales**: Listado de servicios (ej. Servicio a Domicilio) con su precio individual.
+   - **Totales de Facturación**: Subtotal análisis, subtotal servicios y total consolidado de la orden.
+   - **Historial de Abonos y Pagos**: Tabla cronológica de recibos emitidos (`ReceiptInDb`), detallando folio de recibo, fecha, método de pago (`Efectivo`, `Tarjeta`, `Transferencia`), concepto y monto recibido.
+   - **Estado de Cuenta de la Orden**: Total de la orden, total abonado y saldo pendiente (con distintivo verde *"PAGADA EN SU TOTALIDAD"* o azul/ámbar de saldo pendiente).
+2. **Visor Interactivo y Exportación**:
+   - Previsualización nativa e instantánea en pantalla (Scaffold a 0 ms).
+   - Acciones integradas en la barra superior:
+     - 🖨️ **Imprimir**: Envío directo a impresoras físicas o de red mediante `Printing.layoutPdf`.
+     - 📄 **Exportar PDF**: Guardado del archivo PDF local mediante `PdfExportTool.export`.
+     - 📤 **Compartir**: Envío mediante clientes de correo o mensajería con `Printing.sharePdf`.
+3. **Puntos de Acceso en la Aplicación**:
+   - **Listado de Órdenes (`OrdersList`)**: Icono `Icons.receipt_long_outlined` en cada tarjeta de orden.
+   - **Historial de Recibos (`OrderReceiptsHistoryDialog`)**: Botón inferior *"Ver Comprobante de Factura"* para abrir el documento consolidado.
+
 

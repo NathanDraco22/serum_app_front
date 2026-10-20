@@ -13,11 +13,12 @@ class ReceiptsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return BlocProvider<ReadReceiptCubit>(
       create: (context) => ReadReceiptCubit(
         receiptsRepository:
             RepositoryProvider.of<ReceiptsRepository>(context),
-      )..getAll(),
+      )..getAll(ReceiptQueryParams(branchId: currentBranchId)),
       child: const _ReceiptsScreenContent(),
     );
   }
@@ -41,7 +42,8 @@ class _ReceiptsScreenContentState extends State<_ReceiptsScreenContent> {
     _searchController.addListener(() => setState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<ReadCashShiftCubit>().getAll();
+        final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadCashShiftCubit>().getAll(branchId: currentBranchId);
       }
     });
   }
@@ -54,7 +56,11 @@ class _ReceiptsScreenContentState extends State<_ReceiptsScreenContent> {
 
   List<ReceiptInDb> _filterReceipts(List<ReceiptInDb> all) {
     final query = _searchController.text.trim().toLowerCase();
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return all.where((r) {
+      if (r.branchId != currentBranchId) {
+        return false;
+      }
       if (_selectedMethod != 'all' &&
           r.paymentMethod.toLowerCase() != _selectedMethod) {
         return false;
@@ -128,7 +134,10 @@ class _ReceiptsScreenContentState extends State<_ReceiptsScreenContent> {
                 ),
                 const Spacer(),
                 FilledButton.tonalIcon(
-                  onPressed: () => context.read<ReadReceiptCubit>().getAll(),
+                  onPressed: () {
+                    final bId = context.read<AppSessionCubit>().currentBranchId;
+                    context.read<ReadReceiptCubit>().getAll(ReceiptQueryParams(branchId: bId));
+                  },
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('Actualizar'),
                 ),
@@ -383,8 +392,10 @@ class _ReceiptsScreenContentState extends State<_ReceiptsScreenContent> {
                         ),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: () =>
-                              context.read<ReadReceiptCubit>().getAll(),
+                          onPressed: () {
+                            final bId = context.read<AppSessionCubit>().currentBranchId;
+                            context.read<ReadReceiptCubit>().getAll(ReceiptQueryParams(branchId: bId));
+                          },
                           child: const Text('Reintentar'),
                         ),
                       ],

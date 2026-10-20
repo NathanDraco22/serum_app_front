@@ -7,6 +7,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../cubits/report_cubit/report_cubit.dart';
+import '../../../widgets/dialogs/viewers/cash_shift_viewer.dart';
 
 class ShiftsAuditView extends StatelessWidget {
   final ShiftsAuditReportResponse report;
@@ -131,7 +132,7 @@ class ShiftsAuditView extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tabla detallada de Auditoría
-            _buildShiftsTable(theme, allShifts),
+            _buildShiftsTable(context, theme, allShifts),
           ],
         ],
       ),
@@ -322,7 +323,7 @@ class ShiftsAuditView extends StatelessWidget {
     );
   }
 
-  Widget _buildShiftsTable(ThemeData theme, List<ShiftAuditItem> shifts) {
+  Widget _buildShiftsTable(BuildContext context, ThemeData theme, List<ShiftAuditItem> shifts) {
     final dateFormat = DateFormat('dd/MM/yy HH:mm');
 
     return Container(
@@ -366,6 +367,7 @@ class ShiftsAuditView extends StatelessWidget {
                 DataColumn(label: Text('Efectivo Declarado', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Diferencia', style: TextStyle(fontWeight: FontWeight.bold))),
                 DataColumn(label: Text('Notas / Observaciones', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Acciones', style: TextStyle(fontWeight: FontWeight.bold))),
               ],
               rows: shifts.map((s) {
                 final openStr = dateFormat.format(
@@ -431,6 +433,15 @@ class ShiftsAuditView extends StatelessWidget {
                       ),
                     ),
                     DataCell(Text(s.notes.isEmpty ? '—' : s.notes)),
+                    DataCell(
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 20),
+                        tooltip: 'Ver Comprobante PDF / Imprimir',
+                        onPressed: () {
+                          showCashShiftViewerDialogFromId(context, s.shiftId);
+                        },
+                      ),
+                    ),
                   ],
                 );
               }).toList(),

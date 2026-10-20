@@ -19,8 +19,14 @@ class CashShiftsRepository with ReactiveRepository<CashShiftInDb> {
     return newCashShift;
   }
 
-  Future<CashShiftInDb?> getCurrentShift(String userId) async {
-    final result = await cashShiftsDataSource.getCurrentCashShift(userId);
+  Future<CashShiftInDb?> getCurrentShift(
+    String userId, {
+    String? branchId,
+  }) async {
+    final result = await cashShiftsDataSource.getCurrentCashShift(
+      userId,
+      branchId: branchId,
+    );
     if (result == null) return null;
     return CashShiftInDb.fromJson(result);
   }

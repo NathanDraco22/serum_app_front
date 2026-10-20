@@ -17,8 +17,9 @@ class DoctorsDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>> getAllDoctors() async {
-    final uri = HttpTools.generateUri(_endpoint);
+  Future<Map<String, dynamic>> getAllDoctors({String? originBranch}) async {
+    final queryParams = originBranch != null ? {'origin_branch': originBranch} : null;
+    final uri = HttpTools.generateUri(_endpoint, queryParameters: queryParams);
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;
@@ -48,8 +49,15 @@ class DoctorsDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>> searchDoctorsByText(String textQuery) async {
-    final uri = HttpTools.generateUri("$_endpoint/search/$textQuery");
+  Future<Map<String, dynamic>> searchDoctorsByText(
+    String textQuery, {
+    String? originBranch,
+  }) async {
+    final queryParams = originBranch != null ? {'origin_branch': originBranch} : null;
+    final uri = HttpTools.generateUri(
+      "$_endpoint/search/$textQuery",
+      queryParameters: queryParams,
+    );
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);
     return res;

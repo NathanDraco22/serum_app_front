@@ -4,6 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../../widgets/dialogs/viewers/cash_shift_viewer.dart';
 import '../widgets/cash_movements_list_dialog.dart';
 import '../widgets/cash_shift_close_dialog.dart';
 
@@ -155,6 +156,20 @@ class CashShiftCard extends StatelessWidget {
                     }
                   },
                 ),
+                const SizedBox(width: 8),
+                // Imprimir / Exportar Comprobante de Turno y Arqueo en PDF
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                  label: const Text('Imprimir / PDF'),
+                  onPressed: () {
+                    showCashShiftViewerDialog(context, shift);
+                  },
+                ),
                 // Acciones adicionales si el turno está abierto y es del usuario actual
                 if (isOpen && isCurrentUser) ...[
                   const SizedBox(width: 8),
@@ -173,6 +188,9 @@ class CashShiftCard extends StatelessWidget {
                           await CashShiftCloseDialog.show(context, shift);
                       if (res != null) {
                         onShiftUpdated?.call();
+                        if (context.mounted) {
+                          showCashShiftViewerDialog(context, res);
+                        }
                       }
                     },
                   ),

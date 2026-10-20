@@ -9,10 +9,13 @@ class SearchDoctorCubit extends Cubit<SearchDoctorState> {
   SearchDoctorCubit({required this.doctorsRepository})
       : super(SearchDoctorInitial());
 
-  Future<void> search(String textQuery) async {
+  Future<void> search(String textQuery, {String? originBranch}) async {
     emit(SearchDoctorLoading());
     try {
-      final items = await doctorsRepository.searchDoctorsByText(textQuery);
+      final items = await doctorsRepository.searchDoctorsByText(
+        textQuery,
+        originBranch: originBranch,
+      );
       emit(SearchDoctorSuccess(items));
     } catch (e) {
       emit(SearchDoctorError(e.toString()));

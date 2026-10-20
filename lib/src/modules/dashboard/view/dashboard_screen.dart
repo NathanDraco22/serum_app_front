@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../config/app_assets.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../../widgets/common/app_cached_image.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -118,12 +119,11 @@ class DashboardScreen extends StatelessWidget {
     // 1. IsoLogo remoto de la sucursal activa
     final isoLogoUrl = currentBranch?.isoLogoUrl as String?;
     if (isoLogoUrl != null && isoLogoUrl.isNotEmpty) {
-      return Image.network(
-        isoLogoUrl,
+      return AppCachedImage(
+        imageUrl: isoLogoUrl,
         height: 110,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildLogoFallback(context, currentBranch),
+        fallbackWidget: _buildLogoFallback(context, currentBranch),
       );
     }
 
@@ -134,12 +134,11 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildLogoFallback(BuildContext context, dynamic currentBranch) {
     final logoUrl = (currentBranch?.effectiveLogo as String?);
     if (logoUrl != null && logoUrl.isNotEmpty) {
-      return Image.network(
-        logoUrl,
+      return AppCachedImage(
+        imageUrl: logoUrl,
         height: 90,
         fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            _buildAssetFallback(context),
+        fallbackWidget: _buildAssetFallback(context),
       );
     }
 

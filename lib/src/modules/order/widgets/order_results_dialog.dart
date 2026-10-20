@@ -5,6 +5,7 @@ import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import '../../../tools/calculators/clinical_formulas_registry.dart';
+import '../../../tools/formatters/thousands_separator_input_formatter.dart';
 import 'order_results_dialogs/order_results_header.dart';
 import 'order_results_dialogs/order_results_summary_bar.dart';
 import 'order_results_dialogs/parameter_card.dart';
@@ -58,7 +59,10 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             widget.order.status != 'completed') {
           _controllers[r.labTestId] = TextEditingController(text: '0');
         } else {
-          _controllers[r.labTestId] = TextEditingController(text: initial);
+          final formattedInitial = r.dataType == 'numeric' && initial.isNotEmpty
+              ? ThousandsSeparatorInputFormatter.formatText(initial)
+              : initial;
+          _controllers[r.labTestId] = TextEditingController(text: formattedInitial);
         }
       }
     }
@@ -119,7 +123,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           if (canonical == 'CHCM') chcmResult = r;
 
           final text = _controllers[r.labTestId]?.text.trim() ?? '';
-          final val = double.tryParse(text);
+          final val = ThousandsSeparatorInputFormatter.tryParseDouble(text);
           if (val != null) {
             available[canonical] = val;
           }
@@ -150,7 +154,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             if (!isHbManual) {
               final approxHb = htcVal / 3.0;
               final formattedHb = ClinicalFormulasRegistry.formatClinicalValue(approxHb, 1);
-              _controllers[hbResult.labTestId]?.text = formattedHb;
+              _controllers[hbResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedHb);
               available['HB'] = approxHb;
               _autoCalculatedFieldIds.add(hbResult.labTestId);
               _autoCalculatedFormulas[hbResult.labTestId] = 'Hematocrito / 3';
@@ -164,7 +168,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
               final currentHb = available['HB'] ?? (htcVal / 3.0);
               final approxEri = currentHb / 3.0;
               final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
-              _controllers[eriResult.labTestId]?.text = formattedEri;
+              _controllers[eriResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedEri);
               available['ERI'] = approxEri;
               _autoCalculatedFieldIds.add(eriResult.labTestId);
               _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
@@ -195,8 +199,9 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           final calc = computedResults[canonical]!;
           final controller = _controllers[r.labTestId];
           if (controller != null) {
-            if (controller.text != calc.formattedValue) {
-              controller.text = calc.formattedValue;
+            final formatted = ThousandsSeparatorInputFormatter.formatText(calc.formattedValue);
+            if (controller.text != formatted) {
+              controller.text = formatted;
             }
             _autoCalculatedFieldIds.add(r.labTestId);
             _autoCalculatedFormulas[r.labTestId] = calc.formulaDisplay;
@@ -224,8 +229,9 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             final wasAuto = _autoCalculatedFieldIds.contains(r.labTestId);
 
             if (currentText.isEmpty || wasAuto) {
-              if (controller.text != calc.formattedValue) {
-                controller.text = calc.formattedValue;
+              final formatted = ThousandsSeparatorInputFormatter.formatText(calc.formattedValue);
+              if (controller.text != formatted) {
+                controller.text = formatted;
               }
               _autoCalculatedFieldIds.add(r.labTestId);
               _autoCalculatedFormulas[r.labTestId] = calc.formulaDisplay;
@@ -306,7 +312,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     } else if (r.dataType == 'numeric') {
       final text = _controllers[r.labTestId]?.text.trim() ?? '';
       if (text.isEmpty) return null;
-      final valDouble = double.tryParse(text);
+      final valDouble = ThousandsSeparatorInputFormatter.tryParseDouble(text);
       if (valDouble == null) return null;
 
       final ref = _findReferenceValueForPatient(r);
@@ -333,7 +339,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       if (r.dataType != 'qualitative' && r.dataType != 'boolean') {
         final text = _controllers[r.labTestId]?.text.trim() ?? '';
         if (text.isNotEmpty) {
-          final val = double.tryParse(text);
+          final val = ThousandsSeparatorInputFormatter.tryParseDouble(text);
           if (val != null) {
             final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
             if (canonical != null) {
@@ -377,7 +383,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         } else {
           val = _controllers[r.labTestId]?.text.trim();
           if (r.dataType == 'numeric' && val != null && val.isNotEmpty && r.referenceValues.isNotEmpty) {
-            final valDouble = double.tryParse(val);
+            final valDouble = ThousandsSeparatorInputFormatter.tryParseDouble(val);
             if (valDouble != null) {
               final ref = _findReferenceValueForPatient(r);
               if (ref != null) {

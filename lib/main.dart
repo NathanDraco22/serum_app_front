@@ -47,20 +47,37 @@ class AppRoot extends StatefulWidget {
 }
 
 class _AppRootState extends State<AppRoot> {
-  late final GoRouter _router;
+  GoRouter? _router;
+  String? _lastBranchId;
 
   @override
-  void initState() {
-    super.initState();
-    _router = AppRouter.createRouter(sl<AppSessionCubit>());
+  void dispose() {
+    _router?.dispose();
+    super.dispose();
+  }
+
+  void _ensureRouter(String? branchId) {
+    if (_router == null || _lastBranchId != branchId) {
+      final isBranchSwitch = _lastBranchId != null && _lastBranchId != branchId;
+      _lastBranchId = branchId;
+      _router?.dispose();
+      _router = AppRouter.createRouter(
+        sl<AppSessionCubit>(),
+        initialLocation: isBranchSwitch ? AppRouter.lastKnownLocation : null,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    context.watch<AppSessionCubit>();
+    final sessionState = context.watch<AppSessionCubit>().state;
+    final branchId = sessionState.currentBranch?.id;
+    _ensureRouter(branchId);
+
     return MaterialApp.router(
-      title: 'Serum LIS',
-      routerConfig: _router,
+      key: ValueKey('serum_app_${branchId ?? "none"}'),
+      title: 'Serum App',
+      routerConfig: _router!,
       builder: materialAppBuilder,
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.light,

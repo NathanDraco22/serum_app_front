@@ -1,8 +1,9 @@
 import 'dart:math' as math;
-import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:serum_business/serum_business.dart';
+
+import '../../../../tools/cache/app_image_cache.dart';
 
 import '../pdf_font_helper.dart';
 import '../pdf_template.dart';
@@ -53,13 +54,9 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
     final brandImageUrl = branch.effectiveIsoLogo;
 
     if (brandImageUrl != null && brandImageUrl.isNotEmpty) {
-      try {
-        final response = await http.get(Uri.parse(brandImageUrl));
-        if (response.statusCode == 200) {
-          brandImage = pw.MemoryImage(response.bodyBytes);
-        }
-      } catch (_) {
-        // En caso de no poder descargar la imagen se continúa sin ella
+      final bytes = await AppImageCache.getImageBytes(brandImageUrl);
+      if (bytes != null) {
+        brandImage = pw.MemoryImage(bytes);
       }
     }
 
@@ -68,7 +65,12 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
     final pageTheme = pw.PageTheme(
       pageFormat: envelopeVerticalFormat,
       orientation: pw.PageOrientation.landscape,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      margin: const pw.EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 20,
+        bottom: 14,
+      ),
     );
 
     doc.addPage(
@@ -243,7 +245,7 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
 
   pw.Widget _buildFooterBox() {
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.blue300, width: 0.8),
         borderRadius: pw.BorderRadius.circular(6),
@@ -258,12 +260,12 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
               branch.address,
               textAlign: pw.TextAlign.center,
               style: const pw.TextStyle(
-                fontSize: 7.2,
+                fontSize: 8.8,
                 color: PdfColors.black,
               ),
               maxLines: 1,
             ),
-          pw.SizedBox(height: 3),
+          pw.SizedBox(height: 3.5),
 
           // 2. Canales de contacto con iconos circulares
           _buildFooterContactItems(),
@@ -288,7 +290,7 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
 
     // Correo electrónico
     if (branch.email != null && branch.email!.trim().isNotEmpty) {
-      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 16));
       contactItems.add(
         _buildContactItem(
           label: '@',
@@ -300,7 +302,7 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
 
     // Teléfono / WhatsApp
     if (branch.phone.isNotEmpty) {
-      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 16));
       contactItems.add(
         _buildContactItem(
           label: 'W',
@@ -328,8 +330,8 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
         pw.Container(
-          width: 11,
-          height: 11,
+          width: 13.5,
+          height: 13.5,
           decoration: pw.BoxDecoration(
             color: iconColor,
             shape: pw.BoxShape.circle,
@@ -339,16 +341,16 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
             label,
             style: pw.TextStyle(
               color: PdfColors.white,
-              fontSize: 6.5,
+              fontSize: 7.5,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
         ),
-        pw.SizedBox(width: 4),
+        pw.SizedBox(width: 4.5),
         pw.Text(
           text,
           style: const pw.TextStyle(
-            fontSize: 7,
+            fontSize: 8.5,
             color: PdfColors.black,
           ),
         ),

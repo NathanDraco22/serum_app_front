@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_router.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
@@ -20,12 +21,13 @@ class OrdersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return MultiBlocProvider(
       providers: [
         BlocProvider<ReadOrderCubit>(
           create: (context) => ReadOrderCubit(
             ordersRepository: RepositoryProvider.of<OrdersRepository>(context),
-          )..getAll(),
+          )..getAll(OrderQueryParams(branchId: currentBranchId)),
         ),
         BlocProvider<WriteOrderCubit>(
           create: (context) => WriteOrderCubit(
@@ -35,17 +37,17 @@ class OrdersScreen extends StatelessWidget {
         BlocProvider<ReadPatientCubit>(
           create: (context) => ReadPatientCubit(
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
-          )..getAll(),
+          )..getAll(originBranch: currentBranchId),
         ),
         BlocProvider<ReadDoctorCubit>(
           create: (context) => ReadDoctorCubit(
             doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
-          )..getAll(),
+          )..getAll(originBranch: currentBranchId),
         ),
         BlocProvider<ReadLabTestCubit>(
           create: (context) => ReadLabTestCubit(
             labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(),
+          )..getAll(branchId: currentBranchId),
         ),
       ],
       child: const _RootScaffold(),
@@ -84,7 +86,8 @@ class _BodyState extends State<_Body> {
   void _openOrderForm(BuildContext context) {
     context.push<bool>(AppRouter.createOrder).then((value) {
       if (value == true && context.mounted) {
-        context.read<ReadOrderCubit>().getAll();
+        final bId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadOrderCubit>().getAll(OrderQueryParams(branchId: bId));
       }
     });
   }
@@ -106,7 +109,8 @@ class _BodyState extends State<_Body> {
       },
     ).then((value) {
       if (value == true && context.mounted) {
-        context.read<ReadOrderCubit>().getAll();
+        final bId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadOrderCubit>().getAll(OrderQueryParams(branchId: bId));
       }
     });
   }
@@ -123,7 +127,8 @@ class _BodyState extends State<_Body> {
       },
     ).then((value) {
       if (value == true && context.mounted) {
-        context.read<ReadOrderCubit>().getAll();
+        final bId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadOrderCubit>().getAll(OrderQueryParams(branchId: bId));
       }
     });
   }

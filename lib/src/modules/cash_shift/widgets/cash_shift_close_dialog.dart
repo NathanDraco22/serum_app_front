@@ -6,6 +6,7 @@ import 'package:serum_business/serum_business.dart';
 import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/cash_shift_cubit/write_cash_shifts_cubit.dart';
+import '../../../widgets/dialogs/viewers/cash_shift_viewer.dart';
 
 class CashShiftCloseDialog extends StatefulWidget {
   final CashShiftInDb shift;
@@ -95,6 +96,13 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
           backgroundColor: _diffCents == 0
               ? Colors.green.shade700
               : (_diffCents < 0 ? ColorPalette.error : ColorPalette.primary),
+          action: SnackBarAction(
+            label: 'Ver PDF',
+            textColor: Colors.white,
+            onPressed: () {
+              showCashShiftViewerDialog(context, closedShift);
+            },
+          ),
         ),
       );
     } else {

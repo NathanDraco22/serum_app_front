@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_router.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/quotation_cubit/read_quotations_cubit.dart';
 import '../../../cubits/quotation_cubit/write_quotations_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
@@ -16,12 +17,13 @@ class QuotationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return MultiBlocProvider(
       providers: [
         BlocProvider<ReadQuotationCubit>(
           create: (context) => ReadQuotationCubit(
             quotationsRepository: RepositoryProvider.of<QuotationsRepository>(context),
-          )..getAll(),
+          )..getAll(QuotationQueryParams.last30Days(branchId: currentBranchId)),
         ),
         BlocProvider<WriteQuotationCubit>(
           create: (context) => WriteQuotationCubit(
@@ -31,17 +33,17 @@ class QuotationsScreen extends StatelessWidget {
         BlocProvider<ReadPatientCubit>(
           create: (context) => ReadPatientCubit(
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
-          )..getAll(),
+          )..getAll(originBranch: currentBranchId),
         ),
         BlocProvider<ReadDoctorCubit>(
           create: (context) => ReadDoctorCubit(
             doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
-          )..getAll(),
+          )..getAll(originBranch: currentBranchId),
         ),
         BlocProvider<ReadLabTestCubit>(
           create: (context) => ReadLabTestCubit(
             labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(),
+          )..getAll(branchId: currentBranchId),
         ),
       ],
       child: const _RootScaffold(),
@@ -79,7 +81,10 @@ class _BodyState extends State<_Body> {
   void _openQuotationForm(BuildContext context) {
     context.push<bool>(AppRouter.createQuotation).then((value) {
       if (value == true && context.mounted) {
-        context.read<ReadQuotationCubit>().getAll();
+        final bId = context.read<AppSessionCubit>().currentBranchId;
+        context
+            .read<ReadQuotationCubit>()
+            .getAll(QuotationQueryParams.last30Days(branchId: bId));
       }
     });
   }
@@ -192,7 +197,10 @@ class _BodyState extends State<_Body> {
                   icon: const Icon(Icons.refresh, size: 20),
                   tooltip: 'Recargar cotizaciones',
                   onPressed: () {
-                    context.read<ReadQuotationCubit>().getAll();
+                    final bId = context.read<AppSessionCubit>().currentBranchId;
+                    context
+                        .read<ReadQuotationCubit>()
+                        .getAll(QuotationQueryParams.last30Days(branchId: bId));
                   },
                 ),
                 const SizedBox(width: 12),

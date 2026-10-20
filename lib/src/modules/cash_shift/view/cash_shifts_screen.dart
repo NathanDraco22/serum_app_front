@@ -4,6 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
+import '../../../widgets/dialogs/viewers/cash_shift_viewer.dart';
 import '../widgets/cash_movements_list_dialog.dart';
 import '../widgets/cash_shift_card.dart';
 import '../widgets/cash_shift_close_dialog.dart';
@@ -52,8 +53,9 @@ class _BodyState extends State<_Body> {
   }
 
   void _loadShifts() {
-    context.read<ReadCashShiftCubit>().getAll();
-    context.read<AppSessionCubit>().fetchActiveShift();
+    final bId = context.read<AppSessionCubit>().currentBranchId;
+    context.read<ReadCashShiftCubit>().getAll(branchId: bId);
+    context.read<AppSessionCubit>().fetchActiveShift(bId);
   }
 
   @override
@@ -122,6 +124,19 @@ class _BodyState extends State<_Body> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: const Text('Ver Arqueo (PDF)'),
+                  onPressed: () {
+                    showCashShiftViewerDialog(context, activeShift);
+                  },
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   icon: const Icon(Icons.receipt_long_rounded, size: 18),
                   label: const Text('Movimientos de Caja'),
                   onPressed: () async {
@@ -150,6 +165,9 @@ class _BodyState extends State<_Body> {
                         await CashShiftCloseDialog.show(context, activeShift);
                     if (res != null) {
                       _loadShifts();
+                      if (context.mounted) {
+                        showCashShiftViewerDialog(context, res);
+                      }
                     }
                   },
                 ),

@@ -1,4 +1,5 @@
 class CashTransactionQueryParams {
+  final String? branchId;
   final String? shiftId;
   final String? registerId;
   final String? flowType;
@@ -10,6 +11,7 @@ class CashTransactionQueryParams {
   final int limit;
 
   CashTransactionQueryParams({
+    this.branchId,
     this.shiftId,
     this.registerId,
     this.flowType,
@@ -23,6 +25,7 @@ class CashTransactionQueryParams {
 
   Map<String, String> toQueryParameters() {
     final map = <String, String>{};
+    if (branchId != null) map['branchId'] = branchId!;
     if (shiftId != null) map['shiftId'] = shiftId!;
     if (registerId != null) map['registerId'] = registerId!;
     if (flowType != null) map['flowType'] = flowType!;

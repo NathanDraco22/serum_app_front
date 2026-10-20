@@ -86,9 +86,9 @@ El diseño está optimizado para ser sobrio, elegante y despejado, modelado dire
    - **`Resultados de paciente:`:** Rótulo en negrita seguido del nombre del paciente en mayúsculas en la línea siguiente.
    - **`FECHA: dd/MM/yyyy`:** Fecha formateada de emisión/recepción de la orden.
 3. **Pie del Sobre (Marco Azul Redondeado):**
-   - Contenedor con borde azul claro ($0.8\text{ pt}$) y esquinas redondeadas (`BorderRadius.circular(6)`).
-   - **Línea Superior:** Dirección física completa de la sucursal (`branch.address`).
-   - **Línea Inferior:** Canales de contacto con iconos circulares estilizados:
+   - Contenedor con borde azul claro ($0.8\text{ pt}$), esquinas redondeadas (`BorderRadius.circular(6)`) y padding interno ampliado ($12\text{ pt}$ horizontal, $6.5\text{ pt}$ vertical).
+   - **Línea Superior:** Dirección física completa de la sucursal (`branch.address`) con tipografía nítida en $8.8\text{ pt}$.
+   - **Línea Inferior:** Canales de contacto con tipografía en $8.5\text{ pt}$ e iconos circulares estilizados de $13.5 \times 13.5\text{ pt}$:
      - Facebook / Marca (`f`) con el nombre del laboratorio.
      - Correo institucional (`@`).
      - Teléfono / WhatsApp (`W`) con el número de contacto.
@@ -110,7 +110,7 @@ La solución sigue la arquitectura modular establecida en `serum_app_front`:
     marginAll: 0.8 * PdfPageFormat.cm,
   );
   ```
-- **Rotación Automática:** Se aplica `orientation: pw.PageOrientation.landscape` en el `PageTheme`. Como el papel es más alto que ancho ($24.0 > 10.5\text{ cm}$), el motor PDF rota automáticamente el lienzo a $90^\circ$.
+- **Rotación y Márgenes:** Se aplica `orientation: pw.PageOrientation.landscape` en el `PageTheme` con márgenes `EdgeInsets.only(left: 24, right: 24, top: 20, bottom: 14)`. El margen superior de $20\text{ pt}$ (~$7.0\text{ mm}$) asegura que el logotipo respire y no quede pegado al ras del borde del sobre. Como el papel es más alto que ancho ($24.0 > 10.5\text{ cm}$), el motor PDF rota automáticamente el lienzo a $90^\circ$.
 - **Inversión $180^\circ$:** Recibe el parámetro opcional `bool rotate180`. Cuando es `true`, envuelve el contenido en `pw.Transform.rotateBox(angle: math.pi)` para alimentar por el extremo opuesto según la bandeja de la impresora.
 
 ### B. Visor y Panel de Control (`OrderEnvelopeViewer`)

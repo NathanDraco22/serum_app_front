@@ -18,8 +18,8 @@ class PatientsRepository with ReactiveRepository<PatientInDb> {
     return newPatient;
   }
 
-  Future<List<PatientInDb>> getAllPatients() async {
-    final results = await patientsDataSource.getAllPatients();
+  Future<List<PatientInDb>> getAllPatients({String? originBranch}) async {
+    final results = await patientsDataSource.getAllPatients(originBranch: originBranch);
     final response = ListResponse<PatientInDb>.fromJson(
       results,
       PatientInDb.fromJson,
@@ -32,9 +32,15 @@ class PatientsRepository with ReactiveRepository<PatientInDb> {
     return _patients;
   }
 
-  Future<List<PatientInDb>> searchPatientsByText(String textQuery) async {
+  Future<List<PatientInDb>> searchPatientsByText(
+    String textQuery, {
+    String? originBranch,
+  }) async {
     if (textQuery.trim().isEmpty) return [];
-    final results = await patientsDataSource.searchPatientsByText(textQuery);
+    final results = await patientsDataSource.searchPatientsByText(
+      textQuery,
+      originBranch: originBranch,
+    );
     final response = ListResponse<PatientInDb>.fromJson(
       results,
       PatientInDb.fromJson,

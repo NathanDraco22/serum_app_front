@@ -6,7 +6,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/branch_cubit/write_branches_cubit.dart';
+import '../../../tools/cache/app_image_cache.dart';
 import '../../../tools/uploaders/image_uploader.dart';
+import '../../../widgets/common/app_cached_image.dart';
 
 class BranchFormDialog extends StatefulWidget {
   const BranchFormDialog({super.key, this.branch});
@@ -94,6 +96,9 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
   }
 
   void _removeLogo() {
+    if (_logoUrl != null) {
+      AppImageCache.evict(_logoUrl!);
+    }
     setState(() {
       _logoUrl = null;
       _selectedLogoBytes = null;
@@ -128,6 +133,9 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
   }
 
   void _removeIsoLogo() {
+    if (_isoLogoUrl != null) {
+      AppImageCache.evict(_isoLogoUrl!);
+    }
     setState(() {
       _isoLogoUrl = null;
       _selectedIsoLogoBytes = null;
@@ -350,14 +358,12 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                                         )
                                       else if (_logoUrl != null &&
                                           _logoUrl!.isNotEmpty)
-                                        Image.network(
-                                          _logoUrl!,
+                                        AppCachedImage(
+                                          imageUrl: _logoUrl!,
                                           width: 110,
                                           height: 110,
                                           fit: BoxFit.contain,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Icon(
+                                          fallbackWidget: Icon(
                                             Icons.broken_image_outlined,
                                             size: 32,
                                             color: theme.colorScheme.error,
@@ -477,14 +483,12 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                                         )
                                       else if (_isoLogoUrl != null &&
                                           _isoLogoUrl!.isNotEmpty)
-                                        Image.network(
-                                          _isoLogoUrl!,
+                                        AppCachedImage(
+                                          imageUrl: _isoLogoUrl!,
                                           width: 200,
                                           height: 110,
                                           fit: BoxFit.contain,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Icon(
+                                          fallbackWidget: Icon(
                                             Icons.broken_image_outlined,
                                             size: 32,
                                             color: theme.colorScheme.error,

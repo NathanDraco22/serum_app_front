@@ -15,6 +15,7 @@ import '../../../widgets/common/app_buttons.dart';
 import '../widgets/order_catalog_section.dart';
 import '../widgets/order_cart_section.dart';
 import '../widgets/edit_item_price_dialog.dart';
+import '../widgets/add_service_dialog.dart';
 
 class CreateOrderScreen extends StatelessWidget {
   const CreateOrderScreen({super.key});
@@ -50,6 +51,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   PatientInDb? _selectedPatient;
   DoctorInDb? _selectedDoctor;
   final List<LabTestInDb> _selectedItems = [];
+  final List<OrderService> _services = [];
   final Map<String, int> _itemPriceLevels = {};
   final Map<String, int> _customPrices = {};
   int _defaultPriceLevel = 1;
@@ -169,12 +171,39 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     });
   }
 
+  Future<void> _openAddServiceDialog() async {
+    final result = await AddServiceDialog.show(context);
+    if (result != null && mounted) {
+      setState(() {
+        _services.add(result);
+      });
+    }
+  }
+
+  Future<void> _editService(OrderService service) async {
+    final result = await AddServiceDialog.show(context, initialService: service);
+    if (result != null && mounted) {
+      setState(() {
+        final index = _services.indexWhere((s) => s.id == service.id);
+        if (index >= 0) {
+          _services[index] = result;
+        }
+      });
+    }
+  }
+
+  void _removeService(OrderService service) {
+    setState(() {
+      _services.removeWhere((s) => s.id == service.id);
+    });
+  }
+
   void _clearItems() {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('Vaciar Análisis'),
-        content: const Text('¿Deseas quitar todos los análisis agregados a esta orden?'),
+        title: const Text('Vaciar Análisis y Servicios'),
+        content: const Text('¿Deseas quitar todos los análisis y servicios agregados a esta orden?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -185,6 +214,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               Navigator.pop(dialogCtx);
               setState(() {
                 _selectedItems.clear();
+                _services.clear();
                 _itemPriceLevels.clear();
                 _customPrices.clear();
               });
@@ -197,7 +227,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   }
 
   Future<bool> _onWillPop() async {
-    if (_selectedItems.isEmpty && _selectedPatient == null) {
+    if (_selectedItems.isEmpty && _services.isEmpty && _selectedPatient == null) {
       return true;
     }
 
@@ -232,9 +262,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       return;
     }
 
-    if (_selectedItems.isEmpty) {
+    if (_selectedItems.isEmpty && _services.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes agregar al menos un análisis a la orden.')),
+        const SnackBar(content: Text('Debes agregar al menos un análisis o servicio a la orden.')),
       );
       return;
     }
@@ -302,7 +332,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       }
     }
 
-    final totalInCents = orderItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
+    final testsTotalInCents = orderItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
+    final servicesTotalInCents = _services.fold<int>(0, (sum, s) => sum + s.price);
+    final totalInCents = testsTotalInCents + servicesTotalInCents;
     final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
     // 3. Evaluar si algún ítem tiene precio diferente de su precio de catálogo (Precio 1)
@@ -358,6 +390,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
           : null,
       branchId: activeBranchId,
       items: orderItems,
+      services: _services,
       totalPrice: totalInCents,
       status: 'pending',
       results: resultsMap.values.toList(),
@@ -507,6 +540,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedPatient: _selectedPatient,
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
+                          services: _services,
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
@@ -520,6 +554,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
                           onEditItemPrice: _editItemPrice,
                           onClearItems: _clearItems,
+                          onAddService: _openAddServiceDialog,
+                          onRemoveService: _removeService,
+                          onEditService: _editService,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
                       ),
@@ -547,6 +584,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedPatient: _selectedPatient,
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
+                          services: _services,
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
@@ -560,6 +598,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onDefaultPriceLevelChanged: _changeDefaultPriceLevel,
                           onEditItemPrice: _editItemPrice,
                           onClearItems: _clearItems,
+                          onAddService: _openAddServiceDialog,
+                          onRemoveService: _removeService,
+                          onEditService: _editService,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
                       ),

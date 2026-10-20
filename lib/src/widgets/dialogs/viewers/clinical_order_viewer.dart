@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +9,8 @@ import '../../../../config/service_locator.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../tools/exports/pdf/templates/clinical_order_pdf_template.dart';
 import '../../../tools/exports/pdf_export_tool.dart';
+import '../../../tools/formatters/thousands_separator_input_formatter.dart';
+import '../../common/app_cached_image.dart';
 import 'order_envelope_viewer.dart';
 
 Future<void> showClinicalOrderViewerDialog(
@@ -266,12 +269,11 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
                             child: Center(
                               child: Opacity(
                                 opacity: 0.12,
-                                child: Image.network(
-                                  watermarkImg,
+                                child: AppCachedImage(
+                                  imageUrl: watermarkImg,
                                   width: 340,
                                   fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      const SizedBox(),
+                                  fallbackWidget: const SizedBox(),
                                 ),
                               ),
                             ),
@@ -368,11 +370,12 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Image.network(
-                          headerImg,
+                        AppCachedImage(
+                          imageUrl: headerImg,
                           height: 48,
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => Text(
+                          alignment: Alignment.centerLeft,
+                          fallbackWidget: Text(
                             branch.name.toUpperCase(),
                             style: TextStyle(
                               fontSize: 16,
@@ -419,7 +422,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               image: headerImg != null && headerImg.isNotEmpty
                                   ? DecorationImage(
-                                      image: NetworkImage(headerImg),
+                                      image: CachedNetworkImageProvider(headerImg),
                                       fit: BoxFit.contain,
                                     )
                                   : null,
@@ -803,9 +806,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         children: items.map((r) {
                           final isNumeric = r.dataType == 'numeric';
                           final numVal = isNumeric && r.resultValue != null
-                              ? double.tryParse(r.resultValue!
-                                  .replaceAll(',', '.')
-                                  .trim())
+                              ? ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue)
                               : null;
 
                           String? alertFlag = r.alertFlag;
@@ -883,7 +884,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      r.resultValue ?? '—',
+                                      isNumeric && r.resultValue != null
+                                          ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
+                                          : (r.resultValue ?? '—'),
                                       style: TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: hasAlert || isTotalRow

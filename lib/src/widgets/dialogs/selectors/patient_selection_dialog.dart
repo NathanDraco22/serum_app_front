@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../common/search_field_debounced.dart';
 
 Future<PatientInDb?> showPatientSelectionDialog(BuildContext context) async {
@@ -31,8 +32,9 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
 
   Future<void> _loadInitialPatients() async {
     try {
+      final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
       final repo = context.read<PatientsRepository>();
-      final list = await repo.getAllPatients();
+      final list = await repo.getAllPatients(originBranch: currentBranchId);
       if (!mounted) return;
       setState(() {
         _patients = list;
@@ -57,12 +59,16 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
     });
 
     try {
+      final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
       final repo = context.read<PatientsRepository>();
       List<PatientInDb> results;
       if (_currentQuery.isEmpty) {
-        results = await repo.getAllPatients();
+        results = await repo.getAllPatients(originBranch: currentBranchId);
       } else {
-        results = await repo.searchPatientsByText(_currentQuery);
+        results = await repo.searchPatientsByText(
+          _currentQuery,
+          originBranch: currentBranchId,
+        );
       }
 
       if (!mounted) return;

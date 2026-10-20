@@ -179,5 +179,81 @@ void main() {
         isNull,
       );
     });
+
+    test('10. Bioquímica / Perfil Lipídico: Caso Real de Laboratorio', () {
+      // Datos reales extraídos de la fotografía del paciente:
+      // Colesterol Total: 170 mg/dL, Triglicéridos: 98 mg/dL, HDL: 58 mg/dL
+      final inputs = {
+        'COL-T': 170.0,
+        'TRIG': 98.0,
+        'HDL': 58.0,
+      };
+
+      final results = ClinicalFormulasRegistry.evaluateAll(inputs);
+
+      // 1. VLDL = 98 / 5 = 19.6
+      expect(results['VLDL'], isNotNull);
+      expect(results['VLDL']!.value, 19.6);
+      expect(results['VLDL']!.formattedValue, '19.6');
+      expect(results['VLDL']!.formulaDisplay, 'Triglicéridos / 5');
+
+      // 2. LDL = 170 - 58 - 19.6 = 92.4
+      expect(results['LDL'], isNotNull);
+      expect(results['LDL']!.value, 92.4);
+      expect(results['LDL']!.formattedValue, '92.4');
+      expect(results['LDL']!.formulaDisplay, 'Colesterol Total - HDL - VLDL');
+
+      // 3. Riesgo Coronario = 170 / 58 = 2.931... -> formateado a 1 decimal: '2.9'
+      expect(results['RIESG-COR'], isNotNull);
+      expect(results['RIESG-COR']!.formattedValue, '2.9');
+      expect(results['RIESG-COR']!.formulaDisplay, 'Colesterol Total / HDL');
+    });
+
+    test('11. Resolución Canónica de Alias de Perfil Lipídico', () {
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Colesterol'), 'COL-T');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Colesterol Total'), 'COL-T');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('COL-T'), 'COL-T');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Triglicéridos'), 'TRIG');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Trigliceridos'), 'TRIG');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('TRIG'), 'TRIG');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('HDL'), 'HDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Colesterol HDL'), 'HDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('c-HDL'), 'HDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('LDL'), 'LDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Colesterol LDL'), 'LDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('c-LDL'), 'LDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('VLDL'), 'VLDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Colesterol VLDL'), 'VLDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('c-VLDL'), 'VLDL');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Riesgo Coronario'), 'RIESG-COR');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Índice de Castelli'), 'RIESG-COR');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Castelli'), 'RIESG-COR');
+    });
+
+    test('12. Casos Borde de Perfil Lipídico (División por Cero y Datos Incompletos)', () {
+      // HDL = 0.0 -> no debe fallar con división por cero
+      final inputsHdlCero = {
+        'COL-T': 200.0,
+        'TRIG': 150.0,
+        'HDL': 0.0,
+      };
+
+      final resultsHdlCero = ClinicalFormulasRegistry.evaluateAll(inputsHdlCero);
+      expect(resultsHdlCero['VLDL'], isNotNull);
+      expect(resultsHdlCero['VLDL']!.value, 30.0);
+      expect(resultsHdlCero['RIESG-COR'], isNull); // Protegido contra div por 0
+
+      // Falta Triglicéridos -> calcula Riesgo Coronario pero no VLDL ni LDL
+      final inputsSinTrig = {
+        'COL-T': 200.0,
+        'HDL': 50.0,
+      };
+
+      final resultsSinTrig = ClinicalFormulasRegistry.evaluateAll(inputsSinTrig);
+      expect(resultsSinTrig['RIESG-COR'], isNotNull);
+      expect(resultsSinTrig['RIESG-COR']!.formattedValue, '4'); // 200 / 50 = 4.0
+      expect(resultsSinTrig['VLDL'], isNull);
+      expect(resultsSinTrig['LDL'], isNull);
+    });
   });
 }

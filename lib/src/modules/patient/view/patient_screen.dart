@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/patient_cubit/search_patients_cubit.dart';
 import '../../../cubits/patient_cubit/write_patients_cubit.dart';
@@ -13,12 +14,13 @@ class PatientsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return MultiBlocProvider(
       providers: [
         BlocProvider<ReadPatientCubit>(
           create: (context) => ReadPatientCubit(
             patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
-          )..getAll(),
+          )..getAll(originBranch: currentBranchId),
         ),
         BlocProvider<SearchPatientCubit>(
           create: (context) => SearchPatientCubit(
@@ -64,10 +66,11 @@ class _BodyState extends State<_Body> {
   }
 
   void _onSearchChanged(BuildContext context, String query) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     if (query.trim().isEmpty) {
-      context.read<SearchPatientCubit>().search('');
+      context.read<SearchPatientCubit>().search('', originBranch: currentBranchId);
     } else {
-      context.read<SearchPatientCubit>().search(query);
+      context.read<SearchPatientCubit>().search(query, originBranch: currentBranchId);
     }
   }
 
@@ -82,7 +85,8 @@ class _BodyState extends State<_Body> {
       },
     ).then((value) {
       if (value != null && value != false && context.mounted) {
-        context.read<ReadPatientCubit>().getAll();
+        final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadPatientCubit>().getAll(originBranch: currentBranchId);
       }
     });
   }

@@ -6,6 +6,7 @@ import 'package:serum_business/serum_business.dart';
 import '../../../../config/app_theme.dart';
 import '../../receipt/widgets/receipt_detail_dialog.dart';
 import '../../../widgets/dialogs/viewers/receipt_viewer.dart';
+import '../../../widgets/dialogs/viewers/order_invoice_viewer.dart';
 
 class OrderReceiptsHistoryDialog extends StatefulWidget {
   final OrderInDb order;
@@ -407,12 +408,26 @@ class _OrderReceiptsHistoryDialogState
               const SizedBox(height: 16),
 
               // Footer
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cerrar'),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      showOrderInvoiceViewerDialog(
+                        context,
+                        widget.order,
+                        receipts: _receipts,
+                      );
+                    },
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                    label: const Text('Ver Comprobante de Factura'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
               ),
             ],
           ),

@@ -18,10 +18,15 @@ class CashShiftsDataSource with HttpService {
     return res;
   }
 
-  Future<Map<String, dynamic>?> getCurrentCashShift(String userId) async {
+  Future<Map<String, dynamic>?> getCurrentCashShift(
+    String userId, {
+    String? branchId,
+  }) async {
+    final queryParams = {'user_id': userId};
+    if (branchId != null) queryParams['branch_id'] = branchId;
     final uri = HttpTools.generateUri(
       "$_endpoint/current",
-      queryParameters: {'user_id': userId},
+      queryParameters: queryParams,
     );
     final headers = HttpTools.generateAuthHeaders();
     final res = await getQuery(uri, headers: headers);

@@ -26,7 +26,7 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
     }
   }
 
-  Future<void> getAll() async {
+  Future<void> getAll({String? originBranch}) async {
     final currentState = state;
     if (currentState is ReadDoctorSuccess) {
       emit(ReadDoctorRefreshing.fromSuccess(currentState));
@@ -34,7 +34,9 @@ class ReadDoctorCubit extends Cubit<ReadDoctorState> {
       emit(ReadDoctorLoading());
     }
     try {
-      final items = await doctorsRepository.getAllDoctors();
+      final items = await doctorsRepository.getAllDoctors(
+        originBranch: originBranch,
+      );
       if (isClosed) return;
       emit(ReadDoctorSuccess(items));
     } catch (e) {

@@ -122,6 +122,46 @@ class OrderItem {
   }
 }
 
+class OrderService {
+  final String? id;
+  final String name;
+  final int price;
+
+  OrderService({
+    this.id,
+    required this.name,
+    required this.price,
+  });
+
+  factory OrderService.fromJson(Map<String, dynamic> json) {
+    return OrderService(
+      id: json['id'] as String?,
+      name: json['name'] as String? ?? '',
+      price: (json['price'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'name': name,
+      'price': price,
+    };
+  }
+
+  OrderService copyWith({
+    String? id,
+    String? name,
+    int? price,
+  }) {
+    return OrderService(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      price: price ?? this.price,
+    );
+  }
+}
+
 class OrderApproval {
   final bool requiresApproval;
   final bool isApproved;
@@ -168,6 +208,7 @@ class BaseOrder {
   final DoctorInfo? doctorInfo;
   final String? quotationId;
   final List<OrderItem> items;
+  final List<OrderService> services;
   final int totalPrice;
   final int paidAmount;
   final String status;
@@ -178,7 +219,12 @@ class BaseOrder {
   // Backward compatibility getters
   String get examId => items.isNotEmpty ? items.first.labTestId : '';
   String get examName => items.isNotEmpty ? items.map((e) => e.name).join(', ') : '';
-  int get salePriceApplied => totalPrice > 0 ? totalPrice : (items.isNotEmpty ? items.fold(0, (sum, i) => sum + i.salePriceApplied) : 0);
+  int get salePriceApplied {
+    if (totalPrice > 0) return totalPrice;
+    final itemsSum = items.fold(0, (sum, i) => sum + i.salePriceApplied);
+    final servicesSum = services.fold(0, (sum, s) => sum + s.price);
+    return itemsSum + servicesSum;
+  }
 
   BaseOrder({
     required this.patientId,
@@ -188,6 +234,7 @@ class BaseOrder {
     this.doctorInfo,
     this.quotationId,
     this.items = const [],
+    this.services = const [],
     this.totalPrice = 0,
     this.paidAmount = 0,
     this.status = "pending",
@@ -206,6 +253,7 @@ class CreateOrder extends BaseOrder {
     super.doctorInfo,
     super.quotationId,
     super.items = const [],
+    super.services = const [],
     super.totalPrice = 0,
     super.paidAmount = 0,
     super.status = "pending",
@@ -223,6 +271,7 @@ class CreateOrder extends BaseOrder {
       if (doctorInfo != null) 'doctorInfo': doctorInfo!.toJson(),
       'quotationId': quotationId,
       'items': items.map((e) => e.toJson()).toList(),
+      'services': services.map((e) => e.toJson()).toList(),
       'totalPrice': totalPrice > 0 ? totalPrice : salePriceApplied,
       'paidAmount': paidAmount,
       'status': status,
@@ -240,6 +289,7 @@ class UpdateOrder {
   final DoctorInfo? doctorInfo;
   final String? quotationId;
   final List<OrderItem>? items;
+  final List<OrderService>? services;
   final int? totalPrice;
   final int? paidAmount;
   final String? status;
@@ -255,6 +305,7 @@ class UpdateOrder {
     this.doctorInfo,
     this.quotationId,
     this.items,
+    this.services,
     this.totalPrice,
     this.paidAmount,
     this.status,
@@ -272,6 +323,7 @@ class UpdateOrder {
       if (doctorInfo != null) 'doctorInfo': doctorInfo!.toJson(),
       if (quotationId != null) 'quotationId': quotationId,
       if (items != null) 'items': items!.map((e) => e.toJson()).toList(),
+      if (services != null) 'services': services!.map((e) => e.toJson()).toList(),
       if (totalPrice != null) 'totalPrice': totalPrice,
       if (paidAmount != null) 'paidAmount': paidAmount,
       if (status != null) 'status': status,
@@ -348,6 +400,7 @@ class OrderInDb extends BaseOrder {
     super.doctorInfo,
     super.quotationId,
     super.items = const [],
+    super.services = const [],
     super.totalPrice = 0,
     super.paidAmount = 0,
     super.status = "pending",
@@ -375,9 +428,17 @@ class OrderInDb extends BaseOrder {
       ];
     }
 
+    List<OrderService> parsedServices = [];
+    if (json['services'] != null) {
+      parsedServices = (json['services'] as List<dynamic>)
+          .map((e) => OrderService.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
     final int total = (json['totalPrice'] as num?)?.toInt() ??
         (json['salePriceApplied'] as num?)?.toInt() ??
-        parsedItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
+        (parsedItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied) +
+            parsedServices.fold<int>(0, (sum, s) => sum + s.price));
 
     final patientInfoRaw = json['patientInfo'];
     final doctorInfoRaw = json['doctorInfo'];
@@ -396,6 +457,7 @@ class OrderInDb extends BaseOrder {
           : null,
       quotationId: json['quotationId'] as String?,
       items: parsedItems,
+      services: parsedServices,
       totalPrice: total,
       paidAmount: (json['paidAmount'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? "pending",
@@ -411,5 +473,28 @@ class OrderInDb extends BaseOrder {
       updatedAt: json['updatedAt'] as int?,
       isDeleted: json['isDeleted'] as bool? ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'patientId': patientId,
+      'branchId': branchId,
+      if (doctorId != null) 'doctorId': doctorId,
+      if (patientInfo != null) 'patientInfo': patientInfo!.toJson(),
+      if (doctorInfo != null) 'doctorInfo': doctorInfo!.toJson(),
+      'quotationId': quotationId,
+      'items': items.map((e) => e.toJson()).toList(),
+      'services': services.map((e) => e.toJson()).toList(),
+      'totalPrice': totalPrice > 0 ? totalPrice : salePriceApplied,
+      'paidAmount': paidAmount,
+      'status': status,
+      'results': results.map((e) => e.toJson()).toList(),
+      'isBlocked': isBlocked,
+      if (approval != null) 'approval': approval!.toJson(),
+      'createdAt': createdAt,
+      if (updatedAt != null) 'updatedAt': updatedAt,
+      'isDeleted': isDeleted,
+    };
   }
 }

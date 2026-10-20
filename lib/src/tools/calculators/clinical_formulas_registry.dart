@@ -166,6 +166,92 @@ class ClinicalFormulasRegistry {
         return diff >= 0 ? diff : 0.0;
       },
     ),
+
+    // -------------------------------------------------------------------------
+    // 3. BIOQUÍMICA / PERFIL LIPÍDICO (FRIEDEWALD Y CASTELLI)
+    // -------------------------------------------------------------------------
+
+    /// Colesterol VLDL
+    /// Fórmula: Triglicéridos / 5
+    /// Unidades: mg/dL
+    ClinicalFormula(
+      id: 'lipidos_vldl',
+      name: 'Colesterol VLDL',
+      targetCanonical: 'VLDL',
+      targetAliases: const [
+        'VLDL',
+        'c-VLDL',
+        'Colesterol VLDL',
+        'VLDL Colesterol',
+        'Lipoproteína de muy baja densidad',
+      ],
+      requiredInputs: const ['TRIG'],
+      formulaDisplay: 'Triglicéridos / 5',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final trig = inputs['TRIG'];
+        if (trig == null || trig < 0) return null;
+        return trig / 5.0;
+      },
+    ),
+
+    /// Colesterol LDL (Fórmula de Friedewald)
+    /// Fórmula: Colesterol Total - Colesterol HDL - Colesterol VLDL (o Triglicéridos / 5)
+    /// Unidades: mg/dL
+    ClinicalFormula(
+      id: 'lipidos_ldl',
+      name: 'Colesterol LDL',
+      targetCanonical: 'LDL',
+      targetAliases: const [
+        'LDL',
+        'c-LDL',
+        'Colesterol LDL',
+        'LDL Colesterol',
+        'Lipoproteína de baja densidad',
+      ],
+      requiredInputs: const ['COL-T', 'HDL'],
+      formulaDisplay: 'Colesterol Total - HDL - VLDL',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final col = inputs['COL-T'];
+        final hdl = inputs['HDL'];
+        if (col == null || hdl == null) return null;
+
+        final vldl = inputs['VLDL'] ?? (inputs['TRIG'] != null ? inputs['TRIG']! / 5.0 : null);
+        if (vldl == null) return null;
+
+        final ldl = col - hdl - vldl;
+        return ldl >= 0 ? ldl : 0.0;
+      },
+    ),
+
+    /// Riesgo Coronario (Índice de Castelli I)
+    /// Fórmula: Colesterol Total / Colesterol HDL
+    /// Unidades: % o ratio
+    ClinicalFormula(
+      id: 'lipidos_riesgo_coronario',
+      name: 'Riesgo Coronario',
+      targetCanonical: 'RIESG-COR',
+      targetAliases: const [
+        'RIESG-COR',
+        'Riesgo Coronario',
+        'Índice de Castelli',
+        'Indice de Castelli',
+        'Castelli',
+        'Castelli I',
+        'Relación Colesterol/HDL',
+        'Relacion Colesterol/HDL',
+      ],
+      requiredInputs: const ['COL-T', 'HDL'],
+      formulaDisplay: 'Colesterol Total / HDL',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final col = inputs['COL-T'];
+        final hdl = inputs['HDL'];
+        if (col == null || hdl == null || hdl <= 0) return null;
+        return col / hdl;
+      },
+    ),
   ];
 
   /// Mapa de equivalencias para normalizar cualquier código o nombre ingresado
@@ -282,6 +368,55 @@ class ClinicalFormulasRegistry {
       'plaquetas',
       'plaqueta',
       'recuento de plaquetas',
+    ],
+    'COL-T': [
+      'col-t',
+      'col',
+      'colesterol',
+      'colesterol total',
+      'colesteroltotal',
+      'total cholesterol',
+    ],
+    'TRIG': [
+      'trig',
+      'trigliceridos',
+      'triglicéridos',
+      'triglycerides',
+    ],
+    'HDL': [
+      'hdl',
+      'c-hdl',
+      'colesterol hdl',
+      'colesterolhdl',
+      'hdl colesterol',
+      'hdl cholesterol',
+    ],
+    'LDL': [
+      'ldl',
+      'c-ldl',
+      'colesterol ldl',
+      'colesterolldl',
+      'ldl colesterol',
+      'ldl cholesterol',
+    ],
+    'VLDL': [
+      'vldl',
+      'c-vldl',
+      'colesterol vldl',
+      'colesterolvldl',
+      'vldl colesterol',
+      'vldl cholesterol',
+    ],
+    'RIESG-COR': [
+      'riesg-cor',
+      'riesgo coronario',
+      'riesgocoronario',
+      'indice de castelli',
+      'índice de castelli',
+      'castelli',
+      'castelli i',
+      'relacion colesterol/hdl',
+      'relación colesterol/hdl',
     ],
   };
 
@@ -454,11 +589,13 @@ class ClinicalFormulasRegistry {
     Map<String, double> availableInputs,
   ) {
     final results = <String, ClinicalCalculationResult>{};
+    final workingInputs = Map<String, double>.from(availableInputs);
 
     for (final formula in formulas) {
-      final res = evaluateFormula(formula, availableInputs);
+      final res = evaluateFormula(formula, workingInputs);
       if (res != null) {
         results[formula.targetCanonical] = res;
+        workingInputs[formula.targetCanonical] = res.value;
       }
     }
 

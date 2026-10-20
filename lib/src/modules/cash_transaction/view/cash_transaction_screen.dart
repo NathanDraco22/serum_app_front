@@ -12,11 +12,12 @@ class CashTransactionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
     return BlocProvider<ReadCashTransactionCubit>(
       create: (context) => ReadCashTransactionCubit(
         cashTransactionsRepository:
             RepositoryProvider.of<CashTransactionsRepository>(context),
-      )..getAll(),
+      )..getAll(CashTransactionQueryParams(branchId: currentBranchId)),
       child: const _RootScaffold(),
     );
   }
@@ -49,7 +50,8 @@ class _BodyState extends State<_Body> {
     // Cargar o refrescar el listado de turnos para poblar el filtro
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        context.read<ReadCashShiftCubit>().getAll();
+        final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadCashShiftCubit>().getAll(branchId: currentBranchId);
       }
     });
   }
@@ -160,8 +162,11 @@ class _BodyState extends State<_Body> {
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refrescar Transacciones',
                 onPressed: () {
-                  context.read<ReadCashTransactionCubit>().getAll();
-                  context.read<ReadCashShiftCubit>().getAll();
+                  final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
+                  context.read<ReadCashTransactionCubit>().getAll(
+                        CashTransactionQueryParams(branchId: currentBranchId),
+                      );
+                  context.read<ReadCashShiftCubit>().getAll(branchId: currentBranchId);
                 },
               ),
             ],

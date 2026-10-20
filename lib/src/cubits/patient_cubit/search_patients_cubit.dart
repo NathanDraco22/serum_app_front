@@ -9,10 +9,13 @@ class SearchPatientCubit extends Cubit<SearchPatientState> {
   SearchPatientCubit({required this.patientsRepository})
       : super(SearchPatientInitial());
 
-  Future<void> search(String textQuery) async {
+  Future<void> search(String textQuery, {String? originBranch}) async {
     emit(SearchPatientLoading());
     try {
-      final items = await patientsRepository.searchPatientsByText(textQuery);
+      final items = await patientsRepository.searchPatientsByText(
+        textQuery,
+        originBranch: originBranch,
+      );
       emit(SearchPatientSuccess(items));
     } catch (e) {
       emit(SearchPatientError(e.toString()));

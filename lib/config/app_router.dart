@@ -71,32 +71,40 @@ class AppRouter {
   static const String adminAppSettings = '/admin/settings';
   static const String adminImports = '/admin/imports';
 
-  // Navigator keys para cada branch
-  static final _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final _dashboardNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'dashboard');
-  static final _patientsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'patients');
-  static final _doctorsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'doctors');
-  static final _labTestsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'labTests');
-  static final _ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
-  static final _quotationsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'quotations');
-  static final _cashShiftsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
-  static final _cashTransactionsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
-  static final _receiptsNavKey =
-      GlobalKey<NavigatorState>(debugLabel: 'receipts');
-  static final _reportsNavKey = GlobalKey<NavigatorState>(debugLabel: 'reports');
-  static final _adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
+  static String? _lastKnownLocation;
+  static String? get lastKnownLocation => _lastKnownLocation;
+  static void setLastKnownLocation(String? location) =>
+      _lastKnownLocation = location;
 
-  static GoRouter createRouter(AppSessionCubit sessionCubit) {
+  static GoRouter createRouter(
+    AppSessionCubit sessionCubit, {
+    String? initialLocation,
+  }) {
+    final rootNavigatorKey = GlobalKey<NavigatorState>();
+    final dashboardNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'dashboard');
+    final patientsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'patients');
+    final doctorsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'doctors');
+    final labTestsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'labTests');
+    final ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
+    final quotationsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'quotations');
+    final cashShiftsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
+    final cashTransactionsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
+    final receiptsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'receipts');
+    final reportsNavKey =
+        GlobalKey<NavigatorState>(debugLabel: 'reports');
+    final adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
+
     return GoRouter(
-      navigatorKey: _rootNavigatorKey,
-      initialLocation: splash,
+      navigatorKey: rootNavigatorKey,
+      initialLocation: initialLocation ?? splash,
       refreshListenable: GoRouterRefreshStream(sessionCubit.stream),
       redirect: (context, state) {
         final sessionState = sessionCubit.state;
@@ -131,7 +139,23 @@ class AppRouter {
 
         // 4. Instancia activa pero usuario no autenticado -> Redirigir a /login
         if (!isAuthenticated) {
+          _lastKnownLocation = null;
           return isLoggingIn ? null : login;
+        }
+
+        // Registrar la última ubicación operativa para cambios de sucursal
+        final currentLoc = state.matchedLocation;
+        if (currentLoc != splash &&
+            currentLoc != login &&
+            currentLoc != activation &&
+            currentLoc != inactive) {
+          if (currentLoc == createOrder) {
+            _lastKnownLocation = orders;
+          } else if (currentLoc == createQuotation) {
+            _lastKnownLocation = quotations;
+          } else {
+            _lastKnownLocation = currentLoc;
+          }
         }
 
         // 5. Autenticado -> Redirigir a Dashboard si intenta acceder a pantallas de onboarding o auth
@@ -160,42 +184,42 @@ class AppRouter {
         ),
         GoRoute(
           path: createOrder,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const CreateOrderScreen(),
         ),
         GoRoute(
           path: createQuotation,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const CreateQuotationScreen(),
         ),
         GoRoute(
           path: adminBranches,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const BranchesScreen(),
         ),
         GoRoute(
           path: adminUsers,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const UsersScreen(),
         ),
         GoRoute(
           path: adminRoles,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const RoleScreen(),
         ),
         GoRoute(
           path: adminApiKeys,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const ApiKeysScreen(),
         ),
         GoRoute(
           path: adminAppSettings,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const AppSettingsScreen(),
         ),
         GoRoute(
           path: adminImports,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const ImportsScreen(),
         ),
         StatefulShellRoute.indexedStack(
@@ -205,7 +229,7 @@ class AppRouter {
           branches: [
             // Branch 0: Inicio / Dashboard
             StatefulShellBranch(
-              navigatorKey: _dashboardNavKey,
+              navigatorKey: dashboardNavKey,
               routes: [
                 GoRoute(
                   path: dashboard,
@@ -215,7 +239,7 @@ class AppRouter {
             ),
             // Branch 1: Pacientes
             StatefulShellBranch(
-              navigatorKey: _patientsNavKey,
+              navigatorKey: patientsNavKey,
               routes: [
                 GoRoute(
                   path: patients,
@@ -225,7 +249,7 @@ class AppRouter {
             ),
             // Branch 2: Médicos
             StatefulShellBranch(
-              navigatorKey: _doctorsNavKey,
+              navigatorKey: doctorsNavKey,
               routes: [
                 GoRoute(
                   path: doctors,
@@ -235,7 +259,7 @@ class AppRouter {
             ),
             // Branch 3: Pruebas y Packs de Laboratorio
             StatefulShellBranch(
-              navigatorKey: _labTestsNavKey,
+              navigatorKey: labTestsNavKey,
               routes: [
                 GoRoute(
                   path: labTests,
@@ -245,7 +269,7 @@ class AppRouter {
             ),
             // Branch 4: Órdenes Clínicas
             StatefulShellBranch(
-              navigatorKey: _ordersNavKey,
+              navigatorKey: ordersNavKey,
               routes: [
                 GoRoute(
                   path: orders,
@@ -255,7 +279,7 @@ class AppRouter {
             ),
             // Branch 5: Cotizaciones
             StatefulShellBranch(
-              navigatorKey: _quotationsNavKey,
+              navigatorKey: quotationsNavKey,
               routes: [
                 GoRoute(
                   path: quotations,
@@ -265,7 +289,7 @@ class AppRouter {
             ),
             // Branch 6: Turnos de Caja
             StatefulShellBranch(
-              navigatorKey: _cashShiftsNavKey,
+              navigatorKey: cashShiftsNavKey,
               routes: [
                 GoRoute(
                   path: cashShifts,
@@ -279,7 +303,7 @@ class AppRouter {
             ),
             // Branch 7: Transacciones de Caja
             StatefulShellBranch(
-              navigatorKey: _cashTransactionsNavKey,
+              navigatorKey: cashTransactionsNavKey,
               routes: [
                 GoRoute(
                   path: cashTransactions,
@@ -289,7 +313,7 @@ class AppRouter {
             ),
             // Branch 8: Recibos de Caja
             StatefulShellBranch(
-              navigatorKey: _receiptsNavKey,
+              navigatorKey: receiptsNavKey,
               routes: [
                 GoRoute(
                   path: receipts,
@@ -299,7 +323,7 @@ class AppRouter {
             ),
             // Branch 9: Reportes Analíticos
             StatefulShellBranch(
-              navigatorKey: _reportsNavKey,
+              navigatorKey: reportsNavKey,
               routes: [
                 GoRoute(
                   path: reports,
@@ -309,7 +333,7 @@ class AppRouter {
             ),
             // Branch 10: Administración
             StatefulShellBranch(
-              navigatorKey: _adminNavKey,
+              navigatorKey: adminNavKey,
               routes: [
                 GoRoute(
                   path: administration,

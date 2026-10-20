@@ -6,6 +6,7 @@ import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
+import '../../../widgets/dialogs/viewers/order_invoice_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
 import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import 'supervisor_auth_dialog.dart';
@@ -403,6 +404,13 @@ class OrdersList extends StatelessWidget {
                     onPressed: () => showClinicalOrderViewerDialog(context, order),
                   ),
                 ],
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.receipt_long_outlined),
+                  tooltip: 'Comprobante de Factura',
+                  color: theme.colorScheme.primary,
+                  onPressed: () => showOrderInvoiceViewerDialog(context, order),
+                ),
                 const SizedBox(width: 4),
                 IconButton(
                   icon: const Icon(Icons.mail_outline),

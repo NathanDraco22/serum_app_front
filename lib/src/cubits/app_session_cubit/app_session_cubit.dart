@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../config/app_serum_config.dart';
 import '../../../config/service_locator.dart';
 import '../../core/app_config_manager.dart';
+import '../../tools/cache/app_image_cache.dart';
 import '../app_settings/app_settings_cubit.dart';
 
 part 'app_session_state.dart';
@@ -302,7 +305,10 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         ),
       );
 
-      await fetchActiveShift();
+      // Precargar logotipos de la sucursal activa en caché de disco y memoria
+      unawaited(AppImageCache.precacheBranchLogos(branch));
+
+      await fetchActiveShift(branch.id);
     } catch (error) {
       emit(state.copyWith(errorMessage: error.toString()));
     }
@@ -323,12 +329,16 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     );
   }
 
-  /// Consulta el turno activo del usuario actual
-  Future<void> fetchActiveShift() async {
+  /// Consulta el turno activo del usuario actual para la sucursal activa
+  Future<void> fetchActiveShift([String? branchId]) async {
     final currentUser = state.currentUser;
     if (currentUser == null || cashShiftsRepository == null) return;
     try {
-      final shift = await cashShiftsRepository!.getCurrentShift(currentUser.id);
+      final targetBranchId = branchId ?? state.currentBranch?.id;
+      final shift = await cashShiftsRepository!.getCurrentShift(
+        currentUser.id,
+        branchId: targetBranchId,
+      );
       emit(
         state.copyWith(
           activeShift: shift,
@@ -440,6 +450,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
         clearError: true,
       ),
     );
+
+    // Precargar logotipos de la sucursal activa en caché de disco y memoria
+    unawaited(AppImageCache.precacheBranchLogos(selectedBranch));
 
     // Cargar configuraciones del sistema ahora que el tenant y la sesión están activos
     try {

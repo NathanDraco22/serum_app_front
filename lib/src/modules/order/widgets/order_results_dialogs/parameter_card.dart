@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
+import '../../../../tools/formatters/thousands_separator_input_formatter.dart';
 import 'parameter_badge_pill.dart';
 
 /// Tarjeta individual para captura, validación y visualización referencial de un análisis clínico.
@@ -345,6 +346,9 @@ class ParameterCard extends StatelessWidget {
         controller: controller,
         readOnly: isReadOnly,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          ThousandsSeparatorInputFormatter(allowFraction: true),
+        ],
         textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
         onFieldSubmitted: (_) => onFieldSubmitted?.call(),
         onChanged: onNumericChanged,

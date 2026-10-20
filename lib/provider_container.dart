@@ -109,28 +109,40 @@ class GlobalCubitProvider extends StatelessWidget {
         BlocProvider<AppSessionCubit>.value(
           value: sl<AppSessionCubit>(),
         ),
-        BlocProvider<ReadCashShiftCubit>(
-          create: (ctx) => ReadCashShiftCubit(
-            cashShiftsRepository: ctx.read<CashShiftsRepository>(),
-          ),
-        ),
-        BlocProvider<WriteCashShiftCubit>(
-          create: (ctx) => WriteCashShiftCubit(
-            cashShiftsRepository: ctx.read<CashShiftsRepository>(),
-          ),
-        ),
-        BlocProvider<ReadCashMovementCubit>(
-          create: (ctx) => ReadCashMovementCubit(
-            cashMovementsRepository: ctx.read<CashMovementsRepository>(),
-          ),
-        ),
-        BlocProvider<WriteCashMovementCubit>(
-          create: (ctx) => WriteCashMovementCubit(
-            cashMovementsRepository: ctx.read<CashMovementsRepository>(),
-          ),
-        ),
       ],
-      child: child,
+      child: BlocBuilder<AppSessionCubit, AppSessionState>(
+        buildWhen: (previous, current) =>
+            previous.currentBranch?.id != current.currentBranch?.id,
+        builder: (context, sessionState) {
+          final branchId = sessionState.currentBranch?.id ?? 'none';
+          return MultiBlocProvider(
+            key: ValueKey('branch_scope_$branchId'),
+            providers: [
+              BlocProvider<ReadCashShiftCubit>(
+                create: (ctx) => ReadCashShiftCubit(
+                  cashShiftsRepository: ctx.read<CashShiftsRepository>(),
+                ),
+              ),
+              BlocProvider<WriteCashShiftCubit>(
+                create: (ctx) => WriteCashShiftCubit(
+                  cashShiftsRepository: ctx.read<CashShiftsRepository>(),
+                ),
+              ),
+              BlocProvider<ReadCashMovementCubit>(
+                create: (ctx) => ReadCashMovementCubit(
+                  cashMovementsRepository: ctx.read<CashMovementsRepository>(),
+                ),
+              ),
+              BlocProvider<WriteCashMovementCubit>(
+                create: (ctx) => WriteCashMovementCubit(
+                  cashMovementsRepository: ctx.read<CashMovementsRepository>(),
+                ),
+              ),
+            ],
+            child: child,
+          );
+        },
+      ),
     );
   }
 }

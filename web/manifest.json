@@ -1,11 +1,11 @@
 {
-    "name": "serum_app_front",
-    "short_name": "serum_app_front",
+    "name": "Serum App",
+    "short_name": "Serum App",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Serum App - Sistema de Gestión de Laboratorio Clínico",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

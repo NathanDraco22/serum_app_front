@@ -6,7 +6,9 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../config/app_assets.dart';
 import '../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../widgets/common/app_cached_image.dart';
 import '../../widgets/dialogs/selectors/branch_selection_dialog.dart';
+import '../../widgets/dialogs/viewers/cash_shift_viewer.dart';
 import '../cash_shift/widgets/cash_shift_open_dialog.dart';
 import '../cash_shift/widgets/cash_shift_close_dialog.dart';
 
@@ -254,9 +256,13 @@ class _SideNav extends StatelessWidget {
                         tooltip: activeShift != null
                             ? 'Corte y Arqueo de Turno'
                             : 'Abrir Turno de Caja',
-                        onPressed: () {
+                        onPressed: () async {
                           if (activeShift != null) {
-                            CashShiftCloseDialog.show(context, activeShift);
+                            final res =
+                                await CashShiftCloseDialog.show(context, activeShift);
+                            if (res != null && context.mounted) {
+                              showCashShiftViewerDialog(context, res);
+                            }
                           } else {
                             CashShiftOpenDialog.show(context);
                           }
@@ -332,11 +338,10 @@ class _SideNav extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.all(4),
-        child: Image.network(
-          logoUrl,
+        child: AppCachedImage(
+          imageUrl: logoUrl,
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) =>
-              _buildFallbackAssetLogo(theme),
+          fallbackWidget: _buildFallbackAssetLogo(theme),
         ),
       );
     }

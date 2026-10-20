@@ -1,7 +1,8 @@
-import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:serum_business/serum_business.dart';
+import '../../../../tools/cache/app_image_cache.dart';
+import '../../../formatters/thousands_separator_input_formatter.dart';
 import '../pdf_font_helper.dart';
 import '../pdf_template.dart';
 
@@ -139,8 +140,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     if (r.dataType == 'numeric' &&
         r.resultValue != null &&
         r.referenceValues.isNotEmpty) {
-      final numVal =
-          double.tryParse(r.resultValue!.replaceAll(',', '.').trim());
+      final numVal = ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue);
       if (numVal != null) {
         final normalizedGender = gender.toLowerCase();
         ReferenceValue? matchedRef;
@@ -190,13 +190,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     final watermarkImageUrl = branch.effectiveLogo ?? branch.effectiveIsoLogo;
 
     if (headerImageUrl != null && headerImageUrl.isNotEmpty) {
-      try {
-        final response = await http.get(Uri.parse(headerImageUrl));
-        if (response.statusCode == 200) {
-          headerImage = pw.MemoryImage(response.bodyBytes);
-        }
-      } catch (_) {
-        // En caso de no poder descargar la imagen se continúa sin ella
+      final bytes = await AppImageCache.getImageBytes(headerImageUrl);
+      if (bytes != null) {
+        headerImage = pw.MemoryImage(bytes);
       }
     }
 
@@ -204,12 +200,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       if (watermarkImageUrl == headerImageUrl && headerImage != null) {
         watermarkImage = headerImage;
       } else {
-        try {
-          final response = await http.get(Uri.parse(watermarkImageUrl));
-          if (response.statusCode == 200) {
-            watermarkImage = pw.MemoryImage(response.bodyBytes);
-          }
-        } catch (_) {}
+        final bytes = await AppImageCache.getImageBytes(watermarkImageUrl);
+        if (bytes != null) {
+          watermarkImage = pw.MemoryImage(bytes);
+        }
       }
     }
 
@@ -688,7 +682,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                           mainAxisSize: pw.MainAxisSize.min,
                           children: [
                             pw.Text(
-                              r.resultValue ?? '-',
+                              r.dataType == 'numeric' && r.resultValue != null
+                                  ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
+                                  : (r.resultValue ?? '-'),
                               style: pw.TextStyle(
                                 fontSize: 10,
                                 fontWeight: hasAlert || isTotalRow
