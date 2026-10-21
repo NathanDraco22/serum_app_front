@@ -177,8 +177,8 @@ class OrderInvoicePdfTemplate implements PdfTemplate {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Container(
-                      height: 42,
-                      margin: const pw.EdgeInsets.only(bottom: 4),
+                      height: 70,
+                      margin: const pw.EdgeInsets.only(bottom: 6),
                       child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                     ),
                     if (branch.address.isNotEmpty)
@@ -214,9 +214,9 @@ class OrderInvoicePdfTemplate implements PdfTemplate {
                   children: [
                     if (headerImage != null)
                       pw.Container(
-                        width: 44,
-                        height: 44,
-                        margin: const pw.EdgeInsets.only(right: 10),
+                        width: 68,
+                        height: 68,
+                        margin: const pw.EdgeInsets.only(right: 12),
                         child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                       ),
                     pw.Expanded(

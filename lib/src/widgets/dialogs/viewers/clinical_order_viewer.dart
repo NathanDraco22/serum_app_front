@@ -949,6 +949,45 @@ class ClinicalOrderViewerContent extends StatelessWidget {
 
         const SizedBox(height: 20),
 
+        // 4.5 Observaciones Clínicas / Notas del Bioanalista
+        if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey.shade50,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.blueGrey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.rate_review_outlined, size: 16, color: Colors.blueGrey.shade800),
+                    const SizedBox(width: 6),
+                    Text(
+                      'OBSERVACIONES / NOTAS CLÍNICAS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey.shade900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  order.notes!.trim(),
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey.shade900, height: 1.3),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+
         // 5. Resumen Financiero y Notas
         Container(
           padding: const EdgeInsets.all(12),

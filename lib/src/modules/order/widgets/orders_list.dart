@@ -153,6 +153,26 @@ class OrdersList extends StatelessWidget {
                         'Examen: ${order.examName}',
                         style: theme.textTheme.bodyMedium,
                       ),
+                      if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            Icon(Icons.sticky_note_2_outlined, size: 13, color: theme.colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'Nota: ${order.notes!}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       Wrap(
                         spacing: 12,
@@ -308,6 +328,40 @@ class OrdersList extends StatelessWidget {
                               ],
                             ),
                           ),
+                          // Badge de Notas Clínicas
+                          if (order.notes != null && order.notes!.trim().isNotEmpty)
+                            Tooltip(
+                              message: 'Observaciones: ${order.notes!}',
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueGrey.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.blueGrey.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.note_alt_outlined,
+                                      size: 11,
+                                      color: Colors.blueGrey.shade800,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'CON OBSERVACIONES',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blueGrey.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ],

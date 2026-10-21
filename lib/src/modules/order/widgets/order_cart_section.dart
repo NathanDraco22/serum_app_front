@@ -13,6 +13,7 @@ class OrderCartSection extends StatelessWidget {
   final Map<String, int> itemCustomPrices;
   final int defaultPriceLevel;
   final bool isSubmitting;
+  final TextEditingController? notesController;
   final VoidCallback onSelectPatient;
   final VoidCallback onRemovePatient;
   final VoidCallback onSelectDoctor;
@@ -36,6 +37,7 @@ class OrderCartSection extends StatelessWidget {
     this.itemPriceLevels = const {},
     this.itemCustomPrices = const {},
     this.defaultPriceLevel = 1,
+    this.notesController,
     required this.isSubmitting,
     required this.onSelectPatient,
     required this.onRemovePatient,
@@ -430,6 +432,29 @@ class OrderCartSection extends StatelessWidget {
 
             const SizedBox(height: 8),
             const Divider(height: 1),
+            const SizedBox(height: 10),
+
+            // Campo opcional de Notas / Observaciones
+            TextField(
+              controller: notesController,
+              maxLines: 2,
+              minLines: 1,
+              style: theme.textTheme.bodyMedium,
+              decoration: InputDecoration(
+                isDense: true,
+                prefixIcon: const Icon(Icons.note_alt_outlined, size: 18),
+                labelText: 'Notas u Observaciones (Opcional)',
+                hintText: 'Ej. Indicación médica, muestra en ayunas...',
+                hintStyle: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              ),
+            ),
             const SizedBox(height: 10),
 
             // Summary Info

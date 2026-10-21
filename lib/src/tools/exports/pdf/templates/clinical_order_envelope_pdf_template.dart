@@ -116,7 +116,7 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
       return pw.Align(
         alignment: pw.Alignment.topLeft,
         child: pw.Container(
-          height: 38,
+          height: 65,
           child: pw.Image(brandImage, fit: pw.BoxFit.contain),
         ),
       );
@@ -130,9 +130,9 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
         children: [
           if (brandImage != null) ...[
             pw.Container(
-              width: 42,
-              height: 42,
-              margin: const pw.EdgeInsets.only(right: 8),
+              width: 60,
+              height: 60,
+              margin: const pw.EdgeInsets.only(right: 10),
               child: pw.Image(brandImage, fit: pw.BoxFit.contain),
             ),
           ],

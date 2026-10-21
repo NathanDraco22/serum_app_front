@@ -25,6 +25,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   final _formKey = GlobalKey<FormState>();
   late List<OrderTestResult> _results;
   late Map<String, TextEditingController> _controllers;
+  late TextEditingController _notesController;
   late Map<String, String> _qualitativeValues;
   late List<FocusNode> _focusNodes;
   final Set<String> _autoCalculatedFieldIds = {};
@@ -39,6 +40,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     _results = List.from(widget.order.results);
     _controllers = {};
     _qualitativeValues = {};
+    _notesController = TextEditingController(text: widget.order.notes ?? '');
 
     for (var r in _results) {
       if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
@@ -269,6 +271,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
 
   @override
   void dispose() {
+    _notesController.dispose();
     for (var node in _focusNodes) {
       node.dispose();
     }
@@ -435,6 +438,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       final updateOrder = UpdateOrder(
         status: newStatus,
         results: updatedResults,
+        notes: _notesController.text.trim(),
       );
 
       final writeCubit = context.read<WriteOrderCubit>();
@@ -473,6 +477,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isReadOnly = widget.order.status == 'completed';
 
     final patientName = widget.order.patientInfo?.name ?? 'Paciente #${widget.order.patientId}';
@@ -546,15 +551,19 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
               ),
               const Divider(height: 1),
 
-              // 3. Lista de Parámetros con Tarjetas Claras
+              // 3. Lista de Parámetros con Tarjetas Claras y Observaciones
               Expanded(
                 child: Form(
                   key: _formKey,
                   child: ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    itemCount: _results.length,
+                    itemCount: _results.length + 1,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
+                      if (index == _results.length) {
+                        return _buildNotesSection(theme, isReadOnly);
+                      }
+
                       final r = _results[index];
                       final alert = _getAlertFlag(r);
                       final isAlert = alert == 'H' || alert == 'HIGH' || alert == 'L' || alert == 'LOW' || alert == 'ABNORMAL';
@@ -607,6 +616,87 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection(ThemeData theme, bool isReadOnly) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.rate_review_outlined,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Observaciones / Notas del Bioanalista',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              if (isReadOnly)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Solo Lectura',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _notesController,
+            readOnly: isReadOnly,
+            maxLines: 3,
+            minLines: 2,
+            style: theme.textTheme.bodyMedium,
+            decoration: InputDecoration(
+              hintText: isReadOnly
+                  ? 'Sin observaciones registradas'
+                  : 'Ingrese notas diagnósticas, incidencias de la muestra (ej. hemólisis, lipemia), o comentarios clínicos...',
+              hintStyle: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+              filled: true,
+              fillColor: isReadOnly
+                  ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3)
+                  : theme.colorScheme.surface,
+              contentPadding: const EdgeInsets.all(12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

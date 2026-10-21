@@ -56,6 +56,19 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   final Map<String, int> _customPrices = {};
   int _defaultPriceLevel = 1;
   bool _isSubmitting = false;
+  late final TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickPatient() async {
     final patient = await showPatientSelectionDialog(context);
@@ -396,6 +409,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       results: resultsMap.values.toList(),
       isBlocked: isBlocked,
       approval: approval,
+      notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
     );
 
     context.read<WriteOrderCubit>().create(newOrder);
@@ -544,6 +558,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
+                          notesController: _notesController,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
                           onRemovePatient: () => setState(() => _selectedPatient = null),
@@ -588,6 +603,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
+                          notesController: _notesController,
                           isSubmitting: _isSubmitting,
                           onSelectPatient: _pickPatient,
                           onRemovePatient: () => setState(() => _selectedPatient = null),

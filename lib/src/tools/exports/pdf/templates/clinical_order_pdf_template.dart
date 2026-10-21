@@ -303,8 +303,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Container(
-                      height: 42,
-                      margin: const pw.EdgeInsets.only(bottom: 4),
+                      height: 70,
+                      margin: const pw.EdgeInsets.only(bottom: 6),
                       child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                     ),
                     if (branch.address.isNotEmpty)
@@ -344,9 +344,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   children: [
                     if (headerImage != null) ...[
                       pw.Container(
-                        width: 48,
-                        height: 48,
-                        margin: const pw.EdgeInsets.only(right: 10),
+                        width: 68,
+                        height: 68,
+                        margin: const pw.EdgeInsets.only(right: 12),
                         child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                       ),
                     ],
@@ -745,9 +745,40 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }
 
   pw.Widget _buildSignatureAndNotes() {
+    final hasClinicalNotes = order.notes != null && order.notes!.trim().isNotEmpty;
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
+        if (hasClinicalNotes) ...[
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            margin: const pw.EdgeInsets.only(bottom: 8),
+            decoration: pw.BoxDecoration(
+              color: PdfColor.fromHex('#F8F9FA'),
+              border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+              borderRadius: pw.BorderRadius.circular(3),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'OBSERVACIONES / NOTAS CLÍNICAS:',
+                  style: pw.TextStyle(
+                    fontSize: 8.5,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.blueGrey900,
+                  ),
+                ),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  order.notes!.trim(),
+                  style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.black),
+                ),
+              ],
+            ),
+          ),
+        ],
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: pw.BoxDecoration(

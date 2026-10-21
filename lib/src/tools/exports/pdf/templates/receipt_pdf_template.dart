@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:serum_business/serum_business.dart';
+import '../../../../tools/cache/app_image_cache.dart';
 import '../pdf_font_helper.dart';
 import '../pdf_template.dart';
 
@@ -32,6 +33,17 @@ class ReceiptPdfTemplate implements PdfTemplate {
     await PdfFontHelper.ensureInitialized();
     final doc = pw.Document();
 
+    pw.MemoryImage? headerImage;
+    final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
+    final headerImageUrl = branch.effectiveIsoLogo;
+
+    if (headerImageUrl != null && headerImageUrl.isNotEmpty) {
+      final bytes = await AppImageCache.getImageBytes(headerImageUrl);
+      if (bytes != null) {
+        headerImage = pw.MemoryImage(bytes);
+      }
+    }
+
     doc.addPage(
       pw.Page(
         pageFormat: pageFormat,
@@ -40,7 +52,7 @@ class ReceiptPdfTemplate implements PdfTemplate {
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               // 1. Encabezado institucional y folio
-              _buildHeader(),
+              _buildHeader(headerImage, isIsoLogo),
               pw.SizedBox(height: 10),
               pw.Divider(color: PdfColors.blueGrey800, thickness: 1.2),
               pw.SizedBox(height: 8),
@@ -72,42 +84,93 @@ class ReceiptPdfTemplate implements PdfTemplate {
     return doc;
   }
 
-  pw.Widget _buildHeader() {
+  pw.Widget _buildHeader(pw.MemoryImage? headerImage, bool isIsoLogo) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Datos de la sucursal
+        // Datos de la sucursal / Marca
         pw.Expanded(
           flex: 6,
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                branch.name.toUpperCase(),
-                style: pw.TextStyle(
-                  fontSize: 14,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blue900,
+          child: isIsoLogo && headerImage != null
+              ? pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      height: 52,
+                      margin: const pw.EdgeInsets.only(bottom: 4),
+                      child: pw.Image(headerImage, fit: pw.BoxFit.contain),
+                    ),
+                    if (branch.address.isNotEmpty)
+                      pw.Text(
+                        'Dirección: ${branch.address}',
+                        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                      ),
+                    pw.Row(
+                      children: [
+                        if (branch.phone.isNotEmpty)
+                          pw.Text(
+                            'Tel: ${branch.phone}',
+                            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                          ),
+                        if (branch.phone.isNotEmpty &&
+                            branch.email != null &&
+                            branch.email!.isNotEmpty)
+                          pw.Text(
+                            ' | ',
+                            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                          ),
+                        if (branch.email != null && branch.email!.isNotEmpty)
+                          pw.Text(
+                            'Email: ${branch.email!}',
+                            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                          ),
+                      ],
+                    ),
+                  ],
+                )
+              : pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (headerImage != null)
+                      pw.Container(
+                        width: 55,
+                        height: 55,
+                        margin: const pw.EdgeInsets.only(right: 10),
+                        child: pw.Image(headerImage, fit: pw.BoxFit.contain),
+                      ),
+                    pw.Expanded(
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            branch.name.toUpperCase(),
+                            style: pw.TextStyle(
+                              fontSize: 14,
+                              fontWeight: pw.FontWeight.bold,
+                              color: PdfColors.blue900,
+                            ),
+                          ),
+                          pw.SizedBox(height: 2),
+                          pw.Text(
+                            'Laboratorio Clínico y Diagnóstico Especializado',
+                            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+                          ),
+                          if (branch.address.isNotEmpty)
+                            pw.Text(
+                              'Dirección: ${branch.address}',
+                              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                            ),
+                          if (branch.phone.isNotEmpty)
+                            pw.Text(
+                              'Teléfono: ${branch.phone}',
+                              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'Laboratorio Clínico y Diagnóstico Especializado',
-                style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
-              ),
-              if (branch.address.isNotEmpty)
-                pw.Text(
-                  'Dirección: ${branch.address}',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                ),
-              if (branch.phone.isNotEmpty)
-                pw.Text(
-                  'Teléfono: ${branch.phone}',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-                ),
-            ],
-          ),
         ),
         // Badge de Comprobante y Folio
         pw.Expanded(

@@ -704,7 +704,7 @@ packages:
   serum_business:
     dependency: "direct main"
     description:
-      path: "packages/serum_business"
+      path: "../serum_business"
       relative: true
     source: path
     version: "0.1.0"
