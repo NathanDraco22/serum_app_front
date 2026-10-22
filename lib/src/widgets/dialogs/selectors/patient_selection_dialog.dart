@@ -218,9 +218,31 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
             foregroundColor: theme.colorScheme.onPrimaryContainer,
             child: Text(initial, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
-          title: Text(
-            patient.name,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '#${patient.id}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  patient.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+            ],
           ),
           subtitle: Wrap(
             spacing: 8,
@@ -228,7 +250,7 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
             children: [
               if (patient.cardId != null && patient.cardId!.isNotEmpty)
                 Text(
-                  'ID: ${patient.cardId}',
+                  'Cédula: ${patient.cardId}',
                   style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
                 ),
               Text(

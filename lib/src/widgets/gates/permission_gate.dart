@@ -137,4 +137,16 @@ extension AccessContextExtension on BuildContext {
 
   /// Verifica si el usuario actual cumple al menos con el nivel de acceso indicado.
   bool hasAccessLevel(int minLevel) => userAccessLevel >= minLevel;
+
+  /// Verifica si el usuario actual es el usuario root del sistema.
+  bool get isRootUser {
+    final user = watch<AppSessionCubit>().state.currentUser;
+    if (user == null || !user.isActive || user.isDeleted) {
+      return false;
+    }
+    return user.id == 'root' ||
+        user.isInternal ||
+        user.username.toLowerCase() == 'serum' ||
+        user.username.toLowerCase() == 'root';
+  }
 }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/branch_cubit/write_branches_cubit.dart';
 import '../../../tools/cache/app_image_cache.dart';
 import '../../../tools/uploaders/image_uploader.dart';
@@ -145,6 +146,17 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final isRoot = context.read<AppSessionCubit>().state.isRootUser;
+    if (widget.branch == null && !isRoot) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Solo el usuario root puede crear nuevas sucursales'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
     final writeCubit = context.read<WriteBranchCubit>();

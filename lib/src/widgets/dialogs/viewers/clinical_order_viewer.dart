@@ -580,6 +580,8 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
+                    if (order.patientId.isNotEmpty)
+                      _buildDataRow('Código Paciente:', '#${order.patientId}', isBold: true),
                     _buildDataRow('Nombre:', patientInfo.name, isBold: true),
                     _buildDataRow(
                       'Edad / Sexo:',

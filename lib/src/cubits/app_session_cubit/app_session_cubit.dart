@@ -17,6 +17,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   final ServinRepository servinRepository;
   final CashShiftsRepository? cashShiftsRepository;
   final UsersDataSource usersDataSource;
+  StreamSubscription<RepoEvent<BranchInDb>>? _branchesSubscription;
 
   AppSessionCubit({
     required this.authRepository,
@@ -25,7 +26,43 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     this.cashShiftsRepository,
     UsersDataSource? usersDataSource,
   })  : usersDataSource = usersDataSource ?? UsersDataSource(),
-        super(const AppSessionState());
+        super(const AppSessionState()) {
+    _branchesSubscription =
+        branchesRepository.eventStream.listen(_handleBranchEvent);
+  }
+
+  void _handleBranchEvent(RepoEvent<BranchInDb> event) {
+    if (isClosed) return;
+    if (!state.isAuthenticated || state.currentUser == null) return;
+    if (!isRootUser) return;
+
+    if (event is RepoItemCreated<BranchInDb>) {
+      final existing = state.branches;
+      if (!existing.any((b) => b.id == event.item.id)) {
+        emit(state.copyWith(branches: [...existing, event.item]));
+      }
+    } else if (event is RepoItemUpdated<BranchInDb>) {
+      final updatedList = state.branches
+          .map((b) => b.id == event.item.id ? event.item : b)
+          .toList();
+      final updatedCurrent =
+          state.currentBranch?.id == event.item.id ? event.item : state.currentBranch;
+      emit(state.copyWith(
+        branches: updatedList,
+        currentBranch: updatedCurrent,
+      ));
+    } else if (event is RepoItemDeleted<BranchInDb>) {
+      final updatedList =
+          state.branches.where((b) => b.id != event.item.id).toList();
+      emit(state.copyWith(branches: updatedList));
+      if (state.currentBranch?.id == event.item.id) {
+        final nextBranch = updatedList.firstOrNull;
+        if (nextBranch != null) {
+          changeBranch(nextBranch.id);
+        }
+      }
+    }
+  }
 
   String get currentBranchId => state.currentBranch?.id ?? kOriginBranchId;
   BranchInDb? get currentBranch => state.currentBranch;
@@ -36,10 +73,14 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Servin? get servin => state.servin;
   CashShiftInDb? get activeShift => state.activeShift;
   bool get hasActiveShift => state.hasActiveShift;
+  bool get isRootUser => state.isRootUser;
 
   bool get hasMultipleBranches {
     final currentUser = state.currentUser;
     if (currentUser == null) return false;
+    if (isRootUser) {
+      return state.branches.length > 1;
+    }
     return currentUser.branches.length > 1 && state.branches.length > 1;
   }
 
@@ -314,6 +355,26 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     }
   }
 
+  /// Actualiza la lista de sucursales autorizadas desde el repositorio
+  Future<void> refreshBranches() async {
+    try {
+      final allBranches = await branchesRepository.getAllBranches();
+      if (isRootUser && allBranches.isNotEmpty) {
+        final defaultOriginBranch = BranchInDb(
+          id: kOriginBranchId,
+          name: 'Sucursal Matriz (ORIGIN_BRANCH)',
+          address: 'Matriz Principal',
+          phone: '',
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+        );
+        final branchesList = allBranches.any((b) => b.id == kOriginBranchId)
+            ? allBranches
+            : [defaultOriginBranch, ...allBranches];
+        emit(state.copyWith(branches: branchesList));
+      }
+    } catch (_) {}
+  }
+
   /// Cierra la sesión activa y limpia los tokens guardados (permaneciendo en el mismo negocio)
   Future<void> logout() async {
     await authRepository.logout();
@@ -417,14 +478,31 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       allBranches = [defaultOriginBranch, ...allBranches];
     }
 
+    final isRoot = isRootUser ||
+        user.isRoot ||
+        user.id == 'root' ||
+        user.isInternal ||
+        user.username.toLowerCase() == 'serum' ||
+        user.username.toLowerCase() == 'root';
     final isAdmin = user.role.toLowerCase() == 'admin';
-    final userBranches = user.branches.isNotEmpty
-        ? allBranches.where((b) => user.branches.contains(b.id)).toList()
-        : (isAdmin ? allBranches : <BranchInDb>[]);
 
-    final allowedBranches = userBranches.isNotEmpty
-        ? userBranches
-        : (isAdmin ? allBranches : [defaultOriginBranch]);
+    // Para el usuario root, SIEMPRE tiene libertad total y acceso a TODAS las sucursales del sistema
+    final List<BranchInDb> allowedBranches;
+    if (isRoot) {
+      allowedBranches =
+          allBranches.isNotEmpty ? allBranches : [defaultOriginBranch];
+    } else if (user.branches.isNotEmpty) {
+      final filtered =
+          allBranches.where((b) => user.branches.contains(b.id)).toList();
+      allowedBranches = filtered.isNotEmpty
+          ? filtered
+          : (isAdmin ? allBranches : [defaultOriginBranch]);
+    } else if (isAdmin) {
+      allowedBranches =
+          allBranches.isNotEmpty ? allBranches : [defaultOriginBranch];
+    } else {
+      allowedBranches = [defaultOriginBranch];
+    }
 
     final savedBranchId = await AppConfigManager().getSelectedBranchId();
     final candidateBranchId = (savedBranchId != null &&
@@ -463,5 +541,11 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
     // Consultar turno activo tras configurar usuario
     await fetchActiveShift();
+  }
+
+  @override
+  Future<void> close() {
+    _branchesSubscription?.cancel();
+    return super.close();
   }
 }

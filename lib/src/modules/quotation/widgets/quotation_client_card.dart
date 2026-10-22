@@ -106,14 +106,36 @@ class QuotationClientCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     if (hasPatient) ...[
-                      Text(
-                        patient!.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '#${patient!.id}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontSize: 10.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              patient!.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Wrap(
@@ -122,7 +144,7 @@ class QuotationClientCard extends StatelessWidget {
                         children: [
                           if (patient!.cardId != null && patient!.cardId!.isNotEmpty)
                             Text(
-                              'ID: ${patient!.cardId}',
+                              'Cédula: ${patient!.cardId}',
                               style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                             ),
                           Text(

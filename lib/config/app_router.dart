@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:serum_business/serum_business.dart';
 
 import '../src/cubits/app_session_cubit/app_session_cubit.dart';
 import '../src/modules/splash/view/splash_screen.dart';
@@ -10,6 +11,7 @@ import '../src/modules/auth/view/login_screen.dart';
 import '../src/modules/home_menu/home_menus_view.dart';
 import '../src/modules/dashboard/view/dashboard_screen.dart';
 import '../src/modules/patient/view/patient_screen.dart';
+import '../src/modules/patient/view/patient_orders_history_screen.dart';
 import '../src/modules/doctor/view/doctor_screen.dart';
 import '../src/modules/lab_test/view/lab_test_screen.dart';
 import '../src/modules/order/view/order_screen.dart';
@@ -53,6 +55,7 @@ class AppRouter {
   static const String login = '/login';
   static const String dashboard = '/';
   static const String patients = '/patients';
+  static const String patientOrders = '/patients/:patientId/orders';
   static const String doctors = '/doctors';
   static const String labTests = '/lab-tests';
   static const String orders = '/orders';
@@ -191,6 +194,18 @@ class AppRouter {
           path: createQuotation,
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) => const CreateQuotationScreen(),
+        ),
+        GoRoute(
+          path: patientOrders,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) {
+            final patientId = state.pathParameters['patientId'] ?? '';
+            final patient = state.extra as PatientInDb?;
+            return PatientOrdersHistoryScreen(
+              patientId: patientId,
+              patient: patient,
+            );
+          },
         ),
         GoRoute(
           path: adminBranches,

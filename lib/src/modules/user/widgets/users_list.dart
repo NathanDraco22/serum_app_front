@@ -4,6 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/branch_cubit/read_branches_cubit.dart';
 import '../../../cubits/user_cubit/write_users_cubit.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class UsersList extends StatelessWidget {
   const UsersList({
@@ -15,43 +16,17 @@ class UsersList extends StatelessWidget {
   final List<UserInDb> users;
   final void Function(UserInDb user) onEdit;
 
-  void _confirmDelete(BuildContext context, UserInDb user) {
-    final theme = Theme.of(context);
-    final writeCubit = context.read<WriteUserCubit>();
-
-    showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-            const SizedBox(width: 8),
-            const Text('Eliminar Usuario'),
-          ],
-        ),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar la cuenta de "${user.name}" (@${user.username})?\nEsta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
-            ),
-            onPressed: () {
-              Navigator.of(dialogCtx).pop(true);
-              writeCubit.delete(user.id);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context, UserInDb user) async {
+    final confirmed = await ConfirmDeleteDialog.show(
+      context,
+      title: 'Eliminar Usuario',
+      message: '¿Estás seguro de que deseas eliminar la cuenta de usuario del sistema? Esta acción no se puede deshacer.',
+      itemName: '${user.name} (@${user.username})',
     );
+
+    if (confirmed && context.mounted) {
+      context.read<WriteUserCubit>().delete(user.id);
+    }
   }
 
   Color _getRoleColor(String role, ColorScheme colorScheme) {

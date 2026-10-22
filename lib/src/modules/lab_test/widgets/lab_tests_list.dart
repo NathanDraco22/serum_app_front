@@ -3,6 +3,7 @@ import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class LabTestsList extends StatelessWidget {
   final List<LabTestInDb> labTests;
@@ -245,32 +246,21 @@ class LabTestsList extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
                     tooltip: 'Eliminar',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (dialogCtx) => AlertDialog(
-                          title: const Text('Eliminar Prueba / Pack'),
-                          content: Text('¿Está seguro de eliminar ${labTest.name}?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogCtx),
-                              child: const Text('Cancelar'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                context.read<WriteLabTestCubit>().delete(labTest.id).then((_) {
-                                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                                  if (context.mounted) context.read<ReadLabTestCubit>().getAll();
-                                });
-                              },
-                              child: Text(
-                                'Eliminar',
-                                style: TextStyle(color: theme.colorScheme.error),
-                              ),
-                            ),
-                          ],
-                        ),
+                    onPressed: () async {
+                      final confirmed = await ConfirmDeleteDialog.show(
+                        context,
+                        title: labTest.isPack
+                            ? 'Eliminar Perfil / Pack'
+                            : 'Eliminar Prueba de Laboratorio',
+                        message:
+                            '¿Está seguro de eliminar este registro del catálogo? Esta acción no se puede deshacer.',
+                        itemName: labTest.name,
                       );
+                      if (confirmed && context.mounted) {
+                        context.read<WriteLabTestCubit>().delete(labTest.id).then((_) {
+                          if (context.mounted) context.read<ReadLabTestCubit>().getAll();
+                        });
+                      }
                     },
                     color: theme.colorScheme.error,
                   ),

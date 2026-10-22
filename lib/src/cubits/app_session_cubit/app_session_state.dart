@@ -36,6 +36,16 @@ class AppSessionState {
   bool get hasBranch => currentBranch != null;
   bool get hasActiveShift => activeShift != null;
 
+  /// Retorna si el usuario en sesión cuenta con privilegios root del sistema.
+  bool get isRootUser {
+    final u = currentUser;
+    if (u == null || !u.isActive || u.isDeleted) return false;
+    return u.id == 'root' ||
+        u.isInternal ||
+        u.username.toLowerCase() == 'serum' ||
+        u.username.toLowerCase() == 'root';
+  }
+
   AppSessionState copyWith({
     AppSessionStatus? status,
     Servin? servin,

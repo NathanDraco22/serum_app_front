@@ -3,6 +3,7 @@ import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
 import '../../../cubits/doctor_cubit/write_doctors_cubit.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class DoctorsList extends StatelessWidget {
   final List<DoctorInDb> doctors;
@@ -101,32 +102,18 @@ class DoctorsList extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (dialogCtx) => AlertDialog(
-                        title: const Text('Eliminar Médico'),
-                        content: Text('¿Está seguro de eliminar al doctor ${doctor.name}?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(dialogCtx),
-                            child: const Text('Cancelar'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context.read<WriteDoctorCubit>().delete(doctor.id).then((_) {
-                                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                                if (context.mounted) context.read<ReadDoctorCubit>().getAll();
-                              });
-                            },
-                            child: Text(
-                              'Eliminar',
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ),
-                        ],
-                      ),
+                  onPressed: () async {
+                    final confirmed = await ConfirmDeleteDialog.show(
+                      context,
+                      title: 'Eliminar Médico',
+                      message: '¿Está seguro de eliminar al médico del sistema? Esta acción no se puede deshacer.',
+                      itemName: 'Dr. ${doctor.name} (${doctor.specialty})',
                     );
+                    if (confirmed && context.mounted) {
+                      context.read<WriteDoctorCubit>().delete(doctor.id).then((_) {
+                        if (context.mounted) context.read<ReadDoctorCubit>().getAll();
+                      });
+                    }
                   },
                   color: theme.colorScheme.error,
                 ),

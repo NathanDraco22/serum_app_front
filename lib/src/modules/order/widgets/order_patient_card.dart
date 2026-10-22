@@ -90,15 +90,48 @@ class OrderPatientCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  hasPatient ? patient!.name : 'Ningún paciente asignado',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: hasPatient ? theme.colorScheme.onSurface : theme.colorScheme.outline,
+                if (hasPatient)
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '#${patient!.id}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          patient!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    'Ningún paciente asignado',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.outline,
+                    ),
                   ),
-                ),
                 if (hasPatient) ...[
                   const SizedBox(height: 2),
                   Wrap(
@@ -107,7 +140,7 @@ class OrderPatientCard extends StatelessWidget {
                     children: [
                       if (patient!.cardId != null && patient!.cardId!.isNotEmpty)
                         Text(
-                          'ID: ${patient!.cardId}',
+                          'Cédula: ${patient!.cardId}',
                           style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                         ),
                       Text(

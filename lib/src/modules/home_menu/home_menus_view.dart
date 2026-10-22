@@ -171,6 +171,10 @@ class _SideNav extends StatelessWidget {
                           icon: const Icon(Icons.swap_horiz, size: 18),
                           tooltip: 'Cambiar Sucursal',
                           onPressed: () async {
+                            if (sessionCubit.isRootUser) {
+                              await sessionCubit.refreshBranches();
+                            }
+                            if (!context.mounted) return;
                             final filteredBranches = sessionCubit.branches
                                 .where((b) => b.id != sessionCubit.currentBranchId)
                                 .toList();

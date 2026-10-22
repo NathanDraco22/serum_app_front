@@ -14,16 +14,20 @@ Este documento describe la operativa de los módulos de expedientes demográfico
 ## 1. Módulo `patient` (`lib/src/modules/patient/`)
 - **Pantalla**: `PatientScreen` (`view/patient_screen.dart`).
 - **Widgets**:
-  - `PatientsList` (`widgets/patients_list.dart`): Listado con cards informativas que muestran nombre completo, identificación, edad, sexo y teléfono.
-  - `PatientFormDialog` (`widgets/patient_form_dialog.dart`): Diálogo modal para captura o edición de datos de paciente.
+  - `PatientsList` (`widgets/patients_list.dart`): Listado con cards informativas que muestran el código incremental correlativo (`#0001`), nombre completo, cédula de identidad (`cardId`), edad, sexo y teléfono.
+  - `PatientFormDialog` (`widgets/patient_form_dialog.dart`): Diálogo modal para captura o edición de datos de paciente (en modo edición despliega el código asignado).
 - **Cubits**:
   - `ReadPatientCubit`: Carga inicial (`getAll()`) y mantenimiento del estado en caché local.
   - `WritePatientCubit`: Operaciones de creación y modificación (`createPatient()`, `updatePatient()`).
-  - `SearchPatientsCubit`: Búsqueda reactiva por texto libre (cédula o nombre).
+  - `SearchPatientsCubit`: Búsqueda reactiva por texto libre (código correlativo, cédula o nombre).
 - **Funcionalidades Clave**:
-  1. **Búsqueda Instantánea**: Integra una barra de búsqueda con debounce. Si la caja de búsqueda se limpia, retorna la lista completa sin llamar innecesariamente a la red.
-  2. **Validación de Datos Demográficos**: Valida campos obligatorios (nombre, fecha de nacimiento, sexo y sucursal de origen `originBranch`).
-  3. **Sincronización Reactiva**: El `ReactiveRepository` emite eventos (`RepoItemCreated`, `RepoItemUpdated`) que el `ReadPatientCubit` escucha directamente, reflejando cambios en la pantalla al instante.
+  1. **Código Correlativo de Expediente (`id`)**: Generado atómicamente por `CounterManager().next_patient_number()` formateado a 4 dígitos (`0001`, `0002`, etc.). Es visible en listados, tarjetas de creación de órdenes (`OrderPatientCard`), cotizaciones (`QuotationClientCard`), selector modal (`PatientSelectionDialog`), ficha de detalles con copiado a 1 toque (`PatientInfoDialog`), visor clínico y documentos PDF impresos.
+  2. **Diferenciación de Cédula (`cardId`)**: Se distingue visualmente de forma estricta el identificador correlativo de laboratorio del documento de identidad oficial.
+  3. **Búsqueda Instantánea**: Integra una barra de búsqueda con debounce indexada en MongoDB (`TextSearchIndex` que abarca `name`, `cardId`, `phone` y `id`). Si la caja de búsqueda se limpia, retorna la lista completa sin llamar innecesariamente a la red.
+  4. **Validación de Datos Demográficos**: Valida campos obligatorios (nombre, fecha de nacimiento, sexo y sucursal de origen `originBranch`).
+  5. **Sincronización Reactiva**: El `ReactiveRepository` emite eventos (`RepoItemCreated`, `RepoItemUpdated`) que el `ReadPatientCubit` escucha directamente, reflejando cambios en la pantalla al instante.
+  6. **Expediente e Historial de Órdenes (`PatientOrdersHistoryScreen`)**: Vista completa accesible por ruta `/patients/:patientId/orders` y métodos estáticos `.show()`, listando todas las órdenes clínicas históricas, balances y recibos.
+  7. **Comparativa Evolutiva y Delta Check de Biometrías (`ClinicalComparisonViewerDialog`)**: Motor analítico que detecta automáticamente si el paciente cuenta con dos o más Biometrías Hemáticas para compararlas a un solo clic, o mediante selección manual de dos órdenes cualesquiera. Calcula variaciones absolutas ($\Delta$), porcentuales ($\% \Delta$), tendencias ($\uparrow, \downarrow, \approx$) y genera el reporte oficial en PDF (`ClinicalComparisonPdfTemplate`).
 
 ---
 

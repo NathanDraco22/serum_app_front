@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/branch_cubit/write_branches_cubit.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class BranchesList extends StatelessWidget {
   const BranchesList({
@@ -15,43 +16,17 @@ class BranchesList extends StatelessWidget {
   final List<BranchInDb> branches;
   final void Function(BranchInDb branch) onEdit;
 
-  void _confirmDelete(BuildContext context, BranchInDb branch) {
-    final theme = Theme.of(context);
-    final writeCubit = context.read<WriteBranchCubit>();
-
-    showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-            const SizedBox(width: 8),
-            const Text('Eliminar Sucursal'),
-          ],
-        ),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar la sucursal "${branch.name}"?\nEsta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
-            ),
-            onPressed: () {
-              Navigator.of(dialogCtx).pop(true);
-              writeCubit.delete(branch.id);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context, BranchInDb branch) async {
+    final confirmed = await ConfirmDeleteDialog.show(
+      context,
+      title: 'Eliminar Sucursal',
+      message: '¿Estás seguro de que deseas eliminar esta sucursal? Esta acción no se puede deshacer.',
+      itemName: branch.name,
     );
+
+    if (confirmed && context.mounted) {
+      context.read<WriteBranchCubit>().delete(branch.id);
+    }
   }
 
   @override

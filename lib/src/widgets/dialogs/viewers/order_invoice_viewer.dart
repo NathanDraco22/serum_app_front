@@ -544,6 +544,8 @@ class OrderInvoiceViewerContent extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    if (order.patientId.isNotEmpty)
+                      _buildRow('Código Paciente:', '#${order.patientId}', isBold: true),
                     _buildRow('Nombre:', patientInfo?.name ?? 'Paciente General', isBold: true),
                     _buildRow('Identificación / Cédula:', patientInfo?.cardId ?? 'N/D'),
                     _buildRow(

@@ -112,39 +112,50 @@ class OrdersList extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () {
-                          showOrderPatientInfoDialog(
-                            context,
-                            order,
-                            patientsState is ReadPatientSuccess ? patientsState.items : null,
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  'Paciente: $patientName',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.onSurface,
+                      Tooltip(
+                        message: 'Ver y copiar datos del paciente',
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () {
+                            showOrderPatientInfoDialog(
+                              context,
+                              order,
+                              patientsState is ReadPatientSuccess ? patientsState.items : null,
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (order.patientId.isNotEmpty) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '#${order.patientId}',
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Flexible(
+                                  child: Text(
+                                    'Paciente: $patientName',
+                                    style: theme.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Tooltip(
-                                message: 'Ver y copiar datos del paciente',
-                                child: Icon(
-                                  Icons.info_outline,
-                                  size: 17,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -470,18 +481,6 @@ class OrdersList extends StatelessWidget {
                   icon: const Icon(Icons.mail_outline),
                   tooltip: 'Imprimir Sobre',
                   onPressed: () => showOrderEnvelopeViewerDialog(context, order),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.person_outline),
-                  tooltip: 'Información del Paciente',
-                  onPressed: () {
-                    showOrderPatientInfoDialog(
-                      context,
-                      order,
-                      patientsState is ReadPatientSuccess ? patientsState.items : null,
-                    );
-                  },
                 ),
                 if (showPayButton) ...[
                   const SizedBox(width: 4),

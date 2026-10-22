@@ -4,6 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 /// Modelo adaptador para unificar la representación de datos del paciente en el diálogo.
 class PatientDisplayData {
+  final String? patientId;
   final String name;
   final String? phone;
   final String? email;
@@ -13,6 +14,7 @@ class PatientDisplayData {
   final String? address;
 
   const PatientDisplayData({
+    this.patientId,
     required this.name,
     this.phone,
     this.email,
@@ -22,8 +24,9 @@ class PatientDisplayData {
     this.address,
   });
 
-  factory PatientDisplayData.fromPatientInfo(PatientInfo info) {
+  factory PatientDisplayData.fromPatientInfo(PatientInfo info, [String? patientId]) {
     return PatientDisplayData(
+      patientId: patientId,
       name: info.name,
       phone: info.phone.isNotEmpty ? info.phone : null,
       email: info.email != null && info.email!.isNotEmpty ? info.email : null,
@@ -36,6 +39,7 @@ class PatientDisplayData {
 
   factory PatientDisplayData.fromPatientInDb(PatientInDb patient) {
     return PatientDisplayData(
+      patientId: patient.id,
       name: patient.name,
       phone: patient.phone.isNotEmpty ? patient.phone : null,
       email: patient.email != null && patient.email!.isNotEmpty ? patient.email : null,
@@ -47,9 +51,11 @@ class PatientDisplayData {
   }
 
   factory PatientDisplayData.fromOrder(OrderInDb order, [PatientInDb? fallbackPatient]) {
+    final effectivePatientId = order.patientId.isNotEmpty ? order.patientId : fallbackPatient?.id;
     if (order.patientInfo != null) {
       final info = order.patientInfo!;
       return PatientDisplayData(
+        patientId: effectivePatientId,
         name: info.name.isNotEmpty
             ? info.name
             : (fallbackPatient?.name ?? 'Paciente'),
@@ -78,7 +84,10 @@ class PatientDisplayData {
       return PatientDisplayData.fromPatientInDb(fallbackPatient);
     }
 
-    return const PatientDisplayData(name: 'Paciente no identificado');
+    return PatientDisplayData(
+      patientId: effectivePatientId,
+      name: 'Paciente no identificado',
+    );
   }
 }
 
@@ -243,11 +252,34 @@ class _PatientInfoDialogState extends State<PatientInfoDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Información del Paciente',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Información del Paciente',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (patient.patientId != null && patient.patientId!.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '#${patient.patientId}',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         if (widget.orderShortId != null) ...[
                           const SizedBox(height: 2),
@@ -277,6 +309,20 @@ class _PatientInfoDialogState extends State<PatientInfoDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Código de Paciente (con botón de copia)
+                    if (patient.patientId != null && patient.patientId!.isNotEmpty) ...[
+                      _buildCopyableFieldCard(
+                        context: context,
+                        fieldKey: 'patientId',
+                        icon: Icons.tag,
+                        label: 'Código de Paciente',
+                        value: '#${patient.patientId}',
+                        allowCopy: true,
+                        isHighlighted: true,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
                     // Nombre Completo (con botón de copia)
                     _buildCopyableFieldCard(
                       context: context,

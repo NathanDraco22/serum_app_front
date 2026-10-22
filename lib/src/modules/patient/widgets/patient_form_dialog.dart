@@ -139,7 +139,28 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: Text(isEdit ? 'Editar Paciente' : 'Nuevo Paciente'),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(isEdit ? 'Editar Paciente' : 'Nuevo Paciente'),
+          ),
+          if (isEdit)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '#${widget.patient!.id}',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+        ],
+      ),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(

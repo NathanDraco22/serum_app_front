@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/role_cubit/write_roles_cubit.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class RolesList extends StatelessWidget {
   const RolesList({
@@ -14,10 +15,7 @@ class RolesList extends StatelessWidget {
   final List<RoleInDb> roles;
   final void Function(RoleInDb role) onEdit;
 
-  void _confirmDelete(BuildContext context, RoleInDb role) {
-    final theme = Theme.of(context);
-    final writeCubit = context.read<WriteRoleCubit>();
-
+  Future<void> _confirmDelete(BuildContext context, RoleInDb role) async {
     if (role.name.toLowerCase() == 'admin') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -28,39 +26,16 @@ class RolesList extends StatelessWidget {
       return;
     }
 
-    showDialog<bool>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: theme.colorScheme.error),
-            const SizedBox(width: 8),
-            const Text('Eliminar Rol'),
-          ],
-        ),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar el rol "${role.name}"?\nEsta acción no se puede deshacer.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: theme.colorScheme.error,
-              foregroundColor: theme.colorScheme.onError,
-            ),
-            onPressed: () {
-              Navigator.of(dialogCtx).pop(true);
-              writeCubit.delete(role.id);
-            },
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmDeleteDialog.show(
+      context,
+      title: 'Eliminar Rol',
+      message: '¿Estás seguro de que deseas eliminar este rol? Esta acción no se puede deshacer.',
+      itemName: '${role.name} (Nivel ${role.accessLevel})',
     );
+
+    if (confirmed && context.mounted) {
+      context.read<WriteRoleCubit>().delete(role.id);
+    }
   }
 
   Color _getLevelColor(int level, ColorScheme colors) {

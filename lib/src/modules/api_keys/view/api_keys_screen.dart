@@ -7,6 +7,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/api_keys_cubit/api_keys_cubit.dart';
 import '../../../cubits/api_keys_cubit/api_keys_state.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 
 class ApiKeysScreen extends StatelessWidget {
   const ApiKeysScreen({super.key});
@@ -537,32 +538,18 @@ class _ApiKeyCard extends StatelessWidget {
                 color: theme.colorScheme.error,
               ),
               tooltip: "Revocar Llave",
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text("Revocar Llave"),
-                    content: Text(
-                      "¿Seguro que deseas revocar y eliminar la llave '${apiKey.name}'? Cualquier sistema externo o tablero que use esta llave dejará de tener acceso inmediatamente.",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text("Cancelar"),
-                      ),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: theme.colorScheme.error,
-                        ),
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          cubit.deleteApiKey(apiKey.id);
-                        },
-                        child: const Text("Revocar"),
-                      ),
-                    ],
-                  ),
+              onPressed: () async {
+                final confirmed = await ConfirmDeleteDialog.show(
+                  context,
+                  title: "Revocar Llave API",
+                  message:
+                      "¿Seguro que deseas revocar y eliminar esta llave? Cualquier sistema externo o tablero que use esta llave dejará de tener acceso inmediatamente.",
+                  itemName: apiKey.name,
+                  confirmLabel: "Revocar",
                 );
+                if (confirmed) {
+                  cubit.deleteApiKey(apiKey.id);
+                }
               },
             ),
           ],

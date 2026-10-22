@@ -439,6 +439,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                if (order.patientId.isNotEmpty)
+                  _buildCompactInfoLine('Código Paciente:', '#${order.patientId}'),
                 _buildCompactInfoLine('Paciente:', patient.name, isBold: true),
                 _buildCompactInfoLine(
                   'Edad / Sexo:',

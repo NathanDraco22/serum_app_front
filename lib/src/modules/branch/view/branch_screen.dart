@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/branch_cubit/read_branches_cubit.dart';
 import '../../../cubits/branch_cubit/write_branches_cubit.dart';
 import '../widgets/branches_list.dart';
@@ -62,6 +63,17 @@ class _BodyState extends State<_Body> {
   }
 
   void _openBranchForm(BuildContext context, [BranchInDb? branch]) {
+    final isRoot = context.read<AppSessionCubit>().state.isRootUser;
+    if (branch == null && !isRoot) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Solo el usuario root puede crear nuevas sucursales'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
     showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -80,6 +92,7 @@ class _BodyState extends State<_Body> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isRoot = context.watch<AppSessionCubit>().state.isRootUser;
 
     return BlocListener<WriteBranchCubit, WriteBranchState>(
       listener: (context, state) {
@@ -194,25 +207,26 @@ class _BodyState extends State<_Body> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
-
-                // Add Button
-                ElevatedButton.icon(
-                  onPressed: () => _openBranchForm(context),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Nueva Sucursal'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                // Add Button (Exclusivo para usuario Root)
+                if (isRoot) ...[
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => _openBranchForm(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Nueva Sucursal'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

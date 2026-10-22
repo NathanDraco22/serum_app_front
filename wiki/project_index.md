@@ -155,14 +155,17 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 👤 3.5 Módulo `patient` (Catálogo y Expediente de Pacientes)
 * **Ubicación**: `lib/src/modules/patient/`
-* **Vistas**: `view/patient_screen.dart`
-* **Widgets**: `widgets/patients_list.dart`, `widgets/patient_form_dialog.dart`
+* **Vistas**: `view/patient_screen.dart`, `view/patient_orders_history_screen.dart`
+* **Widgets**: `widgets/patients_list.dart`, `widgets/patient_form_dialog.dart`, subwidgets en `widgets/patient_orders_history/` (`patient_history_header.dart`, `patient_history_filters_bar.dart`, `patient_history_order_card.dart`, `patient_history_orders_list.dart`, `patient_history_bottom_bar.dart`, `patient_history_empty_state.dart`, `patient_history_helpers.dart`), visor `lib/src/widgets/dialogs/viewers/clinical_comparison_viewer_dialog.dart` y subwidgets en `clinical_comparison_dialogs/` (`clinical_comparison_header.dart`, `clinical_comparison_kpi_cards.dart`, `clinical_comparison_filters_bar.dart`, `clinical_comparison_table.dart`, `clinical_comparison_table_row.dart`).
 * **Cubits Asociados**: `ReadPatientCubit`, `WritePatientCubit`, `SearchPatientsCubit`
 * **Funciones Clave**:
-  1. **Listado con Paginación/Actualización**: Muestra el catálogo de pacientes con datos esenciales (nombre completo, documento de identidad, edad calculada, sexo y teléfono).
-  2. **Búsqueda Instantánea**: Integra `SearchPatientsCubit` para buscar por nombre o número de identificación con debounce, sin borrar la vista ante búsquedas vacías.
-  3. **Creación y Edición Integral**: Formulario modal para registrar o modificar datos demográficos, fecha de nacimiento, contacto y sucursal de origen (`originBranch`).
+  1. **Listado con Código Correlativo**: Muestra el catálogo de pacientes con datos esenciales y su identificador incremental (`#0001`), nombre completo, documento de identidad, edad calculada, sexo y teléfono.
+  2. **Búsqueda Instantánea**: Integra `SearchPatientsCubit` para buscar por código correlativo, nombre o número de identificación con debounce, sin borrar la vista ante búsquedas vacías.
+  3. **Creación y Edición Integral**: Formulario modal para registrar o modificar datos demográficos, fecha de nacimiento, contacto y sucursal de origen (`originBranch`). En modo edición visualiza el código asignado.
   4. **Reactividad Automática**: Tras crear o editar un paciente, `ReactiveRepository` emite el evento y la lista se actualiza instantáneamente sin requerir recarga manual del servidor.
+  5. **Integración Transversal y Copiado Rápido**: El código se refleja en selectores (`PatientSelectionDialog`), tarjetas de POS (`OrderPatientCard`, `QuotationClientCard`), visores clínicos, facturación y visor modal `PatientInfoDialog` con copiado al portapapeles en 1 toque.
+  6. **Expediente Clínico Histórico (`PatientOrdersHistoryScreen`)**: Vista completa accesible por `/patients/:patientId/orders` con balance financiero, KPIs de órdenes y detalle cronológico.
+  7. **Comparativa Evolutiva de Biometrías y Exámenes (`ClinicalComparisonViewerDialog`)**: Detección inteligente de 2+ biometrías hemáticas para comparativa con 1 clic, motor de emparejamiento canónico, cálculo de Deltas ($\Delta$ y $\% \Delta$), alertas y exportación/impresión a PDF oficial (`ClinicalComparisonPdfTemplate`).
 
 ---
 
@@ -352,3 +355,4 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 3. **Manejo Seguro de Contexto Asíncrono**: En todas las operaciones asíncronas de diálogos y pantallas, validar siempre `if (!context.mounted) return;` antes de usar `context` tras un `await`.
 4. **Listados con `Refreshing`**: Las búsquedas o recargas no borran la lista previa; emiten el estado `Refreshing` mostrando un `LinearProgressIndicator` superior para máxima fluidez.
 5. **No Reglas de Negocio en `widgets/` o `tools/`**: La validación de negocio reside en los Cubits y Repositorios; los widgets solo se encargan de la presentación y captura de eventos.
+6. **Diálogo de Confirmación Reutilizable con Temporizador (`ConfirmDeleteDialog`)**: Ubicado en `lib/src/widgets/dialogs/confirm_delete_dialog.dart`, previene eliminaciones accidentales forzando un período de cuenta regresiva de 5 segundos con barra de progreso y bloqueo reactivo de botón antes de permitir eliminar Médicos, Pacientes, Pruebas de Laboratorio, Usuarios, Roles, Sucursales o Llaves API.
