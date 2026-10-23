@@ -146,37 +146,44 @@ class ParameterCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Caja de Referencia
-              Container(
-                constraints: const BoxConstraints(minWidth: 160),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.4,
-                        color: theme.colorScheme.onSurfaceVariant,
+              Tooltip(
+                message: _getReferenceText(),
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 160, maxWidth: 260),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        result.referenceText.isNotEmpty
+                            ? 'ESCALA REFERENCIAL'
+                            : (result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO'),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.4,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      _getReferenceText(),
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
+                      const SizedBox(height: 3),
+                      Text(
+                        _getReferenceText(),
+                        maxLines: result.referenceText.isNotEmpty ? 4 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: result.referenceText.isNotEmpty ? 11 : 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -252,6 +259,9 @@ class ParameterCard extends StatelessWidget {
   }
 
   String _getReferenceText() {
+    if (result.referenceText.isNotEmpty) {
+      return result.referenceText;
+    }
     if (result.dataType == 'numeric') {
       if (result.referenceValues.isNotEmpty) {
         final ref = result.referenceValues.first;

@@ -220,12 +220,15 @@ class OrdersList extends StatelessWidget {
                                 children: [
                                   Icon(Icons.lock, size: 11, color: Colors.red.shade900),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'BLOQUEADA (REQ. AUTORIZACIÓN)',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red.shade900,
+                                  Flexible(
+                                    child: Text(
+                                      'BLOQUEADA (REQ. AUTORIZACIÓN)',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade900,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -244,12 +247,15 @@ class OrdersList extends StatelessWidget {
                                 children: [
                                   Icon(Icons.verified_user_outlined, size: 11, color: Colors.teal.shade800),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    'AUTORIZADO: ${order.approval!.approvedBy!.name}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.teal.shade800,
+                                  Flexible(
+                                    child: Text(
+                                      'AUTORIZADO: ${order.approval!.approvedBy!.name}',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal.shade800,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -381,8 +387,49 @@ class OrdersList extends StatelessWidget {
                 // Botón de Desbloqueo / Autorización
                 if (isBlocked) ...[
                   IconButton(
+                    icon: const Icon(Icons.sync_rounded),
+                    tooltip: 'Verificar si ya fue autorizada remotamente',
+                    color: theme.colorScheme.primary,
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final fresh = await context.read<ReadOrderCubit>().refreshOrder(order.id);
+                      if (!context.mounted) return;
+                      if (fresh == null) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('No se pudo verificar el estado de la orden. Verifica tu conexión.'),
+                          ),
+                        );
+                      } else if (!fresh.isBlocked) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: Colors.white),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text('¡Orden #${order.id} autorizada y desbloqueada!'),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: Colors.green.shade800,
+                          ),
+                        );
+                      } else {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'La orden #${order.id} continúa pendiente de autorización por el supervisor.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
                     icon: const Icon(Icons.lock_open),
-                    tooltip: 'Autorizar y Desbloquear Orden',
+                    tooltip: 'Autorizar y Desbloquear Orden (en este equipo)',
                     color: Colors.amber.shade900,
                     onPressed: () async {
                       final currentUser = context.read<AppSessionCubit>().user;

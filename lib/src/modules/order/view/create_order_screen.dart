@@ -325,6 +325,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               referenceValues: childTest.referenceValues,
               qualitativeOptions: childTest.qualitativeOptions,
               expectedQualitativeValue: childTest.expectedQualitativeValue,
+              referenceText: childTest.referenceText,
             );
           }
         }
@@ -340,6 +341,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
             referenceValues: item.referenceValues,
             qualitativeOptions: item.qualitativeOptions,
             expectedQualitativeValue: item.expectedQualitativeValue,
+            referenceText: item.referenceText,
           );
         }
       }

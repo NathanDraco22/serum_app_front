@@ -281,26 +281,29 @@ class _BodyState extends State<_Body> {
                   children: [
                     Row(
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Órdenes Clínicas',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Órdenes Clínicas',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Registro, seguimiento de análisis médicos y control de pagos',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Registro, seguimiento de análisis médicos y control de pagos',
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 16),
                         // KPIs rápidos
                         _KpiBadge(
                           label: 'Total',
@@ -325,7 +328,16 @@ class _BodyState extends State<_Body> {
                           count: completedCount,
                           color: Colors.green.shade700,
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
+                        IconButton.filledTonal(
+                          onPressed: () {
+                            final bId = context.read<AppSessionCubit>().currentBranchId;
+                            context.read<ReadOrderCubit>().getAll(OrderQueryParams(branchId: bId));
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          tooltip: 'Actualizar órdenes',
+                        ),
+                        const SizedBox(width: 8),
                         PrimaryButton(
                           onPressed: () => _openOrderForm(context),
                           icon: Icons.add,
@@ -380,6 +392,7 @@ class _BodyState extends State<_Body> {
                             key: ValueKey(_filterStatus),
                             initialValue: _filterStatus,
                             isDense: true,
+                            isExpanded: true,
                             decoration: InputDecoration(
                               labelText: 'Estado de la orden',
                               prefixIcon: const Icon(Icons.filter_list, size: 20),

@@ -87,6 +87,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }
 
   String _resolveReferenceText(OrderTestResult r, int patientAge, String gender) {
+    if (r.referenceText.isNotEmpty) {
+      return r.referenceText;
+    }
     if (r.dataType == 'numeric') {
       if (r.referenceValues.isNotEmpty) {
         final normalizedGender = gender.toLowerCase();

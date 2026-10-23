@@ -832,7 +832,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                               alertFlag != null && alertFlag.isNotEmpty;
 
                           String referenceText = '—';
-                          if (isNumeric && r.referenceValues.isNotEmpty) {
+                          if (r.referenceText.isNotEmpty) {
+                            referenceText = r.referenceText;
+                          } else if (isNumeric && r.referenceValues.isNotEmpty) {
                             final ref = r.referenceValues.first;
                             final unit = r.unitOfMeasure.isNotEmpty
                                 ? ' ${r.unitOfMeasure}'

@@ -38,6 +38,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _price2Controller = TextEditingController();
   final TextEditingController _qualitativeOptionsController = TextEditingController();
+  final TextEditingController _referenceTextController = TextEditingController();
 
   static const List<Map<String, dynamic>> _qualitativePresets = [
     {
@@ -163,6 +164,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '';
     _price2Controller.text = _salePrice2 > 0 ? _salePrice2.toStringAsFixed(2) : '';
     _qualitativeOptionsController.text = _qualitativeOptions.join(', ');
+    _referenceTextController.text = widget.labTest?.referenceText ?? '';
   }
 
   @override
@@ -172,6 +174,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     _priceController.dispose();
     _price2Controller.dispose();
     _qualitativeOptionsController.dispose();
+    _referenceTextController.dispose();
     super.dispose();
   }
 
@@ -214,6 +217,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
               !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
+          referenceText: !_isPack ? _referenceTextController.text.trim() : '',
         );
         cubit.create(newTest);
       } else {
@@ -235,6 +239,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
               !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
+          referenceText: !_isPack ? _referenceTextController.text.trim() : '',
         );
         cubit.update(widget.labTest!.id, updateTest);
       }
@@ -1178,6 +1183,20 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                     ),
                                   ),
                               ],
+
+                              // Texto / Escala de Referencia Explicativa (Opcional para cualquier prueba individual)
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                controller: _referenceTextController,
+                                maxLines: 3,
+                                decoration: const InputDecoration(
+                                  labelText: 'Texto / Escala de Referencia Explicativa (Opcional)',
+                                  hintText: 'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
+                                  helperText: 'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones PDF.',
+                                  border: OutlineInputBorder(),
+                                  alignLabelWithHint: true,
+                                ),
+                              ),
                             ],
                           ),
                         ),

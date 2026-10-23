@@ -4,11 +4,13 @@ import 'package:serum_business/serum_business.dart';
 class LabTestDetailDialog extends StatelessWidget {
   final LabTestInDb labTest;
   final List<LabTestInDb> allLabTests;
+  final void Function(LabTestInDb)? onEditPrice;
 
   const LabTestDetailDialog({
     super.key,
     required this.labTest,
     this.allLabTests = const [],
+    this.onEditPrice,
   });
 
   @override
@@ -120,6 +122,12 @@ class LabTestDetailDialog extends StatelessWidget {
                             value: '\$$priceFormatted USD',
                             icon: Icons.sell,
                             isHighlighted: true,
+                            tooltip: onEditPrice != null
+                                ? 'Tocar para modificar precio'
+                                : null,
+                            onTap: onEditPrice != null
+                                ? () => onEditPrice!(labTest)
+                                : null,
                           ),
                         ),
                         /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
@@ -362,6 +370,28 @@ class LabTestDetailDialog extends StatelessWidget {
             ),
           ),
         ],
+
+        if (labTest.referenceText.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Escala / Notas de Referencia',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Text(
+              labTest.referenceText,
+              style: const TextStyle(fontSize: 12, height: 1.4),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -494,19 +524,23 @@ class _InfoTile extends StatelessWidget {
   final String value;
   final IconData icon;
   final bool isHighlighted;
+  final VoidCallback? onTap;
+  final String? tooltip;
 
   const _InfoTile({
     required this.label,
     required this.value,
     required this.icon,
     this.isHighlighted = false,
+    this.onTap,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
+    Widget content = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isHighlighted
@@ -547,8 +581,36 @@ class _InfoTile extends StatelessWidget {
               ],
             ),
           ),
+          if (onTap != null)
+            Icon(
+              Icons.edit_outlined,
+              size: 16,
+              color: isHighlighted
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
         ],
       ),
     );
+
+    if (onTap != null) {
+      content = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: content,
+        ),
+      );
+    }
+
+    if (tooltip != null) {
+      content = Tooltip(
+        message: tooltip!,
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

@@ -9,6 +9,7 @@ import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../widgets/lab_tests_list.dart';
 import 'lab_test_form_screen.dart';
 import '../widgets/lab_test_detail_dialog.dart';
+import '../widgets/lab_test_quick_price_dialog.dart';
 import '../../../widgets/common/app_buttons.dart';
 
 class LabTestsScreen extends StatelessWidget {
@@ -111,8 +112,20 @@ class _BodyState extends State<_Body> {
         return LabTestDetailDialog(
           labTest: labTest,
           allLabTests: allTests,
+          onEditPrice: (test) {
+            Navigator.of(dialogContext).pop();
+            _openQuickPriceDialog(context, test);
+          },
         );
       },
+    );
+  }
+
+  void _openQuickPriceDialog(BuildContext context, LabTestInDb labTest) {
+    LabTestQuickPriceDialog.show(
+      context,
+      labTest: labTest,
+      branchId: context.read<AppSessionCubit>().currentBranchId,
     );
   }
 
@@ -380,6 +393,7 @@ class _BodyState extends State<_Body> {
                       allLabTests: allTests,
                       onEdit: (labTest) => _openLabTestForm(context, labTest),
                       onDetail: (labTest) => _openLabTestDetail(context, labTest, allTests),
+                      onEditPrice: (labTest) => _openQuickPriceDialog(context, labTest),
                     );
                   },
                 ),

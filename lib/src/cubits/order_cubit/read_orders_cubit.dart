@@ -43,6 +43,20 @@ class ReadOrderCubit extends Cubit<ReadOrderState> {
     }
   }
 
+  /// Consulta el estado más reciente de una orden específica en el backend
+  /// y actualiza el estado local en memoria sin recargar toda la lista.
+  Future<OrderInDb?> refreshOrder(String orderId) async {
+    try {
+      final item = await ordersRepository.getOrderById(orderId);
+      if (item != null && !isClosed) {
+        markOrderUpdated(item);
+      }
+      return item;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> getById(String orderId) async {
     emit(ReadOrderLoading());
     try {

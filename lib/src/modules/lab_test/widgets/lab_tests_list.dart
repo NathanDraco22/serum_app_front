@@ -10,6 +10,7 @@ class LabTestsList extends StatelessWidget {
   final List<LabTestInDb> allLabTests;
   final Function(LabTestInDb) onEdit;
   final Function(LabTestInDb) onDetail;
+  final Function(LabTestInDb)? onEditPrice;
 
   const LabTestsList({
     super.key,
@@ -17,6 +18,7 @@ class LabTestsList extends StatelessWidget {
     this.allLabTests = const [],
     required this.onEdit,
     required this.onDetail,
+    this.onEditPrice,
   });
 
   @override
@@ -152,31 +154,77 @@ class LabTestsList extends StatelessWidget {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.sell, size: 14, color: theme.colorScheme.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '\$$priceFormatted',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                                /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
-                                if (labTest.salePrice2 > 0) ...[
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'P2: \$${(labTest.salePrice2 / 100.0).toStringAsFixed(2)}',
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: theme.colorScheme.tertiary,
+                            Tooltip(
+                              message: 'Tocar para modificar precio',
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: onEditPrice != null
+                                      ? () => onEditPrice!(labTest)
+                                      : null,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primaryContainer
+                                          .withValues(alpha: 0.35),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.sell,
+                                          size: 13,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 5),
+                                        Text(
+                                          '\$$priceFormatted',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        if (labTest.salePrice2 > 0) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.tertiaryContainer,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'P2: \$${(labTest.salePrice2 / 100.0).toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.onTertiaryContainer,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.edit_outlined,
+                                          size: 13,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                                */
-                              ],
+                                ),
+                              ),
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.min,

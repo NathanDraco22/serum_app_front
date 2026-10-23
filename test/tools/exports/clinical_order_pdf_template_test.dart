@@ -241,5 +241,72 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Genera PDF correctamente para prueba con referenceText multilínea (HbA1c)', () async {
+      final hba1cOrder = OrderInDb(
+        id: 'ord-hba1c-1',
+        patientId: 'pat-1',
+        doctorId: 'doc-1',
+        branchId: 'br-1',
+        items: [
+          OrderItem(
+            labTestId: 'lt-hba1c',
+            name: 'Glicohemoglobina A1c (HbA1c)',
+            salePriceApplied: 2500,
+          ),
+        ],
+        status: 'completed',
+        totalPrice: 2500,
+        paidAmount: 2500,
+        results: [
+          OrderTestResult(
+            labTestId: 'lt-hba1c',
+            parameterName: 'Glicohemoglobina A1c HbA1c',
+            medicalClassification: 'Química Sanguínea',
+            dataType: 'numeric',
+            unitOfMeasure: '%',
+            referenceValues: [
+              ReferenceValue(
+                patientType: 'general',
+                gender: 'both',
+                minAgeDays: 0,
+                maxAgeDays: 43800,
+                minValue: 4.0,
+                maxValue: 5.6,
+              ),
+            ],
+            referenceText: '- Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético\n- Mayor de 6.5%: Diagnosticado diabético\n- NOTA: 4.5 - 8.4%: Metabolismo normal O Diabético Controlado\n- (Mayor de 8.5%: Diabético mal controlado o Metabolismo desequilibrado)',
+            resultValue: '6.0',
+            alertFlag: 'HIGH',
+          ),
+        ],
+        createdAt: nowMs,
+        patientInfo: PatientInfo(
+          name: 'Maribel Lopez',
+          dateOfBirth: nowMs - (53 * 365 * 86400000),
+          gender: 'F',
+        ),
+      );
+
+      final branchWithoutImage = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Serum Matriz',
+        address: 'Calle Principal 456',
+        phone: 'PBX 2222-0000',
+        imageUrl: null,
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: hba1cOrder,
+        branch: branchWithoutImage,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }
