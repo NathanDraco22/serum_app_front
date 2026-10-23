@@ -20,6 +20,7 @@ class PatientSelectionDialog extends StatefulWidget {
 
 class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
   List<PatientInDb> _patients = [];
+  List<PatientInDb> _initialPatients = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _currentQuery = '';
@@ -38,6 +39,7 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
       if (!mounted) return;
       setState(() {
         _patients = list;
+        _initialPatients = list;
         _isLoading = false;
       });
     } catch (e) {
@@ -53,6 +55,15 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
   Future<void> _searchPatients(String keyword) async {
     _currentQuery = keyword.trim();
 
+    if (_currentQuery.isEmpty) {
+      setState(() {
+        _patients = _initialPatients;
+        _isLoading = false;
+        _errorMessage = null;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -61,15 +72,10 @@ class _PatientSelectionDialogState extends State<PatientSelectionDialog> {
     try {
       final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
       final repo = context.read<PatientsRepository>();
-      List<PatientInDb> results;
-      if (_currentQuery.isEmpty) {
-        results = await repo.getAllPatients(originBranch: currentBranchId);
-      } else {
-        results = await repo.searchPatientsByText(
-          _currentQuery,
-          originBranch: currentBranchId,
-        );
-      }
+      final results = await repo.searchPatientsByText(
+        _currentQuery,
+        originBranch: currentBranchId,
+      );
 
       if (!mounted) return;
       setState(() {

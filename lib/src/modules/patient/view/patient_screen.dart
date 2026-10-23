@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
@@ -58,20 +60,37 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(BuildContext context, String query) {
-    final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
-    if (query.trim().isEmpty) {
-      context.read<SearchPatientCubit>().search('', originBranch: currentBranchId);
-    } else {
-      context.read<SearchPatientCubit>().search(query, originBranch: currentBranchId);
+    _debounceTimer?.cancel();
+    setState(() {}); // Actualiza visibilidad de suffixIcon
+
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      context.read<SearchPatientCubit>().clear();
+      return;
     }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final currentBranchId = context.read<AppSessionCubit>().currentBranchId;
+      context.read<SearchPatientCubit>().search(trimmed, originBranch: currentBranchId);
+    });
+  }
+
+  void _clearSearch(BuildContext context) {
+    _debounceTimer?.cancel();
+    _searchController.clear();
+    context.read<SearchPatientCubit>().clear();
+    setState(() {});
   }
 
   void _openPatientForm(BuildContext context, [PatientInDb? patient]) {
@@ -130,26 +149,29 @@ class _BodyState extends State<_Body> {
             ),
             child: Row(
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pacientes',
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pacientes',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Gestión del catálogo de pacientes del laboratorio',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Gestión del catálogo de pacientes del laboratorio',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 16),
                 // Search Input
                 SizedBox(
                   width: 300,
@@ -157,8 +179,15 @@ class _BodyState extends State<_Body> {
                     controller: _searchController,
                     onChanged: (val) => _onSearchChanged(context, val),
                     decoration: InputDecoration(
-                      hintText: 'Buscar paciente...',
+                      hintText: 'Buscar paciente por nombre, cédula o teléfono...',
                       prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              tooltip: 'Limpiar búsqueda',
+                              onPressed: () => _clearSearch(context),
+                            )
+                          : null,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -199,11 +228,49 @@ class _BodyState extends State<_Body> {
           Expanded(
             child: BlocBuilder<SearchPatientCubit, SearchPatientState>(
               builder: (context, searchState) {
-                if (searchState is SearchPatientSuccess && _searchController.text.trim().isNotEmpty) {
-                  return PatientsList(
-                    patients: searchState.items,
-                    onEdit: (patient) => _openPatientForm(context, patient),
-                  );
+                if (_searchController.text.trim().isNotEmpty) {
+                  if (searchState is SearchPatientLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (searchState is SearchPatientSuccess) {
+                    if (searchState.items.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 48,
+                              color: theme.colorScheme.outline,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No se encontraron pacientes para "${_searchController.text.trim()}"',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () => _clearSearch(context),
+                              icon: const Icon(Icons.backspace_outlined, size: 16),
+                              label: const Text('Limpiar búsqueda'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return PatientsList(
+                      patients: searchState.items,
+                      onEdit: (patient) => _openPatientForm(context, patient),
+                    );
+                  } else if (searchState is SearchPatientError) {
+                    return Center(
+                      child: Text(
+                        'Error al buscar pacientes: ${searchState.message}',
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
+                    );
+                  }
                 }
 
                 // Default fallback to read all patients

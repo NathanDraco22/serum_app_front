@@ -149,6 +149,55 @@ void main() {
 
       await writeCubit.close();
     });
+
+    testWidgets('renders pack options without assertion errors when isPack is true',
+        (tester) async {
+      final packTest = LabTestInDb(
+        id: 'pack-201',
+        name: 'Perfil Lipídico',
+        code: 'PERF-LIP',
+        commercialCategory: 'Perfiles Clínicos',
+        salePrice: 40000,
+        salePrice2: 35000,
+        costPrice: 15000,
+        currency: 'USD',
+        isPack: true,
+        useChildTestsPriceSum: true,
+        childTestIds: ['test-col', 'test-tri'],
+        dataType: 'numeric',
+        unitOfMeasure: '',
+        createdAt: 1700000000000,
+        isDeleted: false,
+      );
+
+      final writeCubit = WriteLabTestCubit(labTestsRepository: repository);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BlocProvider<WriteLabTestCubit>.value(
+              value: writeCubit,
+              child: LabTestQuickPriceDialog(
+                labTest: packTest,
+                branchId: 'branch-1',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify header and pack specific section
+      expect(find.text('Modificar Precio de Análisis'), findsOneWidget);
+      expect(find.text('Perfil Lipídico'), findsOneWidget);
+      expect(find.text('Cód: PERF-LIP'), findsOneWidget);
+      expect(find.text('Modalidad de Precio del Perfil / Pack'), findsOneWidget);
+      expect(
+        find.text('Calcular precio sumando los análisis incluidos'),
+        findsOneWidget,
+      );
+
+      await writeCubit.close();
+    });
   });
 
   group('LabTestsList Price Badge Interaction', () {

@@ -299,7 +299,6 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                   if (isPack) ...[
                     Material(
                       color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(color: Colors.blue.shade200),
