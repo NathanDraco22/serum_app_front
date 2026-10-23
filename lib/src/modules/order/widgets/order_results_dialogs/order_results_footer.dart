@@ -34,37 +34,48 @@ class OrderResultsFooter extends StatelessWidget {
         ),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (isReadOnly || hasResults)
-            OutlinedButton.icon(
-              icon: const Icon(Icons.picture_as_pdf, size: 16),
-              label: const Text('Ver Informe'),
-              style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
+            Flexible(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.picture_as_pdf, size: 16),
+                label: const Text('Ver Informe'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: isSubmitting ? null : onViewReport,
               ),
-              onPressed: isSubmitting ? null : onViewReport,
-            ),
-          const Spacer(),
-          TextButton(
-            onPressed: isSubmitting ? null : onCancel,
-            child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),
+            )
+          else
+            const SizedBox.shrink(),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                onPressed: isSubmitting ? null : onCancel,
+                child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),
+              ),
+              if (!isReadOnly) ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check, size: 16),
+                  label: Text(
+                    canComplete ? 'Completar y Guardar' : 'Guardar Resultados',
+                  ),
+                  onPressed: isSubmitting ? null : onSubmit,
+                ),
+              ],
+            ],
           ),
-          if (!isReadOnly) ...[
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              icon: isSubmitting
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.check, size: 16),
-              label: Text(
-                canComplete ? 'Completar y Guardar' : 'Guardar Resultados',
-              ),
-              onPressed: isSubmitting ? null : onSubmit,
-            ),
-          ],
         ],
       ),
     );

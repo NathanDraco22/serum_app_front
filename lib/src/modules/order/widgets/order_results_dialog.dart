@@ -28,6 +28,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late TextEditingController _notesController;
   late Map<String, String> _qualitativeValues;
   late List<FocusNode> _focusNodes;
+  late FocusNode _notesFocusNode;
   final Set<String> _autoCalculatedFieldIds = {};
   final Map<String, String> _autoCalculatedFormulas = {};
   final Set<String> _manuallyOverriddenFieldIds = {};
@@ -41,6 +42,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     _controllers = {};
     _qualitativeValues = {};
     _notesController = TextEditingController(text: widget.order.notes ?? '');
+    _notesFocusNode = FocusNode();
 
     for (var r in _results) {
       if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
@@ -265,12 +267,13 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     if (index + 1 < _focusNodes.length) {
       _focusNodes[index + 1].requestFocus();
     } else {
-      _submit();
+      _notesFocusNode.requestFocus();
     }
   }
 
   @override
   void dispose() {
+    _notesFocusNode.dispose();
     _notesController.dispose();
     for (var node in _focusNodes) {
       node.dispose();
@@ -521,8 +524,8 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
-            maxWidth: 600,
-            maxHeight: 600,
+            maxWidth: 680,
+            maxHeight: 680,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -574,7 +577,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                         isAlert: isAlert,
                         isReadOnly: isReadOnly,
                         focusNode: _focusNodes[index],
-                        isLast: index == _results.length - 1,
+                        isLast: false,
                         onFieldSubmitted: () => _onFieldSubmitted(index),
                         controller: _controllers[r.labTestId],
                         isAutoCalculated: _autoCalculatedFieldIds.contains(r.labTestId),
@@ -639,15 +642,17 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              Text(
-                'Observaciones / Notas del Bioanalista',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  'Descripción / Observaciones del Bioanalista',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
-              const Spacer(),
-              if (isReadOnly)
+              if (isReadOnly) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
@@ -661,19 +666,21 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 10),
           TextFormField(
             controller: _notesController,
+            focusNode: _notesFocusNode,
             readOnly: isReadOnly,
             maxLines: 3,
             minLines: 2,
             style: theme.textTheme.bodyMedium,
             decoration: InputDecoration(
               hintText: isReadOnly
-                  ? 'Sin observaciones registradas'
-                  : 'Ingrese notas diagnósticas, incidencias de la muestra (ej. hemólisis, lipemia), o comentarios clínicos...',
+                  ? 'Sin descripción ni observaciones registradas'
+                  : 'Ingrese notas diagnósticas, descripción clínica, incidencias de la muestra (ej. hemólisis, lipemia), o comentarios clínicos...',
               hintStyle: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
               ),

@@ -91,11 +91,12 @@ class AdministrationScreen extends StatelessWidget {
                   // Cards Grid
                   LayoutBuilder(
                     builder: (context, constraints) {
+                      final isWide = constraints.maxWidth > 900;
                       return GridView.extent(
                         maxCrossAxisExtent: 420,
                         crossAxisSpacing: 20,
                         mainAxisSpacing: 20,
-                        childAspectRatio: 1.45,
+                        childAspectRatio: isWide ? 1.22 : 1.15,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         children: [

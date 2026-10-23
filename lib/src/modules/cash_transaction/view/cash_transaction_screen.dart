@@ -118,6 +118,7 @@ class _BodyState extends State<_Body> {
                 width: 290,
                 child: DropdownButtonFormField<String?>(
                   initialValue: _selectedShiftId,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Filtrar por Turno',
                     prefixIcon: Icon(Icons.lock_clock_outlined, size: 20),

@@ -63,10 +63,11 @@ class _SideNav extends StatelessWidget {
     final user = sessionState.currentUser;
     final activeShift = sessionState.activeShift;
 
-    return Container(
-      width: 260,
+    return Material(
       color: theme.colorScheme.surfaceContainerLow,
-      child: Column(
+      child: SizedBox(
+        width: 260,
+        child: Column(
         children: [
           // Logo / Header
           Padding(
@@ -326,6 +327,7 @@ class _SideNav extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -402,32 +404,29 @@ class _NavItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Material(
-        color: Colors.transparent,
-        child: ListTile(
-          leading: Icon(
-            icon,
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
+        ),
+        title: Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             color: isSelected
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
+                : theme.colorScheme.onSurface,
           ),
-          title: Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface,
-            ),
-          ),
-          selected: isSelected,
-          selectedTileColor: theme.colorScheme.primaryContainer.withAlpha(38),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          onTap: onTap,
-          dense: true,
         ),
+        selected: isSelected,
+        selectedTileColor: theme.colorScheme.primaryContainer.withAlpha(38),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        onTap: onTap,
+        dense: true,
       ),
     );
   }

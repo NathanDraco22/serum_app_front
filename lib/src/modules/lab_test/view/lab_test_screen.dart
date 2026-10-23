@@ -114,7 +114,11 @@ class _BodyState extends State<_Body> {
           allLabTests: allTests,
           onEditPrice: (test) {
             Navigator.of(dialogContext).pop();
-            _openQuickPriceDialog(context, test);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                _openQuickPriceDialog(context, test);
+              }
+            });
           },
         );
       },

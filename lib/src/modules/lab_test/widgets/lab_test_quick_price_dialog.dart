@@ -27,6 +27,7 @@ class LabTestQuickPriceDialog extends StatefulWidget {
 
     return showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: false,
       builder: (dialogCtx) => BlocProvider.value(
         value: writeCubit,
@@ -49,6 +50,14 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
   late final TextEditingController _price2Controller;
   late bool _useChildTestsPriceSum;
   bool _isSaving = false;
+  bool _hasPopped = false;
+
+  void _closeDialog(bool result) {
+    if (!_hasPopped && mounted) {
+      _hasPopped = true;
+      Navigator.of(context, rootNavigator: true).pop(result);
+    }
+  }
 
   @override
   void initState() {
@@ -103,9 +112,6 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
 
     try {
       await cubit.update(widget.labTest.id, updateModel);
-      if (mounted) {
-        Navigator.of(context).pop(true);
-      }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -127,7 +133,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
     return BlocListener<WriteLabTestCubit, WriteLabTestState>(
       listener: (context, state) {
         if (state is LabTestUpdated && mounted && _isSaving) {
-          Navigator.of(context).pop(true);
+          _closeDialog(true);
         } else if (state is WriteLabTestError && mounted && _isSaving) {
           setState(() => _isSaving = false);
         }
@@ -171,7 +177,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
             ),
             IconButton(
               icon: const Icon(Icons.close, size: 20),
-              onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+              onPressed: _isSaving ? null : () => _closeDialog(false),
             ),
           ],
         ),
@@ -291,61 +297,64 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
 
                   // Si es Pack y tiene sumatoria automática, permitir alternar a tarifa fija
                   if (isPack) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                    Material(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
+                        side: BorderSide(color: Colors.blue.shade200),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 16,
-                                color: Colors.blue.shade800,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Modalidad de Precio del Perfil / Pack',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade900,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Colors.blue.shade800,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Modalidad de Precio del Perfil / Pack',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue.shade900,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            visualDensity: VisualDensity.compact,
-                            dense: true,
-                            title: const Text(
-                              'Calcular precio sumando los análisis incluidos',
-                              style: TextStyle(fontSize: 12),
+                              ],
                             ),
-                            value: _useChildTestsPriceSum,
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() => _useChildTestsPriceSum = val);
-                              }
-                            },
-                          ),
-                          if (_useChildTestsPriceSum)
-                            Text(
-                              'El precio se actualizará automáticamente a partir de la suma de sus pruebas hijas. Si deseas establecer una tarifa especial fija, desmarca esta casilla.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.blue.shade800,
+                            const SizedBox(height: 4),
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                              dense: true,
+                              title: const Text(
+                                'Calcular precio sumando los análisis incluidos',
+                                style: TextStyle(fontSize: 12),
                               ),
+                              value: _useChildTestsPriceSum,
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _useChildTestsPriceSum = val);
+                                }
+                              },
                             ),
-                        ],
+                            if (_useChildTestsPriceSum)
+                              Text(
+                                'El precio se actualizará automáticamente a partir de la suma de sus pruebas hijas. Si deseas establecer una tarifa especial fija, desmarca esta casilla.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -421,7 +430,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
         actionsPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         actions: [
           TextButton(
-            onPressed: _isSaving ? null : () => Navigator.of(context).pop(false),
+            onPressed: _isSaving ? null : () => _closeDialog(false),
             child: const Text('Cancelar'),
           ),
           FilledButton.icon(
