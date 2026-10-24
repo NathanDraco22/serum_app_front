@@ -839,10 +839,10 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                                 : '';
                             referenceText =
                                 '${ref.minValue} - ${ref.maxValue}$unit';
-                          } else if (r.referenceText.isNotEmpty) {
+                          } else if (r.referenceText.trim().isNotEmpty) {
                             referenceText = r.referenceText.contains('\n') || r.referenceText.length > 25
                                 ? 'Ver notas'
-                                : r.referenceText;
+                                : r.referenceText.trim();
                           } else if (r.dataType == 'boolean' &&
                               r.expectedQualitativeValue != null) {
                             referenceText =

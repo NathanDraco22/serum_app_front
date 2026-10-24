@@ -10,6 +10,8 @@ class ImportsCubit extends Cubit<ImportsState> {
       : super(const ImportsInitial());
 
   ImportCatalogResult? get lastResult => importsRepository.lastResult;
+  ImportBranchPricesResult? get lastPricesResult =>
+      importsRepository.lastPricesResult;
 
   Future<ImportCatalogResult?> importDefaultCatalog() async {
     emit(const ImportsLoading(
@@ -33,6 +35,29 @@ class ImportsCubit extends Cubit<ImportsState> {
       final result = await importsRepository.importLabTests();
       if (isClosed) return result;
       emit(ImportsSuccess(result));
+      return result;
+    } catch (e) {
+      if (isClosed) return null;
+      emit(ImportsFailure(e.toString()));
+      return null;
+    }
+  }
+
+  Future<ImportBranchPricesResult?> importBranchPrices({
+    required String sourceBranchId,
+    required String targetBranchId,
+    bool mustOverridePrice = false,
+  }) async {
+    emit(const ImportsLoading(
+        message: 'Importando precios entre sucursales...'));
+    try {
+      final result = await importsRepository.importBranchPrices(
+        sourceBranchId: sourceBranchId,
+        targetBranchId: targetBranchId,
+        mustOverridePrice: mustOverridePrice,
+      );
+      if (isClosed) return result;
+      emit(ImportsPricesSuccess(result));
       return result;
     } catch (e) {
       if (isClosed) return null;

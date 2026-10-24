@@ -6,6 +6,7 @@ import 'package:serum_business/serum_business.dart';
 import '../../../cubits/imports_cubit/imports_cubit.dart';
 import '../../../cubits/imports_cubit/imports_state.dart';
 import '../../../widgets/gates/permission_gate.dart';
+import '../widgets/branch_prices_import_card.dart';
 
 class ImportsScreen extends StatelessWidget {
   const ImportsScreen({super.key});
@@ -123,7 +124,7 @@ class _ImportsScaffold extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Carga e inicialización de catálogos maestros y datos base para el tenant actual',
+                        'Carga e inicialización de catálogos maestros, datos base y sincronización multi-sede',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -197,6 +198,14 @@ class _ImportsScaffold extends StatelessWidget {
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
+                    } else if (state is ImportsPricesSuccess) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.result.message),
+                          backgroundColor: Colors.teal.shade700,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     } else if (state is ImportsFailure) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -228,21 +237,32 @@ class _ImportsScaffold extends StatelessWidget {
 
                               const SizedBox(height: 24),
 
-                              // 2. Estado de carga en progreso
+                              // 2. Tarjeta: Importación de Precios entre Sucursales
+                              BranchPricesImportCard(
+                                isLoading: isLoading,
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // 3. Estado de carga en progreso
                               if (isLoading)
                                 _buildLoadingIndicator(context, theme, state),
 
-                              // 3. Tarjeta de Resultados (KPIs)
+                              // 4. Tarjetas de Resultados (KPIs)
                               if (state is ImportsSuccess)
                                 _buildResultsCard(context, theme, state.result),
 
-                              // 4. Tarjeta de Error
+                              if (state is ImportsPricesSuccess)
+                                _buildPricesResultsCard(
+                                    context, theme, state.result),
+
+                              // 5. Tarjeta de Error
                               if (state is ImportsFailure)
                                 _buildErrorCard(context, theme, state.message),
 
                               const SizedBox(height: 32),
 
-                              // 5. Próximas importaciones (Roadmap extensible)
+                              // 6. Próximas importaciones (Roadmap extensible)
                               _buildUpcomingImportsSection(context, theme),
                             ],
                           ),
@@ -267,11 +287,11 @@ class _ImportsScaffold extends StatelessWidget {
   }) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerLow,
+      color: theme.colorScheme.surfaceContainerLowest,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withAlpha(90),
+          color: theme.colorScheme.outlineVariant.withAlpha(120),
         ),
       ),
       child: Padding(
@@ -371,42 +391,46 @@ class _ImportsScaffold extends StatelessWidget {
                 _buildFeatureChip(
                   theme,
                   Icons.water_drop_outlined,
-                  'Uroanálisis General (EGO y Sedimento)',
+                  'Urianálisis y Coprología Completa',
                 ),
                 _buildFeatureChip(
                   theme,
-                  Icons.coronavirus_outlined,
-                  'Coprología, Parasitología y Serología',
+                  Icons.layers_outlined,
+                  'Packs y Perfiles (Perfil Lipídico, Baterías Diagnósticas)',
                 ),
                 _buildFeatureChip(
                   theme,
-                  Icons.category_outlined,
-                  'Cuentas Contables y Categorías Clínicas',
+                  Icons.account_tree_outlined,
+                  'Cuentas Comerciales de Laboratorio inicializadas',
                 ),
               ],
             ),
 
             const SizedBox(height: 20),
 
-            // Banner informativo de idempotencia
+            // Advertencia de conservación de datos
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withAlpha(20),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue.withAlpha(60)),
+                color: theme.colorScheme.surfaceContainerHighest.withAlpha(100),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withAlpha(80),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded,
-                      color: Colors.blue, size: 20),
+                  Icon(
+                    Icons.security_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Operación Idempotente y Segura: Si una prueba ya existe registrada con el mismo código, el sistema la respetará y preservará sin sobrescribir precios o configuraciones personalizadas.',
+                      'Operación segura e idempotente: Las pruebas ya existentes no serán sobrescritas ni se duplicarán registros.',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.blue.shade900,
-                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -416,7 +440,7 @@ class _ImportsScaffold extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Botón de acción
+            // Botón de Acción
             Align(
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
@@ -429,11 +453,9 @@ class _ImportsScaffold extends StatelessWidget {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.play_arrow_rounded),
+                    : const Icon(Icons.cloud_download_rounded, size: 18),
                 label: Text(
-                  isLoading
-                      ? 'Procesando importación...'
-                      : 'Ejecutar Importación del Catálogo',
+                  isLoading ? 'Procesando...' : 'Iniciar Importación de Catálogo',
                 ),
                 onPressed: isLoading ? null : onImport,
                 style: FilledButton.styleFrom(
@@ -483,33 +505,42 @@ class _ImportsScaffold extends StatelessWidget {
   ) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerLow,
+      color: theme.colorScheme.primaryContainer.withAlpha(40),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: theme.colorScheme.primary.withAlpha(80)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+        padding: const EdgeInsets.all(20),
+        child: Row(
           children: [
-            const LinearProgressIndicator(),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  state.message ?? 'Cargando y procesando pruebas clínicas...',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Proceso de Importación en Curso...',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    state.message ??
+                        'Sincronizando información en la base de datos...',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -561,6 +592,11 @@ class _ImportsScaffold extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  tooltip: 'Cerrar resumen',
+                  onPressed: () => context.read<ImportsCubit>().reset(),
                 ),
               ],
             ),
@@ -614,6 +650,162 @@ class _ImportsScaffold extends StatelessWidget {
                       value: result.alreadyExisting.toString(),
                       icon: Icons.verified_rounded,
                       color: Colors.teal,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPricesResultsCard(
+    BuildContext context,
+    ThemeData theme,
+    ImportBranchPricesResult result,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Colors.teal.withAlpha(15),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.teal.withAlpha(90)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.teal,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Resultado de Importación de Precios',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal.shade900,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            tooltip: 'Cerrar resumen',
+                            onPressed: () =>
+                                context.read<ImportsCubit>().reset(),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        result.message,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.teal.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withAlpha(70),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    result.mustOverridePrice
+                        ? Icons.edit_note_rounded
+                        : Icons.add_task_rounded,
+                    size: 16,
+                    color: result.mustOverridePrice
+                        ? Colors.amber.shade900
+                        : Colors.blue.shade800,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Modo: ${result.mustOverridePrice ? 'Sobreescritura total' : 'Actualización en \$0'}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: result.mustOverridePrice
+                          ? Colors.amber.shade900
+                          : Colors.blue.shade900,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${result.sourceBranchName.isNotEmpty ? result.sourceBranchName : result.sourceBranchId} ➔ ${result.targetBranchName.isNotEmpty ? result.targetBranchName : result.targetBranchId}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 20),
+
+            // Métricas KPIs en cuadrícula
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 600;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildKpiCard(
+                      theme,
+                      title: 'Pruebas Evaluadas',
+                      value: result.totalEvaluated.toString(),
+                      icon: Icons.playlist_add_check_rounded,
+                      color: Colors.blue,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Precios Actualizados',
+                      value: result.updatedCount.toString(),
+                      icon: Icons.update_rounded,
+                      color: Colors.teal,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Cuentas Creadas',
+                      value: result.createdCount.toString(),
+                      icon: Icons.add_circle_outline_rounded,
+                      color: Colors.green,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Omitidas / Sin cambio',
+                      value: result.skippedCount.toString(),
+                      icon: Icons.check_circle_outline_rounded,
+                      color: Colors.blueGrey,
                       width: isCompact ? double.infinity : 170,
                     ),
                   ],

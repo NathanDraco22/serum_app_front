@@ -112,10 +112,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         final unitSuffix = r.unitOfMeasure.isNotEmpty ? ' ${r.unitOfMeasure}' : '';
         return '${matchedRef.minValue} - ${matchedRef.maxValue}$unitSuffix';
       }
-      if (r.referenceText.isNotEmpty) {
+      if (r.referenceText.trim().isNotEmpty) {
         return r.referenceText.contains('\n') || r.referenceText.length > 25
             ? 'Ver notas'
-            : r.referenceText;
+            : r.referenceText.trim();
       }
       return '-';
     } else if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
@@ -123,10 +123,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           r.expectedQualitativeValue!.isNotEmpty) {
         return 'Esperado: ${r.expectedQualitativeValue}';
       }
-      if (r.referenceText.isNotEmpty) {
+      if (r.referenceText.trim().isNotEmpty) {
         return r.referenceText.contains('\n') || r.referenceText.length > 25
             ? 'Ver notas'
-            : r.referenceText;
+            : r.referenceText.trim();
       }
       return 'Negativo';
     } else {
@@ -134,10 +134,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           r.expectedQualitativeValue!.isNotEmpty) {
         return r.expectedQualitativeValue!;
       }
-      if (r.referenceText.isNotEmpty) {
+      if (r.referenceText.trim().isNotEmpty) {
         return r.referenceText.contains('\n') || r.referenceText.length > 25
             ? 'Ver notas'
-            : r.referenceText;
+            : r.referenceText.trim();
       }
       return '-';
     }

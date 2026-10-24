@@ -20,6 +20,12 @@ class ImportsSuccess extends ImportsState {
   const ImportsSuccess(this.result);
 }
 
+class ImportsPricesSuccess extends ImportsState {
+  final ImportBranchPricesResult result;
+
+  const ImportsPricesSuccess(this.result);
+}
+
 class ImportsFailure extends ImportsState {
   final String message;
 
