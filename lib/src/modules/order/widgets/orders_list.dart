@@ -9,6 +9,7 @@ import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_invoice_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
 import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
+import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 import 'supervisor_auth_dialog.dart';
 
 class OrdersList extends StatelessWidget {
@@ -555,32 +556,20 @@ class OrdersList extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     tooltip: 'Eliminar Orden',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (dialogCtx) => AlertDialog(
-                          title: const Text('Eliminar Orden'),
-                          content: const Text('¿Está seguro de eliminar esta orden pendiente?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogCtx),
-                              child: const Text('Cancelar'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                context.read<WriteOrderCubit>().delete(order.id).then((_) {
-                                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                                  if (context.mounted) context.read<ReadOrderCubit>().getAll();
-                                });
-                              },
-                              child: Text(
-                                'Eliminar',
-                                style: TextStyle(color: theme.colorScheme.error),
-                              ),
-                            ),
-                          ],
-                        ),
+                    onPressed: () async {
+                      final confirmed = await ConfirmDeleteDialog.show(
+                        context,
+                        title: 'Eliminar Orden',
+                        message:
+                            '¿Está seguro de eliminar esta orden del sistema? Esta acción no se puede deshacer.',
+                        itemName:
+                            'Orden #${order.id} ($patientName - ${order.examName})',
                       );
+                      if (confirmed && context.mounted) {
+                        context.read<WriteOrderCubit>().delete(order.id).then((_) {
+                          if (context.mounted) context.read<ReadOrderCubit>().getAll();
+                        });
+                      }
                     },
                     color: theme.colorScheme.error,
                   ),
