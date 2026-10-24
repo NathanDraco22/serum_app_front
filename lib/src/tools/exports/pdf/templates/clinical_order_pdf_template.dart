@@ -87,9 +87,6 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }
 
   String _resolveReferenceText(OrderTestResult r, int patientAge, String gender) {
-    if (r.referenceText.isNotEmpty) {
-      return r.referenceText;
-    }
     if (r.dataType == 'numeric') {
       if (r.referenceValues.isNotEmpty) {
         final normalizedGender = gender.toLowerCase();
@@ -115,17 +112,32 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         final unitSuffix = r.unitOfMeasure.isNotEmpty ? ' ${r.unitOfMeasure}' : '';
         return '${matchedRef.minValue} - ${matchedRef.maxValue}$unitSuffix';
       }
+      if (r.referenceText.isNotEmpty) {
+        return r.referenceText.contains('\n') || r.referenceText.length > 25
+            ? 'Ver notas'
+            : r.referenceText;
+      }
       return '-';
     } else if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
       if (r.expectedQualitativeValue != null &&
           r.expectedQualitativeValue!.isNotEmpty) {
         return 'Esperado: ${r.expectedQualitativeValue}';
       }
+      if (r.referenceText.isNotEmpty) {
+        return r.referenceText.contains('\n') || r.referenceText.length > 25
+            ? 'Ver notas'
+            : r.referenceText;
+      }
       return 'Negativo';
     } else {
       if (r.expectedQualitativeValue != null &&
           r.expectedQualitativeValue!.isNotEmpty) {
         return r.expectedQualitativeValue!;
+      }
+      if (r.referenceText.isNotEmpty) {
+        return r.referenceText.contains('\n') || r.referenceText.length > 25
+            ? 'Ver notas'
+            : r.referenceText;
       }
       return '-';
     }
@@ -617,6 +629,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           final groupTitle = entry.key;
           final items = entry.value;
           final bool hasGroupHeader = groupTitle.isNotEmpty && groupTitle != clinicalArea;
+          final referenceNotesItems = items.where((r) => r.referenceText.trim().isNotEmpty).toList();
 
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -741,6 +754,49 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   );
                 }).toList(),
               ),
+              if (referenceNotesItems.isNotEmpty) ...[
+                pw.SizedBox(height: 3),
+                ...referenceNotesItems.map((r) {
+                  final showParameterName =
+                      order.results.where((x) => x.referenceText.trim().isNotEmpty).length > 1;
+                  final title = showParameterName
+                      ? 'NOTAS DE REFERENCIA (${r.parameterName.toUpperCase()}):'
+                      : 'NOTAS DE REFERENCIA:';
+
+                  return pw.Container(
+                    width: double.infinity,
+                    margin: const pw.EdgeInsets.only(top: 3, bottom: 4),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('#F8F9FA'),
+                      border: pw.Border.all(color: PdfColors.grey400, width: 0.5),
+                      borderRadius: pw.BorderRadius.circular(3),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          title,
+                          style: pw.TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.blueGrey900,
+                          ),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          r.referenceText.trim(),
+                          style: const pw.TextStyle(
+                            fontSize: 8.0,
+                            color: PdfColors.black,
+                            lineSpacing: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
               pw.SizedBox(height: 3),
             ],
           );

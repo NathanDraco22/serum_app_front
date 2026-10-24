@@ -412,6 +412,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           referenceValues: r.referenceValues,
           qualitativeOptions: r.qualitativeOptions,
           expectedQualitativeValue: r.expectedQualitativeValue,
+          referenceText: r.referenceText,
           resultValue: val,
           alertFlag: alert,
         );

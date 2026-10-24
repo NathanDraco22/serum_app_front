@@ -1,9 +1,18 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_app_front/src/tools/exports/pdf/templates/clinical_order_pdf_template.dart';
 import 'package:serum_business/serum_business.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (methodCall) async => '.',
+    );
+  });
 
   group('SingleClinicalOrderTemplate Tests', () {
     final nowMs = DateTime.now().millisecondsSinceEpoch;

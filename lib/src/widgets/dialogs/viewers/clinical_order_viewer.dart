@@ -832,15 +832,17 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                               alertFlag != null && alertFlag.isNotEmpty;
 
                           String referenceText = '—';
-                          if (r.referenceText.isNotEmpty) {
-                            referenceText = r.referenceText;
-                          } else if (isNumeric && r.referenceValues.isNotEmpty) {
+                          if (isNumeric && r.referenceValues.isNotEmpty) {
                             final ref = r.referenceValues.first;
                             final unit = r.unitOfMeasure.isNotEmpty
                                 ? ' ${r.unitOfMeasure}'
                                 : '';
                             referenceText =
                                 '${ref.minValue} - ${ref.maxValue}$unit';
+                          } else if (r.referenceText.isNotEmpty) {
+                            referenceText = r.referenceText.contains('\n') || r.referenceText.length > 25
+                                ? 'Ver notas'
+                                : r.referenceText;
                           } else if (r.dataType == 'boolean' &&
                               r.expectedQualitativeValue != null) {
                             referenceText =
@@ -941,6 +943,65 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                             ],
                           );
                         }).toList(),
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final referenceNotesItems =
+                              items.where((r) => r.referenceText.trim().isNotEmpty).toList();
+                          if (referenceNotesItems.isEmpty) return const SizedBox.shrink();
+
+                          final showParameterName = order.results
+                                  .where((x) => x.referenceText.trim().isNotEmpty)
+                                  .length >
+                              1;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 6),
+                              ...referenceNotesItems.map((r) {
+                                final title = showParameterName
+                                    ? 'NOTAS DE REFERENCIA (${r.parameterName.toUpperCase()}):'
+                                    : 'NOTAS DE REFERENCIA:';
+
+                                return Container(
+                                  width: double.infinity,
+                                  margin: const EdgeInsets.only(top: 4, bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    border: Border.all(
+                                        color: Colors.grey.shade300, width: 0.8),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        title,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blueGrey.shade900,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        r.referenceText.trim(),
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: Colors.grey.shade800,
+                                          height: 1.35,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 6),
                     ],
