@@ -317,5 +317,80 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye PDF con Bioanalista Representante configurado en la sucursal', () async {
+      final branchWithBioanalyst = BranchInDb(
+        id: 'br-bio',
+        name: 'Laboratorio Clínico Serum Matriz',
+        address: 'Calle Principal 456',
+        phone: 'PBX 2222-0000',
+        imageUrl: null,
+        bioanalyst: BranchBioanalyst(
+          name: 'Lic. Joselin Lopez',
+          title: 'TECNOLOGO MEDICO',
+          code: 'Codigo MINSA 88027',
+        ),
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: mockOrder,
+        branch: branchWithBioanalyst,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
+    test('Construye PDF con pie de página conteniendo dirección, WhatsApp, Facebook y Email', () async {
+      final branchWithFullContacts = BranchInDb(
+        id: 'br-full',
+        name: 'Laboratorio Clínico Biomedic',
+        address: 'Consultorio Médico Divino Niño, de Unión FENOSA 1 C y 75 vrs al este',
+        phone: '8783-4873',
+        facebook: 'Laboratorio Clínico Biomedic',
+        email: 'info@biomedic.com',
+        imageUrl: null,
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: mockOrder,
+        branch: branchWithFullContacts,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
+    test('Construye PDF con pie de página tolerante cuando los contactos son nulos o vacíos', () async {
+      final branchEmptyContacts = BranchInDb(
+        id: 'br-empty',
+        name: 'Laboratorio Clínico Matriz',
+        address: '',
+        phone: '',
+        facebook: null,
+        email: null,
+        imageUrl: null,
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: mockOrder,
+        branch: branchEmptyContacts,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }

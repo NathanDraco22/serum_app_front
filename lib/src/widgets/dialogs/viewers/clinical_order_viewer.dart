@@ -1107,15 +1107,162 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 color: Colors.black87,
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Responsable de Laboratorio',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'Firma y Sello de Validación Clínica',
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              ),
+              if (branch.bioanalyst != null &&
+                  branch.bioanalyst!.name.trim().isNotEmpty) ...[
+                Text(
+                  branch.bioanalyst!.name.trim(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (branch.bioanalyst!.title.trim().isNotEmpty)
+                  Text(
+                    branch.bioanalyst!.title.trim(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blueGrey.shade800,
+                    ),
+                  ),
+                if (branch.bioanalyst!.code.trim().isNotEmpty)
+                  Text(
+                    branch.bioanalyst!.code.trim(),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+              ] else ...[
+                const Text(
+                  'Responsable de Laboratorio',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Firma y Sello de Validación Clínica',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                ),
+              ],
             ],
+          ),
+        ),
+
+        const SizedBox(height: 36),
+
+        // 7. Pie de Página Institucional (Dirección y Contactos)
+        _buildViewerFooter(branch),
+      ],
+    );
+  }
+
+  Widget _buildViewerFooter(BranchInDb branch) {
+    final contactItems = <Widget>[];
+
+    // Facebook
+    if (branch.facebook != null && branch.facebook!.trim().isNotEmpty) {
+      contactItems.add(
+        _buildViewerContactItem(
+          label: 'f',
+          text: branch.facebook!.trim(),
+          color: Colors.blue.shade700,
+        ),
+      );
+    }
+
+    // Teléfono / WhatsApp
+    if (branch.phone.trim().isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(const SizedBox(width: 16));
+      contactItems.add(
+        _buildViewerContactItem(
+          label: 'W',
+          text: branch.phone.trim(),
+          color: Colors.teal,
+        ),
+      );
+    }
+
+    // Correo electrónico
+    if (branch.email != null && branch.email!.trim().isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(const SizedBox(width: 16));
+      contactItems.add(
+        _buildViewerContactItem(
+          label: '@',
+          text: branch.email!.trim(),
+          color: Colors.blue.shade600,
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+          if (branch.address.trim().isNotEmpty) ...[
+            Text(
+              branch.address.trim(),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
+          if (contactItems.isNotEmpty)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: contactItems,
+            ),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Vista Previa Oficial',
+              style: TextStyle(fontSize: 10.5, color: Colors.grey.shade500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewerContactItem({
+    required String label,
+    required String text,
+    required Color color,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 5),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 11.5,
+            color: Colors.grey.shade800,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],

@@ -349,6 +349,36 @@ class _OrderReceiptsHistoryDialogState
                                                         .onSurfaceVariant,
                                                   ),
                                                 ),
+                                                if (r.paymentMethod.toLowerCase() == 'transfer' &&
+                                                    ((r.bank != null && r.bank!.isNotEmpty) ||
+                                                        (r.referenceNumber != null &&
+                                                            r.referenceNumber!.isNotEmpty))) ...[
+                                                  const SizedBox(height: 2),
+                                                  Row(
+                                                    children: [
+                                                      Icon(Icons.account_balance,
+                                                          size: 12, color: methodColor),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          [
+                                                            if (r.bank != null && r.bank!.isNotEmpty)
+                                                              r.bank!,
+                                                            if (r.referenceNumber != null &&
+                                                                r.referenceNumber!.isNotEmpty)
+                                                              'Ref: ${r.referenceNumber!}',
+                                                          ].join(' • '),
+                                                          style: TextStyle(
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: methodColor,
+                                                          ),
+                                                          overflow: TextOverflow.ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
                                                 if (r.concept.isNotEmpty)
                                                   Text(
                                                     r.concept,

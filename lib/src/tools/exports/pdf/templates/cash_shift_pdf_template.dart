@@ -352,6 +352,14 @@ class CashShiftPdfTemplate implements PdfTemplate {
                 _tableRowCell('Cobros en Efectivo (Ventas / Abonos)', 'Efectivo', _formatMoney(shift.cashBalance)),
                 _tableRowCell('Cobros con Tarjeta Bancaria', 'Terminal / Tarjeta', _formatMoney(shift.cardBalance)),
                 _tableRowCell('Cobros por Transferencia Electrónica', 'Banco / Transferencia', _formatMoney(shift.transferBalance)),
+                if (shift.bankTransfers.isNotEmpty)
+                  _tableRowCell(
+                    '   └─ Desglose por Banco',
+                    shift.bankTransfers.entries
+                        .map((e) => '${e.key}: ${_formatMoney(e.value)}')
+                        .join(' | '),
+                    '',
+                  ),
                 if (totalIncomesCents > 0)
                   _tableRowCell('Entradas Libres Extraordinarias', 'Caja Chica', '+${_formatMoney(totalIncomesCents)}'),
                 if (totalExpensesCents > 0)

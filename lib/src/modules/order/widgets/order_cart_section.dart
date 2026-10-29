@@ -9,6 +9,7 @@ class OrderCartSection extends StatelessWidget {
   final DoctorInDb? selectedDoctor;
   final List<LabTestInDb> selectedItems;
   final List<OrderService> services;
+  final List<OrderDiscount> discounts;
   final Map<String, int> itemPriceLevels;
   final Map<String, int> itemCustomPrices;
   final int defaultPriceLevel;
@@ -26,6 +27,9 @@ class OrderCartSection extends StatelessWidget {
   final VoidCallback onAddService;
   final void Function(OrderService) onRemoveService;
   final void Function(OrderService) onEditService;
+  final VoidCallback onAddDiscount;
+  final void Function(OrderDiscount) onRemoveDiscount;
+  final void Function(OrderDiscount) onEditDiscount;
   final VoidCallback onSubmitOrder;
 
   const OrderCartSection({
@@ -34,6 +38,7 @@ class OrderCartSection extends StatelessWidget {
     required this.selectedDoctor,
     required this.selectedItems,
     this.services = const [],
+    this.discounts = const [],
     this.itemPriceLevels = const {},
     this.itemCustomPrices = const {},
     this.defaultPriceLevel = 1,
@@ -51,6 +56,9 @@ class OrderCartSection extends StatelessWidget {
     required this.onAddService,
     required this.onRemoveService,
     required this.onEditService,
+    required this.onAddDiscount,
+    required this.onRemoveDiscount,
+    required this.onEditDiscount,
     required this.onSubmitOrder,
   });
 
@@ -68,13 +76,17 @@ class OrderCartSection extends StatelessWidget {
     });
 
     final servicesCents = services.fold<int>(0, (sum, s) => sum + s.price);
-    final totalCents = testsCents + servicesCents;
+    final grossSubtotalCents = testsCents + servicesCents;
+    final discountsCents = discounts.fold<int>(0, (sum, d) => sum + d.appliedAmount);
+    final totalCents = (grossSubtotalCents - discountsCents).clamp(0, grossSubtotalCents);
     final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
     final hasModifiedPrices = selectedItems.any((item) {
       final custom = itemCustomPrices[item.id];
       return custom != null && custom != item.salePrice;
     });
+    final hasDiscounts = discounts.isNotEmpty;
+    final requiresSupervisorApproval = hasModifiedPrices || hasDiscounts;
 
     // Calculate total individual clinical tests that will result from packs + items
     int totalParameters = 0;
@@ -186,18 +198,19 @@ class OrderCartSection extends StatelessWidget {
                               : item.salePrice);
                       final priceStr = NumberFormatter.convertToMoneyLike(appliedPrice);
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Material(
                           color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isPriceModified
-                                ? Colors.amber.shade300
-                                : theme.colorScheme.outlineVariant.withAlpha(80),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: isPriceModified
+                                  ? Colors.amber.shade300
+                                  : theme.colorScheme.outlineVariant.withAlpha(80),
+                            ),
                           ),
-                        ),
-                        child: ListTile(
+                          child: ListTile(
                           dense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           onLongPress: isSubmitting ? null : () => onEditItemPrice(item),
@@ -298,8 +311,9 @@ class OrderCartSection extends StatelessWidget {
                             ],
                           ),
                         ),
-                      );
-                    }),
+                      ),
+                    );
+                  }),
 
                   const SizedBox(height: 12),
                   const Divider(height: 1),
@@ -350,16 +364,17 @@ class OrderCartSection extends StatelessWidget {
                     )
                   else
                     ...services.map((service) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Material(
                           color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: theme.colorScheme.secondary.withAlpha(60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: theme.colorScheme.secondary.withAlpha(60),
+                            ),
                           ),
-                        ),
-                        child: ListTile(
+                          child: ListTile(
                           dense: true,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           leading: Container(
@@ -424,8 +439,142 @@ class OrderCartSection extends StatelessWidget {
                             ],
                           ),
                         ),
-                      );
-                    }),
+                      ),
+                    );
+                  }),
+
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+
+                  // --- Sección 3: Descuentos en la Orden ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.discount_outlined, size: 18, color: theme.colorScheme.tertiary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Descuentos en la Orden (${discounts.length})',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextButton.icon(
+                        onPressed: isSubmitting ? null : onAddDiscount,
+                        icon: const Icon(Icons.add_circle_outline, size: 16),
+                        label: const Text('Agregar Descuento', style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.tertiary,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+
+                  if (discounts.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Sin descuentos aplicados a esta orden.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.outline,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    ...discounts.map((discount) {
+                      final discountStr = discount.isPercentage
+                          ? '${discount.value % 1 == 0 ? discount.value.toInt() : discount.value.toStringAsFixed(1)}%'
+                          : NumberFormatter.convertToMoneyLike(discount.appliedAmount);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Material(
+                          color: theme.colorScheme.surfaceContainerLow,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: BorderSide(
+                              color: theme.colorScheme.tertiary.withAlpha(70),
+                            ),
+                          ),
+                          child: ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          leading: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.tertiaryContainer,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              discount.isPercentage ? Icons.percent : Icons.attach_money,
+                              size: 16,
+                              color: theme.colorScheme.onTertiaryContainer,
+                            ),
+                          ),
+                          title: Text(
+                            discount.description,
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          ),
+                          subtitle: Text(
+                            discount.isPercentage
+                                ? 'Deducción del $discountStr sobre el subtotal'
+                                : 'Descuento por monto fijo',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Tooltip(
+                                message: 'Modificar descuento',
+                                child: InkWell(
+                                  onTap: isSubmitting ? null : () => onEditDiscount(discount),
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '- ${NumberFormatter.convertToMoneyLike(discount.appliedAmount)}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Colors.red.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          Icons.edit_outlined,
+                                          size: 14,
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                color: theme.colorScheme.error,
+                                tooltip: 'Quitar descuento',
+                                onPressed: isSubmitting ? null : () => onRemoveDiscount(discount),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -483,7 +632,7 @@ class OrderCartSection extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (services.isNotEmpty) ...[
+                  if (services.isNotEmpty || discounts.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -500,26 +649,51 @@ class OrderCartSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Subtotal Servicios:',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                    if (services.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Subtotal Servicios:',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                        Text(
-                          NumberFormatter.convertToMoneyLike(servicesCents),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: theme.colorScheme.secondary,
+                          Text(
+                            NumberFormatter.convertToMoneyLike(servicesCents),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: theme.colorScheme.secondary,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
+                    if (discounts.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Descuentos Totales:',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.red.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '- ${NumberFormatter.convertToMoneyLike(discountsCents)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.red.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 6),
                   Row(
@@ -540,7 +714,7 @@ class OrderCartSection extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (hasModifiedPrices) ...[
+                  if (requiresSupervisorApproval) ...[
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -555,7 +729,11 @@ class OrderCartSection extends StatelessWidget {
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Precios modificados: La orden se creará con requerimiento de autorización de supervisor.',
+                              hasDiscounts && hasModifiedPrices
+                                  ? 'Precios modificados y descuentos aplicados: La orden se creará con requerimiento de autorización de supervisor.'
+                                  : (hasDiscounts
+                                      ? 'Descuento aplicado: La orden se creará con requerimiento de autorización de supervisor.'
+                                      : 'Precios modificados: La orden se creará con requerimiento de autorización de supervisor.'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.amber.shade900,

@@ -556,6 +556,7 @@ class OrderInvoicePdfTemplate implements PdfTemplate {
   pw.Widget _buildTotalsSection(int totalOrder) {
     final testsSum = order.items.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
     final servicesSum = order.services.fold<int>(0, (sum, s) => sum + s.price);
+    final discountsSum = order.discounts.fold<int>(0, (sum, d) => sum + d.appliedAmount);
 
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -570,10 +571,20 @@ class OrderInvoicePdfTemplate implements PdfTemplate {
           ),
           child: pw.Column(
             children: [
-              if (order.services.isNotEmpty) ...[
+              if (order.services.isNotEmpty || order.discounts.isNotEmpty) ...[
                 _buildTotalRow('Subtotal Análisis:', NumberFormatter.convertToMoneyLike(testsSum)),
-                pw.SizedBox(height: 2),
-                _buildTotalRow('Subtotal Servicios:', NumberFormatter.convertToMoneyLike(servicesSum)),
+                if (order.services.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  _buildTotalRow('Subtotal Servicios:', NumberFormatter.convertToMoneyLike(servicesSum)),
+                ],
+                if (order.discounts.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  _buildTotalRow(
+                    'Descuentos:',
+                    '- ${NumberFormatter.convertToMoneyLike(discountsSum)}',
+                    color: PdfColors.red700,
+                  ),
+                ],
                 pw.Divider(color: PdfColors.grey300, thickness: 0.5),
               ],
               _buildTotalRow(

@@ -231,6 +231,26 @@ class BranchesList extends StatelessWidget {
                                 ),
                               ],
                             ),
+                          if (branch.bioanalyst != null &&
+                              branch.bioanalyst!.name.trim().isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.badge_outlined,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Bioanalista: ${branch.bioanalyst!.name}',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ],

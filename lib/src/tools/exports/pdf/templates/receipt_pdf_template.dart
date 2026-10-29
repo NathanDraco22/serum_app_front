@@ -349,6 +349,38 @@ class ReceiptPdfTemplate implements PdfTemplate {
                     ),
                   ],
                 ),
+                if (receipt.paymentMethod.toLowerCase() == 'transfer' &&
+                    ((receipt.bank != null && receipt.bank!.isNotEmpty) ||
+                        (receipt.referenceNumber != null &&
+                            receipt.referenceNumber!.isNotEmpty))) ...[
+                  pw.SizedBox(height: 3),
+                  pw.Row(
+                    children: [
+                      pw.Text(
+                        'Detalle Bancario: ',
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                      pw.Text(
+                        [
+                          if (receipt.bank != null && receipt.bank!.isNotEmpty)
+                            'Banco: ${receipt.bank!}',
+                          if (receipt.referenceNumber != null &&
+                              receipt.referenceNumber!.isNotEmpty)
+                            'Ref: ${receipt.referenceNumber!}',
+                        ].join(' | '),
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.purple900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

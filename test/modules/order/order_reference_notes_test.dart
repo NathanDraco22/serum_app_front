@@ -154,4 +154,68 @@ void main() {
     expect(find.text('NOTAS DE REFERENCIA:'), findsOneWidget);
     expect(find.textContaining('Menor de 5.6%: Nivel no diabético'), findsOneWidget);
   });
+
+  testWidgets('ClinicalOrderViewerContent despliega Bioanalista Representante en la firma si está configurado', (tester) async {
+    final branchWithBio = BranchInDb(
+      id: 'branch-1',
+      name: 'Laboratorio Clínico Serum',
+      address: 'Sede Principal',
+      phone: '2222-0000',
+      bioanalyst: BranchBioanalyst(
+        name: 'Lic. Joselin Lopez',
+        title: 'TECNOLOGO MEDICO',
+        code: 'Codigo MINSA 88027',
+      ),
+      createdAt: 1700000000000,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ClinicalOrderViewerContent(
+              order: hba1cOrder,
+              branch: branchWithBio,
+              patientInfo: hba1cOrder.patientInfo!,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lic. Joselin Lopez'), findsOneWidget);
+    expect(find.text('TECNOLOGO MEDICO'), findsOneWidget);
+    expect(find.text('Codigo MINSA 88027'), findsOneWidget);
+    expect(find.text('Responsable de Laboratorio'), findsNothing);
+  });
+
+  testWidgets('ClinicalOrderViewerContent despliega Responsable de Laboratorio si la sucursal no tiene bioanalista', (tester) async {
+    final branchWithoutBio = BranchInDb(
+      id: 'branch-1',
+      name: 'Laboratorio Clínico Serum',
+      address: 'Sede Principal',
+      phone: '2222-0000',
+      createdAt: 1700000000000,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ClinicalOrderViewerContent(
+              order: hba1cOrder,
+              branch: branchWithoutBio,
+              patientInfo: hba1cOrder.patientInfo!,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Responsable de Laboratorio'), findsOneWidget);
+    expect(find.text('Firma y Sello de Validación Clínica'), findsOneWidget);
+    expect(find.text('Lic. Joselin Lopez'), findsNothing);
+  });
 }

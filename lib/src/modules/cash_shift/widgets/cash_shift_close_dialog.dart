@@ -34,11 +34,50 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
 
   double _declaredAmount = 0.0;
   bool _isLoading = false;
+  Map<String, int> _bankTransfers = {};
+  bool _isLoadingTransfers = false;
 
   @override
   void initState() {
     super.initState();
     _declaredCashController.addListener(_onDeclaredCashChanged);
+    _loadTransfersBreakdown();
+  }
+
+  Future<void> _loadTransfersBreakdown() async {
+    if (widget.shift.bankTransfers.isNotEmpty) {
+      setState(() => _bankTransfers = widget.shift.bankTransfers);
+      return;
+    }
+    if (widget.shift.transferBalance > 0) {
+      setState(() => _isLoadingTransfers = true);
+      try {
+        final repo = context.read<ReceiptsRepository>();
+        final receipts = await repo.getAllReceipts(
+          queryParams: ReceiptQueryParams(
+            shiftId: widget.shift.id,
+            paymentMethod: 'transfer',
+          ),
+        );
+        final Map<String, int> grouped = {};
+        for (final r in receipts) {
+          final bank = (r.bank != null && r.bank!.trim().isNotEmpty)
+              ? r.bank!.trim()
+              : 'Otros';
+          grouped[bank] = (grouped[bank] ?? 0) + r.amount;
+        }
+        if (mounted) {
+          setState(() {
+            _bankTransfers = grouped;
+            _isLoadingTransfers = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _isLoadingTransfers = false);
+        }
+      }
+    }
   }
 
   void _onDeclaredCashChanged() {
@@ -216,6 +255,85 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
                           ),
                         ],
                       ),
+                      if (_isLoadingTransfers) ...[
+                        const SizedBox(height: 10),
+                        const Center(
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ] else if (_bankTransfers.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade50.withAlpha(120),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.purple.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.account_balance,
+                                      size: 14, color: Colors.purple.shade800),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Desglose por Banco (Referencia):',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.purple.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: _bankTransfers.entries.map((entry) {
+                                  final bankName = entry.key;
+                                  final amountDouble = entry.value / 100.0;
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: Colors.purple.shade100),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '$bankName: ',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.purple.shade900,
+                                          ),
+                                        ),
+                                        Text(
+                                          '\$${amountDouble.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.purple.shade700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

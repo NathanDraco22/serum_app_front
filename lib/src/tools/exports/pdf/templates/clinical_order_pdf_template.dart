@@ -263,28 +263,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           );
         },
         footer: (pw.Context context) {
-          return pw.Container(
-            margin: const pw.EdgeInsets.only(top: 10),
-            padding: const pw.EdgeInsets.only(top: 4),
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(
-                top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-              ),
-            ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'Serum LIS - Sistema de Gestión de Laboratorio Clínico',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
-                ),
-                pw.Text(
-                  'Página ${context.pageNumber} de ${context.pagesCount}',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
-                ),
-              ],
-            ),
-          );
+          return _buildFooter(context);
         },
         build: (pw.Context context) {
           return [
@@ -862,15 +841,172 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 color: PdfColors.black,
               ),
               pw.SizedBox(height: 4),
-              pw.Text(
-                'Responsable de Laboratorio',
-                style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.Text(
-                'Firma y Sello de Validación',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
-              ),
+              if (branch.bioanalyst != null &&
+                  branch.bioanalyst!.name.trim().isNotEmpty) ...[
+                pw.Text(
+                  branch.bioanalyst!.name.trim(),
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                if (branch.bioanalyst!.title.trim().isNotEmpty)
+                  pw.Text(
+                    branch.bioanalyst!.title.trim(),
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blueGrey800,
+                    ),
+                  ),
+                if (branch.bioanalyst!.code.trim().isNotEmpty)
+                  pw.Text(
+                    branch.bioanalyst!.code.trim(),
+                    style: const pw.TextStyle(
+                      fontSize: 7.5,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+              ] else ...[
+                pw.Text(
+                  'Responsable de Laboratorio',
+                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  'Firma y Sello de Validación',
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                ),
+              ],
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildFooter(pw.Context context) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 8),
+      padding: const pw.EdgeInsets.only(top: 4),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(
+          top: pw.BorderSide(color: PdfColors.grey300, width: 0.6),
+        ),
+      ),
+      child: pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          // 1. Dirección física de la sucursal
+          if (branch.address.trim().isNotEmpty) ...[
+            pw.Text(
+              branch.address.trim(),
+              textAlign: pw.TextAlign.center,
+              style: const pw.TextStyle(
+                fontSize: 8,
+                color: PdfColors.black,
+              ),
+              maxLines: 1,
+            ),
+            pw.SizedBox(height: 3),
+          ],
+
+          // 2. Canales de contacto con iconos circulares (Facebook, WhatsApp, Email)
+          _buildFooterContactItems(),
+
+          pw.SizedBox(height: 3),
+
+          // 3. Paginación alineada a la derecha
+          pw.Align(
+            alignment: pw.Alignment.centerRight,
+            child: pw.Text(
+              'Página ${context.pageNumber} de ${context.pagesCount}',
+              style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildFooterContactItems() {
+    final contactItems = <pw.Widget>[];
+
+    // Facebook
+    if (branch.facebook != null && branch.facebook!.trim().isNotEmpty) {
+      contactItems.add(
+        _buildContactItem(
+          label: 'f',
+          text: branch.facebook!.trim(),
+          iconColor: PdfColors.blue700,
+        ),
+      );
+    }
+
+    // Teléfono / WhatsApp
+    if (branch.phone.trim().isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      contactItems.add(
+        _buildContactItem(
+          label: 'W',
+          text: branch.phone.trim(),
+          iconColor: PdfColors.teal,
+        ),
+      );
+    }
+
+    // Correo electrónico
+    if (branch.email != null && branch.email!.trim().isNotEmpty) {
+      if (contactItems.isNotEmpty) contactItems.add(pw.SizedBox(width: 14));
+      contactItems.add(
+        _buildContactItem(
+          label: '@',
+          text: branch.email!.trim(),
+          iconColor: PdfColors.blue500,
+        ),
+      );
+    }
+
+    if (contactItems.isEmpty) return pw.SizedBox();
+
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      children: contactItems,
+    );
+  }
+
+  pw.Widget _buildContactItem({
+    required String label,
+    required String text,
+    required PdfColor iconColor,
+  }) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Container(
+          width: 12,
+          height: 12,
+          decoration: pw.BoxDecoration(
+            color: iconColor,
+            shape: pw.BoxShape.circle,
+          ),
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(
+              color: PdfColors.white,
+              fontSize: 6.8,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+        pw.SizedBox(width: 4),
+        pw.Text(
+          text,
+          style: const pw.TextStyle(
+            fontSize: 7.8,
+            color: PdfColors.black,
           ),
         ),
       ],

@@ -109,6 +109,51 @@ void main() {
       expect(minJson.containsKey('facebook'), isFalse);
       expect(minJson.containsKey('logoUrl'), isFalse);
       expect(minJson.containsKey('isoLogoUrl'), isFalse);
+      expect(minJson.containsKey('bioanalyst'), isFalse);
+    });
+
+    test('Serialización y deserialización de BranchBioanalyst en BranchInDb y CreateBranch', () {
+      final bioJson = {
+        'name': 'Lic. Joselin Lopez',
+        'title': 'TECNOLOGO MEDICO',
+        'code': 'Codigo MINSA 88027',
+      };
+
+      final bio = BranchBioanalyst.fromJson(bioJson);
+      expect(bio.name, equals('Lic. Joselin Lopez'));
+      expect(bio.title, equals('TECNOLOGO MEDICO'));
+      expect(bio.code, equals('Codigo MINSA 88027'));
+      expect(bio.toJson(), equals(bioJson));
+
+      final branchJson = {
+        'id': 'BR-BIO',
+        'name': 'Sucursal con Bioanalista',
+        'address': 'Calle Real #10',
+        'phone': '555-9999',
+        'bioanalyst': bioJson,
+        'createdAt': 1700000000000,
+      };
+
+      final branch = BranchInDb.fromJson(branchJson);
+      expect(branch.bioanalyst, isNotNull);
+      expect(branch.bioanalyst!.name, equals('Lic. Joselin Lopez'));
+      expect(branch.bioanalyst!.title, equals('TECNOLOGO MEDICO'));
+      expect(branch.bioanalyst!.code, equals('Codigo MINSA 88027'));
+
+      final createWithBio = CreateBranch(
+        name: 'Sede Bio',
+        address: 'Dirección Bio',
+        phone: '123456',
+        bioanalyst: bio,
+      );
+      final createJson = createWithBio.toJson();
+      expect(createJson['bioanalyst'], equals(bioJson));
+
+      final updateWithBio = UpdateBranch(
+        bioanalyst: bio,
+      );
+      final updateJson = updateWithBio.toJson();
+      expect(updateJson['bioanalyst'], equals(bioJson));
     });
   });
 }

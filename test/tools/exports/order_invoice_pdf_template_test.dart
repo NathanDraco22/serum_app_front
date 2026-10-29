@@ -128,6 +128,43 @@ void main() {
       expect(bytes.isNotEmpty, isTrue);
     });
 
+    test('Construye documento PDF de Comprobante de Factura con descuentos aplicados', () async {
+      final orderWithDiscount = OrderInDb(
+        id: 'ord-disc-pdf',
+        patientId: 'pat-1',
+        branchId: 'br-1',
+        createdAt: nowMs,
+        items: [
+          OrderItem(
+            labTestId: 'lt-1',
+            name: 'Glucosa',
+            salePriceApplied: 30000,
+          )
+        ],
+        discounts: [
+          OrderDiscount(
+            description: 'Tercera Edad',
+            type: 'percentage',
+            value: 10.0,
+            appliedAmount: 3000,
+          )
+        ],
+        totalPrice: 27000,
+      );
+
+      final template = OrderInvoicePdfTemplate(
+        order: orderWithDiscount,
+        branch: mockBranch,
+        receipts: const [],
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
     test('Construye documento PDF de Comprobante de Factura con sucursal que posee isoLogoUrl', () async {
       final branchWithIsoLogo = BranchInDb(
         id: 'br-iso',

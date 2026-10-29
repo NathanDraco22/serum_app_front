@@ -40,6 +40,52 @@ void main() {
       expect(receipt.performedBy.name, 'Carlos Cajero');
       expect(receipt.formattedDate, isNotEmpty);
       expect(receipt.isDeleted, false);
+      expect(receipt.referenceNumber, isNull);
+      expect(receipt.bank, isNull);
+    });
+
+    test('ReceiptInDb y OrderPayRequest con transferencia bancaria y selección de banco', () {
+      final json = {
+        'id': '102',
+        'receiptNumber': '102',
+        'orderId': 'ORD-60',
+        'orderNumber': '60',
+        'branchId': 'BR1',
+        'shiftId': 'SH-2',
+        'amount': 30000,
+        'paymentMethod': 'transfer',
+        'concept': 'Liquidación de orden #ORD-60',
+        'performedBy': {
+          'id': 'user-1',
+          'name': 'Carlos Cajero',
+        },
+        'patientName': 'María Torres',
+        'referenceNumber': '987654321',
+        'bank': 'BAC',
+        'createdAt': 1776268800000,
+      };
+
+      final receipt = ReceiptInDb.fromJson(json);
+
+      expect(receipt.paymentMethod, 'transfer');
+      expect(receipt.paymentMethodLabel, 'Transferencia');
+      expect(receipt.bank, 'BAC');
+      expect(receipt.referenceNumber, '987654321');
+      expect(receipt.paymentDetailsLabel, 'Transferencia (BAC • Ref: 987654321)');
+
+      final payRequest = OrderPayRequest(
+        amount: 30000,
+        shiftId: 'SH-2',
+        paymentMethod: 'transfer',
+        performedBy: UserInfo(id: 'u1', name: 'Carlos'),
+        referenceNumber: '987654321',
+        bank: 'BAC',
+      );
+
+      final reqJson = payRequest.toJson();
+      expect(reqJson['paymentMethod'], 'transfer');
+      expect(reqJson['referenceNumber'], '987654321');
+      expect(reqJson['bank'], 'BAC');
     });
 
     test('CreateReceipt serializa correctamente', () {

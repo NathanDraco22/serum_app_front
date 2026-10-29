@@ -29,6 +29,11 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
   late final TextEditingController _emailController;
   late final TextEditingController _facebookController;
 
+  // Bioanalista Representante
+  late final TextEditingController _bioanalystNameController;
+  late final TextEditingController _bioanalystTitleController;
+  late final TextEditingController _bioanalystCodeController;
+
   // Logotipo (símbolo o icono compacto)
   String? _logoUrl;
   Uint8List? _selectedLogoBytes;
@@ -56,6 +61,16 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
     _facebookController =
         TextEditingController(text: widget.branch?.facebook ?? '');
 
+    _bioanalystNameController = TextEditingController(
+      text: widget.branch?.bioanalyst?.name ?? '',
+    );
+    _bioanalystTitleController = TextEditingController(
+      text: widget.branch?.bioanalyst?.title ?? '',
+    );
+    _bioanalystCodeController = TextEditingController(
+      text: widget.branch?.bioanalyst?.code ?? '',
+    );
+
     _logoUrl = widget.branch?.effectiveLogo;
     _isoLogoUrl = widget.branch?.isoLogoUrl;
   }
@@ -67,6 +82,9 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
     _phoneController.dispose();
     _emailController.dispose();
     _facebookController.dispose();
+    _bioanalystNameController.dispose();
+    _bioanalystTitleController.dispose();
+    _bioanalystCodeController.dispose();
     super.dispose();
   }
 
@@ -190,6 +208,19 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
       final emailText = _emailController.text.trim();
       final facebookText = _facebookController.text.trim();
 
+      final bioName = _bioanalystNameController.text.trim();
+      final bioTitle = _bioanalystTitleController.text.trim();
+      final bioCode = _bioanalystCodeController.text.trim();
+
+      BranchBioanalyst? branchBioanalyst;
+      if (bioName.isNotEmpty || bioTitle.isNotEmpty || bioCode.isNotEmpty) {
+        branchBioanalyst = BranchBioanalyst(
+          name: bioName,
+          title: bioTitle,
+          code: bioCode,
+        );
+      }
+
       if (_isEditing) {
         await writeCubit.update(
           widget.branch!.id,
@@ -202,6 +233,7 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
             logoUrl: finalLogoUrl,
             imageUrl: finalLogoUrl,
             isoLogoUrl: finalIsoLogoUrl,
+            bioanalyst: branchBioanalyst,
           ),
         );
       } else {
@@ -215,6 +247,7 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
             logoUrl: finalLogoUrl,
             imageUrl: finalLogoUrl,
             isoLogoUrl: finalIsoLogoUrl,
+            bioanalyst: branchBioanalyst,
           ),
         );
       }
@@ -660,6 +693,71 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                       labelText: 'Página de Facebook',
                       hintText: 'Ej. facebook.com/laboratorioclinico o @laboratorio',
                       prefixIcon: Icon(Icons.facebook_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(height: 1),
+                  const SizedBox(height: 20),
+
+                  // Sección Bioanalista Representante
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.badge_outlined,
+                        size: 20,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Bioanalista Representante de la Sede',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Profesional responsable que figurará en el pie de firma y validación de los resultados clínicos de esta sucursal.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Nombre del Bioanalista
+                  TextFormField(
+                    controller: _bioanalystNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre Completo del Bioanalista',
+                      hintText: 'Ingresa el nombre completo',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Título Profesional
+                  TextFormField(
+                    controller: _bioanalystTitleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Título Profesional / Cargo',
+                      hintText: 'Ingresa el título profesional o especialidad',
+                      prefixIcon: Icon(Icons.school_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Código Profesional / Registro
+                  TextFormField(
+                    controller: _bioanalystCodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Código Profesional / Registro',
+                      hintText: 'Ingresa el código profesional o número de registro',
+                      prefixIcon: Icon(Icons.card_membership_outlined),
                       border: OutlineInputBorder(),
                     ),
                   ),

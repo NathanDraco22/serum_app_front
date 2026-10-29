@@ -286,6 +286,52 @@ class CashShiftCard extends StatelessWidget {
               },
             ),
 
+            // Desglose de Transferencias por Banco si existen
+            if (shift.bankTransfers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50.withAlpha(120),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.account_balance,
+                        size: 15, color: Colors.purple.shade800),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Bancos: ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade900,
+                      ),
+                    ),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: shift.bankTransfers.entries.map((e) {
+                          final amt = (e.value / 100.0).toStringAsFixed(2);
+                          return Text(
+                            '${e.key}: \$$amt',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.purple.shade900,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Arqueo Result (si está cerrado)
             if (!isOpen && shift.declaredCash != null) ...[
               const SizedBox(height: 16),

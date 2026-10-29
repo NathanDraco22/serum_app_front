@@ -230,6 +230,26 @@ class ReceiptDetailDialog extends StatelessWidget {
                 label: 'Cajero / Operador:',
                 value: receipt.performedBy.name,
               ),
+              if (receipt.paymentMethod.toLowerCase() == 'transfer') ...[
+                if (receipt.bank != null && receipt.bank!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildDetailRow(
+                    context,
+                    icon: Icons.account_balance_outlined,
+                    label: 'Banco:',
+                    value: receipt.bank!,
+                  ),
+                ],
+                if (receipt.referenceNumber != null && receipt.referenceNumber!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildDetailRow(
+                    context,
+                    icon: Icons.tag,
+                    label: 'Nº Transferencia / Ref:',
+                    value: receipt.referenceNumber!,
+                  ),
+                ],
+              ],
               if (receipt.shiftId != null) ...[
                 const SizedBox(height: 8),
                 _buildDetailRow(

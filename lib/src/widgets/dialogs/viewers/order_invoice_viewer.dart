@@ -289,6 +289,7 @@ class OrderInvoiceViewerContent extends StatelessWidget {
 
     final testsSum = order.items.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
     final servicesSum = order.services.fold<int>(0, (sum, s) => sum + s.price);
+    final discountsSum = order.discounts.fold<int>(0, (sum, d) => sum + d.appliedAmount);
 
     final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
     final headerImg = branch.effectiveIsoLogo;
@@ -782,10 +783,20 @@ class OrderInvoiceViewerContent extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  if (order.services.isNotEmpty) ...[
+                  if (order.services.isNotEmpty || order.discounts.isNotEmpty) ...[
                     _buildTotalLine('Subtotal Análisis:', NumberFormatter.convertToMoneyLike(testsSum)),
-                    const SizedBox(height: 4),
-                    _buildTotalLine('Subtotal Servicios:', NumberFormatter.convertToMoneyLike(servicesSum)),
+                    if (order.services.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _buildTotalLine('Subtotal Servicios:', NumberFormatter.convertToMoneyLike(servicesSum)),
+                    ],
+                    if (order.discounts.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      _buildTotalLine(
+                        'Descuentos:',
+                        '- ${NumberFormatter.convertToMoneyLike(discountsSum)}',
+                        color: Colors.red.shade700,
+                      ),
+                    ],
                     const Divider(height: 12),
                   ],
                   _buildTotalLine(

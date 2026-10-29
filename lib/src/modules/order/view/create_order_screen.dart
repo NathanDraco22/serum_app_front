@@ -16,6 +16,7 @@ import '../widgets/order_catalog_section.dart';
 import '../widgets/order_cart_section.dart';
 import '../widgets/edit_item_price_dialog.dart';
 import '../widgets/add_service_dialog.dart';
+import '../widgets/add_discount_dialog.dart';
 
 class CreateOrderScreen extends StatelessWidget {
   const CreateOrderScreen({super.key});
@@ -52,6 +53,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   DoctorInDb? _selectedDoctor;
   final List<LabTestInDb> _selectedItems = [];
   final List<OrderService> _services = [];
+  final List<OrderDiscount> _discounts = [];
   final Map<String, int> _itemPriceLevels = {};
   final Map<String, int> _customPrices = {};
   int _defaultPriceLevel = 1;
@@ -211,12 +213,63 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     });
   }
 
+  int _calculateCurrentGrossSubtotal() {
+    final testsTotalInCents = _selectedItems.fold<int>(0, (sum, test) {
+      final level = _itemPriceLevels[test.id] ?? _defaultPriceLevel;
+      final customPrice = _customPrices[test.id];
+      final price = customPrice ??
+          ((level == 2 && test.salePrice2 > 0) ? test.salePrice2 : test.salePrice);
+      return sum + price;
+    });
+    final servicesTotalInCents = _services.fold<int>(0, (sum, s) => sum + s.price);
+    return testsTotalInCents + servicesTotalInCents;
+  }
+
+  Future<void> _openAddDiscountDialog() async {
+    final currentSubtotal = _calculateCurrentGrossSubtotal();
+    if (currentSubtotal <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Agrega análisis o servicios antes de aplicar un descuento.')),
+      );
+      return;
+    }
+    final result = await AddDiscountDialog.show(context, currentSubtotal: currentSubtotal);
+    if (result != null && mounted) {
+      setState(() {
+        _discounts.add(result);
+      });
+    }
+  }
+
+  Future<void> _editDiscount(OrderDiscount discount) async {
+    final currentSubtotal = _calculateCurrentGrossSubtotal();
+    final result = await AddDiscountDialog.show(
+      context,
+      currentSubtotal: currentSubtotal,
+      initialDiscount: discount,
+    );
+    if (result != null && mounted) {
+      setState(() {
+        final index = _discounts.indexWhere((d) => d.id == discount.id);
+        if (index >= 0) {
+          _discounts[index] = result;
+        }
+      });
+    }
+  }
+
+  void _removeDiscount(OrderDiscount discount) {
+    setState(() {
+      _discounts.removeWhere((d) => d.id == discount.id);
+    });
+  }
+
   void _clearItems() {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Vaciar Análisis y Servicios'),
-        content: const Text('¿Deseas quitar todos los análisis y servicios agregados a esta orden?'),
+        content: const Text('¿Deseas quitar todos los análisis, servicios y descuentos agregados a esta orden?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -228,6 +281,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               setState(() {
                 _selectedItems.clear();
                 _services.clear();
+                _discounts.clear();
                 _itemPriceLevels.clear();
                 _customPrices.clear();
               });
@@ -240,7 +294,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   }
 
   Future<bool> _onWillPop() async {
-    if (_selectedItems.isEmpty && _services.isEmpty && _selectedPatient == null) {
+    if (_selectedItems.isEmpty && _services.isEmpty && _discounts.isEmpty && _selectedPatient == null) {
       return true;
     }
 
@@ -349,18 +403,28 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
     final testsTotalInCents = orderItems.fold<int>(0, (sum, i) => sum + i.salePriceApplied);
     final servicesTotalInCents = _services.fold<int>(0, (sum, s) => sum + s.price);
-    final totalInCents = testsTotalInCents + servicesTotalInCents;
+    final grossTotalInCents = testsTotalInCents + servicesTotalInCents;
+    final discountsTotalInCents = _discounts.fold<int>(0, (sum, d) => sum + d.appliedAmount);
+    final totalInCents = (grossTotalInCents - discountsTotalInCents).clamp(0, grossTotalInCents);
     final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
 
-    // 3. Evaluar si algún ítem tiene precio diferente de su precio de catálogo (Precio 1)
+    // 3. Evaluar si algún ítem tiene precio diferente de su precio de catálogo o si hay descuentos
     final hasModifiedPrice = orderItems.any((i) => i.salePriceApplied != i.originalPrice);
+    final hasDiscounts = _discounts.isNotEmpty;
+    final requiresSupervisorApproval = hasModifiedPrice || hasDiscounts;
     final currentUser = context.read<AppSessionCubit>().user;
     final hasSupervisorLevel = (currentUser?.accessLevel ?? 0) > 3;
 
     bool isBlocked = false;
     OrderApproval? approval;
 
-    if (hasModifiedPrice) {
+    if (requiresSupervisorApproval) {
+      final defaultReason = hasDiscounts && hasModifiedPrice
+          ? 'Precio modificado y descuento aplicado en ventanilla'
+          : (hasDiscounts
+              ? 'Descuento aplicado a la orden'
+              : 'Precio modificado respecto al catálogo');
+
       if (hasSupervisorLevel && currentUser != null) {
         // Creado por un supervisor o admin -> se aprueba automáticamente
         isBlocked = false;
@@ -369,7 +433,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
           isApproved: true,
           approvedBy: UserInfo(id: currentUser.id, name: currentUser.name),
           approvedAt: DateTime.now().millisecondsSinceEpoch,
-          reason: 'Precio especial autorizado al formular orden por supervisor (${currentUser.name})',
+          reason: '$defaultReason (Autorizado por supervisor: ${currentUser.name})',
         );
       } else {
         // Creado por un operador -> nace bloqueada
@@ -377,7 +441,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
         approval = OrderApproval(
           requiresApproval: true,
           isApproved: false,
-          reason: 'Precio modificado respecto al catálogo',
+          reason: defaultReason,
         );
       }
     }
@@ -406,6 +470,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       branchId: activeBranchId,
       items: orderItems,
       services: _services,
+      discounts: _discounts,
       totalPrice: totalInCents,
       status: 'pending',
       results: resultsMap.values.toList(),
@@ -557,6 +622,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
                           services: _services,
+                          discounts: _discounts,
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
@@ -574,6 +640,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onAddService: _openAddServiceDialog,
                           onRemoveService: _removeService,
                           onEditService: _editService,
+                          onAddDiscount: _openAddDiscountDialog,
+                          onRemoveDiscount: _removeDiscount,
+                          onEditDiscount: _editDiscount,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
                       ),
@@ -602,6 +671,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           selectedDoctor: _selectedDoctor,
                           selectedItems: _selectedItems,
                           services: _services,
+                          discounts: _discounts,
                           itemPriceLevels: _itemPriceLevels,
                           itemCustomPrices: _customPrices,
                           defaultPriceLevel: _defaultPriceLevel,
@@ -619,6 +689,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                           onAddService: _openAddServiceDialog,
                           onRemoveService: _removeService,
                           onEditService: _editService,
+                          onAddDiscount: _openAddDiscountDialog,
+                          onRemoveDiscount: _removeDiscount,
+                          onEditDiscount: _editDiscount,
                           onSubmitOrder: () => _submit(allLabTests),
                         ),
                       ),
