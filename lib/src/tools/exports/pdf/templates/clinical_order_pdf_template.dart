@@ -297,7 +297,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Container(
-                      height: 70,
+                      height: 48,
                       margin: const pw.EdgeInsets.only(bottom: 6),
                       child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                     ),
@@ -338,8 +338,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   children: [
                     if (headerImage != null) ...[
                       pw.Container(
-                        width: 68,
-                        height: 68,
+                        width: 48,
+                        height: 48,
                         margin: const pw.EdgeInsets.only(right: 12),
                         child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                       ),

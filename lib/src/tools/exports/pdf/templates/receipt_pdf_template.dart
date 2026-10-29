@@ -97,7 +97,7 @@ class ReceiptPdfTemplate implements PdfTemplate {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Container(
-                      height: 52,
+                      height: 48,
                       margin: const pw.EdgeInsets.only(bottom: 4),
                       child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                     ),
@@ -134,8 +134,8 @@ class ReceiptPdfTemplate implements PdfTemplate {
                   children: [
                     if (headerImage != null)
                       pw.Container(
-                        width: 55,
-                        height: 55,
+                        width: 48,
+                        height: 48,
                         margin: const pw.EdgeInsets.only(right: 10),
                         child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                       ),

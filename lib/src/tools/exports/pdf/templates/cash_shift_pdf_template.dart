@@ -128,7 +128,7 @@ class CashShiftPdfTemplate implements PdfTemplate {
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
                             pw.Container(
-                              height: 58,
+                              height: 48,
                               margin: const pw.EdgeInsets.only(bottom: 5),
                               child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                             ),
@@ -165,8 +165,8 @@ class CashShiftPdfTemplate implements PdfTemplate {
                           children: [
                             if (headerImage != null)
                               pw.Container(
-                                width: 58,
-                                height: 58,
+                                width: 48,
+                                height: 48,
                                 margin: const pw.EdgeInsets.only(right: 12),
                                 child: pw.Image(headerImage, fit: pw.BoxFit.contain),
                               ),
