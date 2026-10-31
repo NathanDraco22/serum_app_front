@@ -16,7 +16,7 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - `OrderScreen` (`view/order_screen.dart`): Tablero principal de seguimiento y listado de órdenes clínicas.
   - `CreateOrderScreen` (`view/create_order_screen.dart`): Pantalla completa (`/orders/new`) para crear órdenes con layout de dos columnas (catálogo interactivo de pruebas/perfiles a la izquierda y carrito/resumen de orden a la derecha).
 - **Widgets Clave**:
-  - `OrderCatalogSection` (`widgets/order_catalog_section.dart`): Columna izquierda con buscador debounced, filtros por categoría/tipo y grid interactivo.
+  - `OrderCatalogSection` (`widgets/order_catalog_section.dart`): Columna izquierda con buscador debounced, filtros por categoría/tipo, filtro predeterminado `_hideProfileParameters = true` ("Ocultar parámetros de perfil") con chip interactivo y badge visual `PARÁMETRO`, y grid interactivo de selección de estudios comerciales.
   - `OrderCartSection` (`widgets/order_cart_section.dart`): Columna derecha con resumen, totales y listado de análisis seleccionados.
   - `OrderPatientCard` y `OrderDoctorCard` (`widgets/`): Tarjetas interactivas para asignar paciente y médico.
   - `PatientSelectionDialog` y `DoctorSelectionDialog` (`lib/src/widgets/dialogs/selectors/`): Modales dedicados (Pickers) con búsqueda reactiva debounced para miles de registros.
