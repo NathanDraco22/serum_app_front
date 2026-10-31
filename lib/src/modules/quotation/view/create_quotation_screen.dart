@@ -21,19 +21,10 @@ class CreateQuotationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<ReadLabTestCubit>(
-          create: (context) => ReadLabTestCubit(
-            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(branchId: context.read<AppSessionCubit>().currentBranchId),
-        ),
-        BlocProvider<WriteQuotationCubit>(
-          create: (context) => WriteQuotationCubit(
-            quotationsRepository: RepositoryProvider.of<QuotationsRepository>(context),
-          ),
-        ),
-      ],
+    return BlocProvider<WriteQuotationCubit>(
+      create: (context) => WriteQuotationCubit(
+        quotationsRepository: RepositoryProvider.of<QuotationsRepository>(context),
+      ),
       child: const _CreateQuotationContent(),
     );
   }
@@ -54,6 +45,18 @@ class _CreateQuotationContentState extends State<_CreateQuotationContent> {
   final Map<String, int> _itemPriceLevels = {};
   int _defaultPriceLevel = 1;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReadLabTestCubit>().loadIfNotLoaded(
+              branchId: context.read<AppSessionCubit>().currentBranchId,
+            );
+      }
+    });
+  }
 
   @override
   void dispose() {

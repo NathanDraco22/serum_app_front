@@ -20,11 +20,6 @@ class LabTestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ReadLabTestCubit>(
-          create: (context) => ReadLabTestCubit(
-            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(branchId: context.read<AppSessionCubit>().currentBranchId),
-        ),
         BlocProvider<SearchLabTestCubit>(
           create: (context) => SearchLabTestCubit(
             labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
@@ -65,6 +60,18 @@ class _BodyState extends State<_Body> {
   String _selectedCategory = 'Todas';
   String _selectedSubclassification = 'Todas';
   bool _hideProfileParameters = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReadLabTestCubit>().loadIfNotLoaded(
+              branchId: context.read<AppSessionCubit>().currentBranchId,
+            );
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -272,26 +279,28 @@ class _BodyState extends State<_Body> {
                   children: [
                     Row(
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Catálogo de Pruebas de Laboratorio',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Catálogo de Pruebas de Laboratorio',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Gestión de análisis clínicos individuales y perfiles comerciales (Packs)',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                              const SizedBox(height: 4),
+                              Text(
+                                'Gestión de análisis clínicos individuales y perfiles comerciales (Packs)',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 16),
                         // KPIs rápidos
                         _KpiBadge(
                           label: 'Total',
@@ -319,6 +328,28 @@ class _BodyState extends State<_Body> {
                           ),
                         ],
                         const SizedBox(width: 16),
+                        IconButton.outlined(
+                          tooltip: 'Actualizar catálogo',
+                          style: IconButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onPressed: (readState is ReadLabTestRefreshing || readState is ReadLabTestLoading)
+                              ? null
+                              : () {
+                                  final branchId = context.read<AppSessionCubit>().currentBranchId;
+                                  context.read<ReadLabTestCubit>().getAll(branchId: branchId);
+                                },
+                          icon: (readState is ReadLabTestRefreshing)
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.refresh_rounded),
+                        ),
+                        const SizedBox(width: 8),
                         PrimaryButton(
                           onPressed: () => _openLabTestForm(context),
                           icon: Icons.add,

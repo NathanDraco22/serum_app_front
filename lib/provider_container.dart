@@ -10,6 +10,7 @@ import 'src/cubits/cash_movement_cubit/read_cash_movements_cubit.dart';
 import 'src/cubits/cash_movement_cubit/write_cash_movements_cubit.dart';
 import 'src/cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
 import 'src/cubits/cash_shift_cubit/write_cash_shifts_cubit.dart';
+import 'src/cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 
 class ProviderContainer extends StatelessWidget {
   const ProviderContainer({super.key, required this.child});
@@ -137,6 +138,11 @@ class GlobalCubitProvider extends StatelessWidget {
                 create: (ctx) => WriteCashMovementCubit(
                   cashMovementsRepository: ctx.read<CashMovementsRepository>(),
                 ),
+              ),
+              BlocProvider<ReadLabTestCubit>(
+                create: (ctx) => ReadLabTestCubit(
+                  labTestsRepository: ctx.read<LabTestsRepository>(),
+                )..loadIfNotLoaded(branchId: sessionState.currentBranch?.id),
               ),
             ],
             child: child,

@@ -23,19 +23,10 @@ class CreateOrderScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<ReadLabTestCubit>(
-          create: (context) => ReadLabTestCubit(
-            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(branchId: context.read<AppSessionCubit>().currentBranchId),
-        ),
-        BlocProvider<WriteOrderCubit>(
-          create: (context) => WriteOrderCubit(
-            ordersRepository: RepositoryProvider.of<OrdersRepository>(context),
-          ),
-        ),
-      ],
+    return BlocProvider<WriteOrderCubit>(
+      create: (context) => WriteOrderCubit(
+        ordersRepository: RepositoryProvider.of<OrdersRepository>(context),
+      ),
       child: const _CreateOrderContent(),
     );
   }
@@ -64,6 +55,13 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   void initState() {
     super.initState();
     _notesController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ReadLabTestCubit>().loadIfNotLoaded(
+              branchId: context.read<AppSessionCubit>().currentBranchId,
+            );
+      }
+    });
   }
 
   @override

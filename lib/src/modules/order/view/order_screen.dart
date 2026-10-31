@@ -9,7 +9,6 @@ import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../cubits/patient_cubit/read_patients_cubit.dart';
 import '../../../cubits/doctor_cubit/read_doctors_cubit.dart';
-import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../widgets/orders_list.dart';
 import '../widgets/order_results_dialog.dart';
 import '../widgets/order_pay_dialog.dart';
@@ -43,11 +42,6 @@ class OrdersScreen extends StatelessWidget {
           create: (context) => ReadDoctorCubit(
             doctorsRepository: RepositoryProvider.of<DoctorsRepository>(context),
           )..getAll(originBranch: currentBranchId),
-        ),
-        BlocProvider<ReadLabTestCubit>(
-          create: (context) => ReadLabTestCubit(
-            labTestsRepository: RepositoryProvider.of<LabTestsRepository>(context),
-          )..getAll(branchId: currentBranchId),
         ),
       ],
       child: const _RootScaffold(),

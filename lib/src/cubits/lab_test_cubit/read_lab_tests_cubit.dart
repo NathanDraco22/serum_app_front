@@ -26,6 +26,17 @@ class ReadLabTestCubit extends Cubit<ReadLabTestState> {
     }
   }
 
+  /// Carga las pruebas solo si el estado actual aún no es exitoso ([ReadLabTestSuccess]).
+  /// Si ya se cargaron con éxito o se encuentran en proceso de carga, no realiza peticiones adicionales.
+  Future<void> loadIfNotLoaded({String? branchId}) async {
+    if (state is ReadLabTestSuccess ||
+        state is ReadLabTestRefreshing ||
+        state is ReadLabTestLoading) {
+      return;
+    }
+    await getAll(branchId: branchId);
+  }
+
   Future<void> getAll({String? branchId}) async {
     final currentState = state;
     if (currentState is ReadLabTestSuccess) {
