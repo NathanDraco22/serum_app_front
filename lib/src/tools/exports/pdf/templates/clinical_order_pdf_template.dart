@@ -201,10 +201,12 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
     pw.MemoryImage? headerImage;
     pw.MemoryImage? watermarkImage;
+    pw.MemoryImage? sealImage;
 
     final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
     final headerImageUrl = branch.effectiveIsoLogo;
     final watermarkImageUrl = branch.effectiveLogo ?? branch.effectiveIsoLogo;
+    final sealImageUrl = branch.bioanalyst?.sealUrl;
 
     if (headerImageUrl != null && headerImageUrl.isNotEmpty) {
       final bytes = await AppImageCache.getImageBytes(headerImageUrl);
@@ -221,6 +223,13 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         if (bytes != null) {
           watermarkImage = pw.MemoryImage(bytes);
         }
+      }
+    }
+
+    if (sealImageUrl != null && sealImageUrl.isNotEmpty) {
+      final bytes = await AppImageCache.getImageBytes(sealImageUrl);
+      if (bytes != null) {
+        sealImage = pw.MemoryImage(bytes);
       }
     }
 
@@ -274,7 +283,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             pw.SizedBox(height: 14),
             _buildClinicalResultsSection(patientAge, patient.gender),
             pw.SizedBox(height: 20),
-            _buildSignatureAndNotes(),
+            _buildSignatureAndNotes(sealImage),
           ];
         },
       ),
@@ -523,14 +532,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // 1. Barra de acento teal superior
-        pw.Container(
-          height: 2.2,
-          color: PdfColor.fromHex('#26A69A'),
-        ),
-        pw.SizedBox(height: 5),
-
-        // 2. Encabezado de área (ej. HEMATOLOGIA)
+        // 1. Encabezado de área (ej. HEMATOLOGIA)
         pw.Text(
           clinicalArea,
           style: pw.TextStyle(
@@ -791,7 +793,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     );
   }
 
-  pw.Widget _buildSignatureAndNotes() {
+  pw.Widget _buildSignatureAndNotes(pw.MemoryImage? sealImage) {
     final hasClinicalNotes = order.notes != null && order.notes!.trim().isNotEmpty;
 
     return pw.Column(
@@ -826,22 +828,24 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             ),
           ),
         ],
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-            borderRadius: pw.BorderRadius.circular(3),
-          ),
-          child: pw.Text(
-            'Nota: Los resultados aquí expresados corresponden única y exclusivamente a la muestra recibida y procesada en nuestras instalaciones. Todo resultado debe ser correlacionado clínicamente por el médico tratante.',
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-            textAlign: pw.TextAlign.justify,
-          ),
-        ),
-        pw.SizedBox(height: 36),
+        pw.SizedBox(height: 10),
         pw.Center(
           child: pw.Column(
             children: [
+              if (sealImage != null) ...[
+                pw.Transform.rotateBox(
+                  angle: -0.087, // ~ -5 grados de inclinación de tinta
+                  child: pw.Image(
+                    sealImage,
+                    width: 100,
+                    height: 75,
+                    fit: pw.BoxFit.contain,
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+              ] else ...[
+                pw.SizedBox(height: 38), // Espacio para firma manuscrita y sello manual
+              ],
               pw.Container(
                 width: 190,
                 height: 0.5,
@@ -877,11 +881,13 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               ] else ...[
                 pw.Text(
                   'Responsable de Laboratorio',
-                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(
+                      fontSize: 9, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.Text(
                   'Firma y Sello de Validación',
-                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                  style: const pw.TextStyle(
+                      fontSize: 8, color: PdfColors.grey600),
                 ),
               ],
             ],
@@ -928,7 +934,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             alignment: pw.Alignment.centerRight,
             child: pw.Text(
               'Página ${context.pageNumber} de ${context.pagesCount}',
-              style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600),
+              style: pw.TextStyle(
+                fontSize: 8,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.grey700,
+              ),
             ),
           ),
         ],

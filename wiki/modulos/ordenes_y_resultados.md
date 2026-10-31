@@ -160,6 +160,12 @@ Para cubrir las atenciones auxiliares no analíticas del laboratorio (ej. recarg
 
 ---
 
+### G. Optimización de Apertura Rápida de Formularios (Catálogo en Memoria)
+- `CreateOrderScreen` consume el catálogo provisto globalmente por `ProviderContainer` (`ReadLabTestCubit`).
+- Al abrir la pantalla de crear orden, se invoca `loadIfNotLoaded`: si el catálogo ya fue cargado previamente, no se realizan llamadas de red redundantes, mostrando el catálogo de inmediato sin pantallas de carga.
+
+---
+
 ### G. Comprobante de Factura y Estado de Cuenta Oficial (`OrderInvoiceViewer`)
 
 Documento formal para el paciente y la administración que unifica el aspecto clínico y financiero:

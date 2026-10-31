@@ -117,12 +117,14 @@ void main() {
         'name': 'Lic. Joselin Lopez',
         'title': 'TECNOLOGO MEDICO',
         'code': 'Codigo MINSA 88027',
+        'sealUrl': 'https://server.com/images/sello_bioanalista.png',
       };
 
       final bio = BranchBioanalyst.fromJson(bioJson);
       expect(bio.name, equals('Lic. Joselin Lopez'));
       expect(bio.title, equals('TECNOLOGO MEDICO'));
       expect(bio.code, equals('Codigo MINSA 88027'));
+      expect(bio.sealUrl, equals('https://server.com/images/sello_bioanalista.png'));
       expect(bio.toJson(), equals(bioJson));
 
       final branchJson = {
@@ -139,6 +141,7 @@ void main() {
       expect(branch.bioanalyst!.name, equals('Lic. Joselin Lopez'));
       expect(branch.bioanalyst!.title, equals('TECNOLOGO MEDICO'));
       expect(branch.bioanalyst!.code, equals('Codigo MINSA 88027'));
+      expect(branch.bioanalyst!.sealUrl, equals('https://server.com/images/sello_bioanalista.png'));
 
       final createWithBio = CreateBranch(
         name: 'Sede Bio',

@@ -102,12 +102,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Bioanalista Representante de la Sede'), findsOneWidget);
+      expect(find.text('Sello Físico de Tinta del Representante'), findsOneWidget);
       expect(find.text('Lic. Joselin Lopez'), findsOneWidget);
       expect(find.text('TECNOLOGO MEDICO'), findsOneWidget);
       expect(find.text('Codigo MINSA 88027'), findsOneWidget);
     });
 
-    testWidgets('BranchesList muestra el chip del Bioanalista cuando está definido', (tester) async {
+    testWidgets('BranchesList muestra el chip del Bioanalista y el badge de SELLO cuando está configurado', (tester) async {
       final branches = [
         BranchInDb(
           id: 'BR-01',
@@ -118,6 +119,7 @@ void main() {
             name: 'Lic. Joselin Lopez',
             title: 'TECNOLOGO MEDICO',
             code: 'Codigo MINSA 88027',
+            sealUrl: 'https://server.com/images/seal.png',
           ),
           createdAt: 1000,
         ),
@@ -144,6 +146,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Bioanalista: Lic. Joselin Lopez'), findsOneWidget);
+      expect(find.text('SELLO'), findsOneWidget);
       expect(find.text('Sucursal Secundaria'), findsOneWidget);
     });
   });

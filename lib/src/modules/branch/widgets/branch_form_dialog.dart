@@ -46,6 +46,12 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
   String? _selectedIsoLogoName;
   bool _isUploadingIsoLogo = false;
 
+  // Sello de Tinta del Bioanalista Representante
+  String? _sealUrl;
+  Uint8List? _selectedSealBytes;
+  String? _selectedSealName;
+  bool _isUploadingSeal = false;
+
   bool _isSaving = false;
 
   bool get _isEditing => widget.branch != null;
@@ -73,6 +79,7 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
 
     _logoUrl = widget.branch?.effectiveLogo;
     _isoLogoUrl = widget.branch?.isoLogoUrl;
+    _sealUrl = widget.branch?.bioanalyst?.sealUrl;
   }
 
   @override
@@ -162,6 +169,43 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
     });
   }
 
+  Future<void> _pickSeal() async {
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+      );
+
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+
+      setState(() {
+        _selectedSealBytes = bytes;
+        _selectedSealName = file.name;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al seleccionar el sello: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _removeSeal() {
+    if (_sealUrl != null) {
+      AppImageCache.evict(_sealUrl!);
+    }
+    setState(() {
+      _sealUrl = null;
+      _selectedSealBytes = null;
+      _selectedSealName = null;
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -182,6 +226,7 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
     try {
       String? finalLogoUrl = _logoUrl;
       String? finalIsoLogoUrl = _isoLogoUrl;
+      String? finalSealUrl = _sealUrl;
 
       // Subida de nuevo Logotipo si fue seleccionado
       if (_selectedLogoBytes != null) {
@@ -205,6 +250,17 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
         );
       }
 
+      // Subida de nuevo Sello si fue seleccionado
+      if (_selectedSealBytes != null) {
+        setState(() => _isUploadingSeal = true);
+        final fileName = _selectedSealName ??
+            'branch_seal_${DateTime.now().millisecondsSinceEpoch}.png';
+        finalSealUrl = await ImageUploader.uploadImage(
+          bytes: _selectedSealBytes!,
+          fileName: fileName,
+        );
+      }
+
       final emailText = _emailController.text.trim();
       final facebookText = _facebookController.text.trim();
 
@@ -213,11 +269,15 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
       final bioCode = _bioanalystCodeController.text.trim();
 
       BranchBioanalyst? branchBioanalyst;
-      if (bioName.isNotEmpty || bioTitle.isNotEmpty || bioCode.isNotEmpty) {
+      if (bioName.isNotEmpty ||
+          bioTitle.isNotEmpty ||
+          bioCode.isNotEmpty ||
+          (finalSealUrl != null && finalSealUrl.isNotEmpty)) {
         branchBioanalyst = BranchBioanalyst(
           name: bioName,
           title: bioTitle,
           code: bioCode,
+          sealUrl: finalSealUrl,
         );
       }
 
@@ -260,6 +320,7 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
         _isSaving = false;
         _isUploadingLogo = false;
         _isUploadingIsoLogo = false;
+        _isUploadingSeal = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -709,11 +770,13 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                         color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Bioanalista Representante de la Sede',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                      Expanded(
+                        child: Text(
+                          'Bioanalista Representante de la Sede',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ],
@@ -761,6 +824,205 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                       border: OutlineInputBorder(),
                     ),
                   ),
+                  const SizedBox(height: 18),
+
+                  // Sello de Tinta del Representante
+                  Builder(
+                    builder: (context) {
+                      final hasSeal = _selectedSealBytes != null ||
+                          (_sealUrl != null && _sealUrl!.isNotEmpty);
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.approval_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Sello Físico de Tinta del Representante',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sube la imagen del sello del profesional (preferiblemente PNG sin fondo). Aparecerá inclinado sobre la línea de firma en los reportes clínicos.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Center(
+                              child: Column(
+                                children: [
+                                  InkWell(
+                                    onTap: _isSaving ? null : _pickSeal,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Container(
+                                      width: 140,
+                                      height: 110,
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: hasSeal
+                                              ? theme.colorScheme.primary
+                                                  .withValues(alpha: 0.5)
+                                              : theme.colorScheme.outlineVariant,
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.04),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            if (_selectedSealBytes != null)
+                                              Transform.rotate(
+                                                angle: -0.087,
+                                                child: Opacity(
+                                                  opacity: 0.9,
+                                                  child: Image.memory(
+                                                    _selectedSealBytes!,
+                                                    width: 110,
+                                                    height: 90,
+                                                    fit: BoxFit.contain,
+                                                  ),
+                                                ),
+                                              )
+                                            else if (_sealUrl != null &&
+                                                _sealUrl!.isNotEmpty)
+                                              Transform.rotate(
+                                                angle: -0.087,
+                                                child: Opacity(
+                                                  opacity: 0.9,
+                                                  child: AppCachedImage(
+                                                    imageUrl: _sealUrl!,
+                                                    width: 110,
+                                                    height: 90,
+                                                    fit: BoxFit.contain,
+                                                    fallbackWidget: Icon(
+                                                      Icons
+                                                          .broken_image_outlined,
+                                                      size: 32,
+                                                      color: theme
+                                                          .colorScheme.error,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                            else
+                                              Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons
+                                                        .add_photo_alternate_outlined,
+                                                    size: 30,
+                                                    color: theme
+                                                        .colorScheme.primary,
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Subir Sello',
+                                                    style: theme
+                                                        .textTheme.labelSmall
+                                                        ?.copyWith(
+                                                      color: theme
+                                                          .colorScheme.primary,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (_isUploadingSeal)
+                                              Container(
+                                                color: Colors.black45,
+                                                child: const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                    strokeWidth: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (hasSeal)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        TextButton.icon(
+                                          onPressed:
+                                              _isSaving ? null : _pickSeal,
+                                          icon: const Icon(
+                                              Icons.refresh_rounded,
+                                              size: 16),
+                                          label: const Text('Cambiar'),
+                                          style: TextButton.styleFrom(
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        TextButton.icon(
+                                          onPressed:
+                                              _isSaving ? null : _removeSeal,
+                                          icon: const Icon(Icons.delete_outline,
+                                              size: 16),
+                                          label: const Text('Eliminar'),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor:
+                                                theme.colorScheme.error,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 28),
 
                   // Botones de acción
@@ -785,8 +1047,8 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
                               )
                             : const Icon(Icons.save_rounded, size: 18),
                         label: Text(_isSaving
-                            ? (_isUploadingLogo || _isUploadingIsoLogo
-                                ? 'Subiendo imágenes...'
+                            ? (_isUploadingLogo || _isUploadingIsoLogo || _isUploadingSeal
+                                ? 'Subiendo imágenes y sello...'
                                 : 'Guardando...')
                             : (_isEditing
                                 ? 'Guardar Cambios'

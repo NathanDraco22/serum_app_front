@@ -249,6 +249,41 @@ class BranchesList extends StatelessWidget {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                                if (branch.bioanalyst!.sealUrl != null &&
+                                    branch.bioanalyst!.sealUrl!.trim().isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Tooltip(
+                                    message: 'Sello digital de tinta configurado',
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.secondaryContainer,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.approval_rounded,
+                                            size: 12,
+                                            color: theme.colorScheme.onSecondaryContainer,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            'SELLO',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.onSecondaryContainer,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                         ],

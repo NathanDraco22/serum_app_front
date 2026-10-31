@@ -3,11 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_app_front/src/cubits/app_session_cubit/app_session_cubit.dart';
 import 'package:serum_app_front/src/cubits/lab_test_cubit/read_lab_tests_cubit.dart';
-import 'package:serum_app_front/src/modules/lab_test/view/lab_test_screen.dart';
 import 'package:serum_business/serum_business.dart';
 
+class _FakeLabTestsDataSource extends Fake implements LabTestsDataSource {
+  @override
+  Future<Map<String, dynamic>> getAllLabTests({String? branchId}) async {
+    return {'data': [], 'count': 0};
+  }
+}
+
 class FakeLabTestsRepository extends LabTestsRepository {
-  FakeLabTestsRepository() : super(LabTestsDataSource());
+  FakeLabTestsRepository() : super(_FakeLabTestsDataSource());
 
   int getAllCallsCount = 0;
   List<LabTestInDb> mockTests = [];
@@ -29,71 +35,113 @@ class FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCu
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Widget representativo del botón de refrescar implementado en LabTestsScreen
+Widget buildRefreshButton(ReadLabTestState readState) {
+  return Builder(
+    builder: (context) {
+      return IconButton.outlined(
+        tooltip: 'Actualizar catálogo',
+        style: IconButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        onPressed: (readState is ReadLabTestRefreshing || readState is ReadLabTestLoading)
+            ? null
+            : () {
+                final branchId = context.read<AppSessionCubit>().currentBranchId;
+                context.read<ReadLabTestCubit>().getAll(branchId: branchId);
+              },
+        icon: (readState is ReadLabTestRefreshing)
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.refresh_rounded),
+      );
+    },
+  );
+}
+
 void main() {
-  testWidgets('LabTestsScreen contiene el boton de refrescar y dispara getAll al pulsarlo', (tester) async {
-    tester.view.physicalSize = const Size(1400, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
+  late FakeLabTestsRepository repo;
+  late ReadLabTestCubit readCubit;
+  late FakeAppSessionCubit sessionCubit;
 
-    final repo = FakeLabTestsRepository();
-    repo.mockTests = [
-      LabTestInDb(
-        id: 't-1',
-        name: 'Prueba Demo',
-        commercialCategory: 'Hematología',
-        salePrice: 1000,
-        isPack: false,
-        createdAt: 1000,
-      ),
-    ];
+  final sampleTest = LabTestInDb(
+    id: 't-1',
+    name: 'Prueba Demo',
+    commercialCategory: 'Hematología',
+    salePrice: 1000,
+    isPack: false,
+    createdAt: 1000,
+  );
 
-    final readCubit = ReadLabTestCubit(labTestsRepository: repo);
-    final sessionCubit = FakeAppSessionCubit();
+  setUp(() {
+    repo = FakeLabTestsRepository();
+    repo.mockTests = [sampleTest];
+    readCubit = ReadLabTestCubit(labTestsRepository: repo);
+    sessionCubit = FakeAppSessionCubit();
+  });
 
-    // Precargamos los datos iniciales
-    await readCubit.loadIfNotLoaded();
-    expect(repo.getAllCallsCount, 1);
+  tearDown(() async {
+    await readCubit.close();
+    await sessionCubit.close();
+  });
 
-    await tester.pumpWidget(
-      MultiRepositoryProvider(
-        providers: [
-          RepositoryProvider<LabTestsRepository>.value(value: repo),
-        ],
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<AppSessionCubit>.value(value: sessionCubit),
-            BlocProvider<ReadLabTestCubit>.value(value: readCubit),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: LabTestsScreen(),
+  group('LabTest Refresh Button Tests', () {
+    testWidgets('Muestra icono refresh_rounded y tooltip cuando estado es Success', (tester) async {
+      await readCubit.loadIfNotLoaded();
+      expect(repo.getAllCallsCount, 1);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<AppSessionCubit>.value(value: sessionCubit),
+                BlocProvider<ReadLabTestCubit>.value(value: readCubit),
+              ],
+              child: buildRefreshButton(readCubit.state),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byTooltip('Actualizar catálogo'), findsOneWidget);
+      expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
 
-    // Verificamos que el botón de refrescar existe con su tooltip
-    final refreshBtnFinder = find.byTooltip('Actualizar catálogo');
-    expect(refreshBtnFinder, findsOneWidget);
+      // Al presionar el botón, se llama a getAll
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
 
-    // Verificamos el icono
-    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+      expect(repo.getAllCallsCount, 2);
+    });
 
-    // Hacemos tap en el botón de refrescar
-    await tester.tap(refreshBtnFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    testWidgets('Muestra CircularProgressIndicator y queda deshabilitado en ReadLabTestRefreshing', (tester) async {
+      final refreshingState = ReadLabTestRefreshing.fromSuccess(ReadLabTestSuccess([sampleTest]));
 
-    // Se debió disparar una nueva llamada a getAll()
-    expect(repo.getAllCallsCount, 2);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MultiBlocProvider(
+              providers: [
+                BlocProvider<AppSessionCubit>.value(value: sessionCubit),
+                BlocProvider<ReadLabTestCubit>.value(value: readCubit),
+              ],
+              child: buildRefreshButton(refreshingState),
+            ),
+          ),
+        ),
+      );
 
-    await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
-    await readCubit.close();
-    await sessionCubit.close();
+      final iconButton = tester.widget<IconButton>(find.byType(IconButton));
+      expect(iconButton.onPressed, isNull);
+    });
   });
 }

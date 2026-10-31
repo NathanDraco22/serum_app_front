@@ -57,3 +57,8 @@ El diálogo permite configurar los tipos de resultados admitidos para cada anál
 
 ### E. Orden Alfabético Estricto (A-Z)
 Todas las listas de pruebas, categorías, subclasificaciones y selectores de perfiles se ordenan alfabéticamente (A-Z) garantizando rapidez y predictibilidad al buscar estudios.
+
+### F. Optimización de Ciclo de Vida Global y Botón de Refrescar
+1. **Alcance Global en `ProviderContainer`**: `ReadLabTestCubit` reside en `GlobalCubitProvider` bajo el scope de la sucursal activa (`branch_scope_$branchId`). Se instancia una única vez y se mantiene reactivamente sincronizado mediante el stream de eventos del repositorio (`labTestsRepository.eventStream`).
+2. **Carga Condicional con `loadIfNotLoaded`**: Los módulos de Crear Orden y Crear Cotización ya no re-instancian cubits ni disparan llamadas HTTP innecesarias; si el catálogo ya está en `ReadLabTestSuccess`, se utiliza de inmediato en memoria (0 ms de retardo).
+3. **Botón de Refrescar en `LabTestsScreen`**: Ubicado en la barra de acciones superior (`Icons.refresh_rounded`, tooltip *"Actualizar catálogo"*). Permite forzar la recarga manual (`getAll()`) emitiendo `ReadLabTestRefreshing` con un indicador circular sutil sin desmontar la interfaz.

@@ -345,6 +345,34 @@ void main() {
       expect(bytes.isNotEmpty, isTrue);
     });
 
+    test('Construye PDF con Sello Digital de Tinta configurado en el Bioanalista', () async {
+      final branchWithBioanalystAndSeal = BranchInDb(
+        id: 'br-seal',
+        name: 'Laboratorio Clínico Serum Matriz',
+        address: 'Calle Principal 456',
+        phone: 'PBX 2222-0000',
+        imageUrl: null,
+        bioanalyst: BranchBioanalyst(
+          name: 'Lic. Joselin Lopez',
+          title: 'TECNOLOGO MEDICO',
+          code: 'Codigo MINSA 88027',
+          sealUrl: 'https://cdn.example.com/seals/sello_lic_joselin.png',
+        ),
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: mockOrder,
+        branch: branchWithBioanalystAndSeal,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
     test('Construye PDF con pie de página conteniendo dirección, WhatsApp, Facebook y Email', () async {
       final branchWithFullContacts = BranchInDb(
         id: 'br-full',

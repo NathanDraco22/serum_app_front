@@ -645,13 +645,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // 3. Barra de acento teal superior
-        Container(
-          height: 3,
-          color: const Color(0xFF26A69A),
-        ),
-        const SizedBox(height: 6),
-
         // 4. Encabezado de Área Clínica y Cabecera de Tabla
         Builder(
           builder: (context) {
@@ -1059,9 +1052,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
           const SizedBox(height: 14),
         ],
 
-        // 5. Resumen Financiero y Notas
+        // 5. Resumen Financiero
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
             borderRadius: BorderRadius.circular(6),
@@ -1070,43 +1063,47 @@ class ClinicalOrderViewerContent extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  'Nota: Los resultados corresponden exclusivamente a la muestra analizada y deben ser valorados en el contexto clínico por el médico tratante.',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+              Text(
+                'Estado de Pago: ${isFullyPaid ? 'PAGADO' : 'PENDIENTE'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isFullyPaid
+                      ? Colors.green.shade800
+                      : Colors.orange.shade800,
                 ),
               ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Total Orden: ${NumberFormatter.convertToMoneyLike(totalPrice)}',
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'Estado de Pago: ${isFullyPaid ? 'PAGADO' : 'PENDIENTE'}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isFullyPaid
-                          ? Colors.green.shade800
-                          : Colors.orange.shade800,
-                    ),
-                  ),
-                ],
+              Text(
+                'Total Orden: ${NumberFormatter.convertToMoneyLike(totalPrice)}',
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: 48),
+        const SizedBox(height: 28),
 
         // 6. Firma y Sello del Responsable
         Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
+              if (branch.bioanalyst?.sealUrl != null &&
+                  branch.bioanalyst!.sealUrl!.trim().isNotEmpty) ...[
+                Transform.rotate(
+                  angle: -0.087, // ~ -5 grados de inclinación realista
+                  child: AppCachedImage(
+                    imageUrl: branch.bioanalyst!.sealUrl!,
+                    width: 125,
+                    height: 95,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ] else ...[
+                const SizedBox(height: 48), // Espacio para firma manuscrita y sello manual
+              ],
               Container(
                 width: 220,
                 height: 1,
@@ -1142,11 +1139,13 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               ] else ...[
                 const Text(
                   'Responsable de Laboratorio',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   'Firma y Sello de Validación Clínica',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.grey.shade600),
                 ),
               ],
             ],
@@ -1228,8 +1227,12 @@ class ClinicalOrderViewerContent extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'Vista Previa Oficial',
-              style: TextStyle(fontSize: 10.5, color: Colors.grey.shade500),
+              'Página 1 de 1',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600,
+              ),
             ),
           ),
         ],
