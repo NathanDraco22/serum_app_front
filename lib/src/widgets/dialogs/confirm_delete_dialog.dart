@@ -12,6 +12,7 @@ class ConfirmDeleteDialog extends StatefulWidget {
   final String cancelLabel;
   final int countdownSeconds;
   final IconData icon;
+  final IconData? confirmIcon;
   final bool isDestructive;
 
   const ConfirmDeleteDialog({
@@ -23,6 +24,7 @@ class ConfirmDeleteDialog extends StatefulWidget {
     this.cancelLabel = 'Cancelar',
     this.countdownSeconds = 5,
     this.icon = Icons.warning_amber_rounded,
+    this.confirmIcon,
     this.isDestructive = true,
   });
 
@@ -37,6 +39,7 @@ class ConfirmDeleteDialog extends StatefulWidget {
     String cancelLabel = 'Cancelar',
     int countdownSeconds = 5,
     IconData icon = Icons.warning_amber_rounded,
+    IconData? confirmIcon,
     bool isDestructive = true,
   }) async {
     final result = await showDialog<bool>(
@@ -50,6 +53,7 @@ class ConfirmDeleteDialog extends StatefulWidget {
         cancelLabel: cancelLabel,
         countdownSeconds: countdownSeconds,
         icon: icon,
+        confirmIcon: confirmIcon,
         isDestructive: isDestructive,
       ),
     );
@@ -240,7 +244,13 @@ class _ConfirmDeleteDialogState extends State<ConfirmDeleteDialog> {
                     ),
                   ),
                 )
-              : const Icon(Icons.delete_forever_rounded, size: 18),
+              : Icon(
+                  widget.confirmIcon ??
+                      (widget.isDestructive
+                          ? Icons.delete_forever_rounded
+                          : Icons.check_circle_outline_rounded),
+                  size: 18,
+                ),
           label: Text(
             isCountingDown
                 ? '${widget.confirmLabel} (${_remainingSeconds}s)'

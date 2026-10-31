@@ -39,12 +39,18 @@ class _PackTestSelectorState extends State<PackTestSelector> {
         categories.add(test.commercialCategory.trim());
       }
     }
-    return categories.toList();
+    final sorted = categories.toList();
+    sorted.sort((a, b) {
+      if (a == 'Todas') return -1;
+      if (b == 'Todas') return 1;
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+    return sorted;
   }
 
   List<LabTestInDb> _getFilteredItems() {
     final query = _searchController.text.trim().toLowerCase();
-    return widget.availableTests.where((test) {
+    final items = widget.availableTests.where((test) {
       if (_showOnlySelected && !widget.selectedTestIds.contains(test.id)) {
         return false;
       }
@@ -55,10 +61,14 @@ class _PackTestSelectorState extends State<PackTestSelector> {
         final matchesName = test.name.toLowerCase().contains(query);
         final matchesCode = (test.code ?? '').toLowerCase().contains(query);
         final matchesCat = test.commercialCategory.toLowerCase().contains(query);
-        if (!matchesName && !matchesCode && !matchesCat) return false;
+        final matchesSub = test.subclassification.toLowerCase().contains(query);
+        if (!matchesName && !matchesCode && !matchesCat && !matchesSub) return false;
       }
       return true;
     }).toList();
+
+    items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return items;
   }
 
   void _toggleTest(String id, bool selected) {
@@ -303,7 +313,8 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                         ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 2),
-                          child: Row(
+                          child: Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
                                 test.commercialCategory.isNotEmpty
@@ -314,6 +325,17 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
+                              if (test.subclassification.isNotEmpty) ...[
+                                const Text(' • ', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                Text(
+                                  test.subclassification,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.tertiary,
+                                  ),
+                                ),
+                              ],
                               if (test.unitOfMeasure.isNotEmpty) ...[
                                 const Text(' • ', style: TextStyle(fontSize: 10, color: Colors.grey)),
                                 Text(
@@ -321,6 +343,24 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                              if (test.isProfileParameter) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Parámetro',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.onSecondaryContainer,
+                                    ),
                                   ),
                                 ),
                               ],

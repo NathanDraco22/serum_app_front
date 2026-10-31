@@ -7,7 +7,6 @@ import '../../../cubits/order_cubit/read_orders_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_invoice_viewer.dart';
-import '../../../widgets/dialogs/viewers/order_envelope_viewer.dart';
 import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 import 'supervisor_auth_dialog.dart';
@@ -27,6 +26,65 @@ class OrdersList extends StatelessWidget {
   String _formatDate(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Future<void> _handleOrderStatusToggle(
+    BuildContext context,
+    OrderInDb order,
+    bool isCompleted,
+    bool isFullyPaid,
+    String patientName,
+  ) async {
+    if (!isCompleted) {
+      final confirmed = await ConfirmDeleteDialog.show(
+        context,
+        title: 'Completar Orden Médica',
+        message:
+            '¿Desea marcar esta orden como completada? Esta acción confirmará los resultados analíticos para su entrega.',
+        itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
+        confirmLabel: 'Marcar como Completada',
+        cancelLabel: 'Cancelar',
+        countdownSeconds: 5,
+        icon: Icons.task_alt_rounded,
+        confirmIcon: Icons.check_circle_rounded,
+        isDestructive: false,
+      );
+      if (confirmed && context.mounted) {
+        await context.read<WriteOrderCubit>().update(
+              order.id,
+              UpdateOrder(status: 'completed'),
+            );
+        if (context.mounted) {
+          context.read<ReadOrderCubit>().getAll();
+        }
+      }
+    } else {
+      final confirmed = await ConfirmDeleteDialog.show(
+        context,
+        title: 'Reabrir Orden Médica',
+        message:
+            '¿Desea reabrir esta orden? Pasará a estado de edición para permitir continuar registrando o corrigiendo resultados.',
+        itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
+        confirmLabel: 'Reabrir Orden',
+        cancelLabel: 'Cancelar',
+        countdownSeconds: 5,
+        icon: Icons.history_rounded,
+        confirmIcon: Icons.refresh_rounded,
+        isDestructive: false,
+      );
+      if (confirmed && context.mounted) {
+        final revertedStatus = isFullyPaid
+            ? 'paid'
+            : (order.paidAmount > 0 ? 'partiallyPaid' : 'pending');
+        await context.read<WriteOrderCubit>().update(
+              order.id,
+              UpdateOrder(status: revertedStatus),
+            );
+        if (context.mounted) {
+          context.read<ReadOrderCubit>().getAll();
+        }
+      }
+    }
   }
 
   @override
@@ -57,7 +115,7 @@ class OrdersList extends StatelessWidget {
             (totalPrice > 0 && order.paidAmount >= totalPrice);
         final hasResults = order.results.isNotEmpty &&
             order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
-        final isCompleted = order.status == 'completed' || (isFullyPaid && hasResults);
+        final isCompleted = order.status == 'completed';
         final isPartiallyPaid = order.paidAmount > 0 && !isFullyPaid;
         final showPayButton = !isFullyPaid &&
             order.status != 'completed' &&
@@ -77,35 +135,54 @@ class OrdersList extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: isBlocked
-                      ? Colors.red.shade100
+                Tooltip(
+                  message: isBlocked
+                      ? 'Orden bloqueada'
                       : (isCompleted
-                          ? Colors.green.shade100
-                          : isFullyPaid
-                              ? Colors.blue.shade100
-                              : hasResults
-                                  ? Colors.amber.shade100
-                                  : theme.colorScheme.primaryContainer),
-                  foregroundColor: isBlocked
-                      ? Colors.red.shade800
-                      : (isCompleted
-                          ? Colors.green.shade800
-                          : isFullyPaid
-                              ? Colors.blue.shade800
-                              : hasResults
-                                  ? Colors.amber.shade900
-                                  : theme.colorScheme.onPrimaryContainer),
-                  child: Icon(
-                    isBlocked
-                        ? Icons.lock
-                        : (isCompleted
-                            ? Icons.check_circle
-                            : isFullyPaid
-                                ? Icons.paid
-                                : hasResults
-                                    ? Icons.assignment_turned_in
-                                    : Icons.pending_actions),
+                          ? 'Orden completada (clic para reabrir)'
+                          : 'Clic para marcar como completada'),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: isBlocked
+                        ? null
+                        : () => _handleOrderStatusToggle(
+                              context,
+                              order,
+                              isCompleted,
+                              isFullyPaid,
+                              patientName,
+                            ),
+                    child: CircleAvatar(
+                      backgroundColor: isBlocked
+                          ? Colors.red.shade100
+                          : (isCompleted
+                              ? Colors.green.shade100
+                              : isFullyPaid
+                                  ? Colors.blue.shade100
+                                  : hasResults
+                                      ? Colors.amber.shade100
+                                      : theme.colorScheme.primaryContainer),
+                      foregroundColor: isBlocked
+                          ? Colors.red.shade800
+                          : (isCompleted
+                              ? Colors.green.shade800
+                              : isFullyPaid
+                                  ? Colors.blue.shade800
+                                  : hasResults
+                                      ? Colors.amber.shade900
+                                      : theme.colorScheme.onPrimaryContainer),
+                      child: Icon(
+                        isBlocked
+                            ? Icons.lock
+                            : (isCompleted
+                                ? Icons.check_circle
+                                : isFullyPaid
+                                    ? Icons.paid
+                                    : hasResults
+                                        ? Icons.assignment_turned_in
+                                        : Icons.pending_actions),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -263,33 +340,64 @@ class OrdersList extends StatelessWidget {
                               ),
                             ),
                           // Badge Clínico
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: hasResults ? Colors.purple.shade50 : Colors.orange.shade50,
+                          Tooltip(
+                            message: isBlocked
+                                ? 'Orden bloqueada'
+                                : (isCompleted
+                                    ? 'Completada (clic para reabrir)'
+                                    : 'Clic para marcar como completada'),
+                            child: InkWell(
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: hasResults ? Colors.purple.shade200 : Colors.orange.shade200,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  hasResults ? Icons.check_circle_outline : Icons.hourglass_top,
-                                  size: 11,
-                                  color: hasResults ? Colors.purple.shade800 : Colors.orange.shade900,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  hasResults ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: hasResults ? Colors.purple.shade800 : Colors.orange.shade900,
+                              onTap: isBlocked
+                                  ? null
+                                  : () => _handleOrderStatusToggle(
+                                        context,
+                                        order,
+                                        isCompleted,
+                                        isFullyPaid,
+                                        patientName,
+                                      ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: isCompleted
+                                      ? Colors.green.shade50
+                                      : (hasResults ? Colors.purple.shade50 : Colors.orange.shade50),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: isCompleted
+                                        ? Colors.green.shade200
+                                        : (hasResults ? Colors.purple.shade200 : Colors.orange.shade200),
                                   ),
                                 ),
-                              ],
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isCompleted
+                                          ? Icons.check_circle
+                                          : (hasResults ? Icons.check_circle_outline : Icons.hourglass_top),
+                                      size: 11,
+                                      color: isCompleted
+                                          ? Colors.green.shade800
+                                          : (hasResults ? Colors.purple.shade800 : Colors.orange.shade900),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isCompleted
+                                          ? 'ORDEN COMPLETADA'
+                                          : (hasResults ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS'),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: isCompleted
+                                            ? Colors.green.shade800
+                                            : (hasResults ? Colors.purple.shade800 : Colors.orange.shade900),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                           // Badge Financiero
@@ -491,7 +599,7 @@ class OrdersList extends StatelessWidget {
                   icon: Icon(isCompleted ? Icons.visibility_outlined : Icons.assignment_outlined),
                   tooltip: isBlocked
                       ? 'Orden bloqueada: Requiere autorización para capturar resultados'
-                      : (isCompleted ? 'Ver resultados' : 'Editar resultados'),
+                      : 'Capturar / Editar Resultados',
                   color: isBlocked
                       ? theme.colorScheme.outline
                       : (isCompleted ? theme.colorScheme.secondary : theme.colorScheme.primary),
@@ -505,9 +613,7 @@ class OrdersList extends StatelessWidget {
                             ),
                           );
                         }
-                      : (isCompleted
-                          ? () => showClinicalOrderViewerDialog(context, order)
-                          : () => onEditResults(order)),
+                      : () => onEditResults(order),
                 ),
                 if (hasResults || isCompleted) ...[
                   const SizedBox(width: 4),
@@ -523,12 +629,6 @@ class OrdersList extends StatelessWidget {
                   tooltip: 'Comprobante de Factura',
                   color: theme.colorScheme.primary,
                   onPressed: () => showOrderInvoiceViewerDialog(context, order),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.mail_outline),
-                  tooltip: 'Imprimir Sobre',
-                  onPressed: () => showOrderEnvelopeViewerDialog(context, order),
                 ),
                 if (showPayButton) ...[
                   const SizedBox(width: 4),

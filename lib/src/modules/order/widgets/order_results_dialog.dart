@@ -24,6 +24,7 @@ class OrderResultsDialog extends StatefulWidget {
 class _OrderResultsDialogState extends State<OrderResultsDialog> {
   final _formKey = GlobalKey<FormState>();
   late List<OrderTestResult> _results;
+  late Map<String, bool> _visibilityMap;
   late Map<String, TextEditingController> _controllers;
   late TextEditingController _notesController;
   late Map<String, String> _qualitativeValues;
@@ -39,6 +40,9 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   void initState() {
     super.initState();
     _results = List.from(widget.order.results);
+    _visibilityMap = {
+      for (var r in _results) r.labTestId: r.showInPrint,
+    };
     _controllers = {};
     _qualitativeValues = {};
     _notesController = TextEditingController(text: widget.order.notes ?? '');
@@ -59,8 +63,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         // Serie Blanca: los 7 parámetros diferenciales tienen valor por defecto 0 si están vacíos
         if (canonical != null &&
             ClinicalFormulasRegistry.differentialKeys.contains(canonical) &&
-            initial.isEmpty &&
-            widget.order.status != 'completed') {
+            initial.isEmpty) {
           _controllers[r.labTestId] = TextEditingController(text: '0');
         } else {
           final formattedInitial = r.dataType == 'numeric' && initial.isNotEmpty
@@ -72,9 +75,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     }
 
     // Evaluación inicial preventiva si la orden tiene valores precargados
-    if (widget.order.status != 'completed') {
-      _evaluateCalculations();
-    }
+    _evaluateCalculations();
 
     _focusNodes = List.generate(_results.length, (index) {
       final node = FocusNode();
@@ -93,7 +94,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       return node;
     });
 
-    if (widget.order.status != 'completed' && _focusNodes.isNotEmpty) {
+    if (_focusNodes.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _focusNodes.isNotEmpty) {
           _focusNodes.first.requestFocus();
@@ -102,9 +103,15 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     }
   }
 
+  void _toggleVisibility(String labTestId, bool show) {
+    setState(() {
+      _visibilityMap[labTestId] = show;
+    });
+  }
+
   /// Evalúa en tiempo real las fórmulas clínicas aplicables según los parámetros presentes
   void _evaluateCalculations({String? triggeredTestId}) {
-    if (_isEvaluatingCalculations || widget.order.status == 'completed') return;
+    if (_isEvaluatingCalculations) return;
     _isEvaluatingCalculations = true;
 
     try {
@@ -407,6 +414,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           labTestId: r.labTestId,
           parameterName: r.parameterName,
           medicalClassification: r.medicalClassification,
+          subclassification: r.subclassification,
           dataType: r.dataType,
           unitOfMeasure: r.unitOfMeasure,
           referenceValues: r.referenceValues,
@@ -415,6 +423,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           referenceText: r.referenceText,
           resultValue: val,
           alertFlag: alert,
+          showInPrint: _visibilityMap[r.labTestId] ?? true,
         );
       }).toList();
 
@@ -425,11 +434,8 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           ? (widget.order.paidAmount >= totalPrice)
           : (widget.order.status == 'paid');
 
-      final hasAllResults = updatedResults.isNotEmpty &&
-          updatedResults.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
-
       final String newStatus;
-      if (hasAllResults && isFullyPaid) {
+      if (widget.order.status == 'completed') {
         newStatus = 'completed';
       } else if (isFullyPaid) {
         newStatus = 'paid';
@@ -482,7 +488,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isReadOnly = widget.order.status == 'completed';
+    const isReadOnly = false;
 
     final patientName = widget.order.patientInfo?.name ?? 'Paciente #${widget.order.patientId}';
     final shortId = widget.order.id.length > 8
@@ -516,7 +522,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     }
     final differentialSum =
         ClinicalFormulasRegistry.calculateLeukocyteDifferentialSum(availableCanonicalInputs);
-    final isDiffValid = differentialSum == null || ClinicalFormulasRegistry.isDifferentialValid(differentialSum);
+    final visibleCount = _visibilityMap.values.where((v) => v).length;
 
     return PopScope(
       canPop: !_isSubmitting,
@@ -550,6 +556,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
               OrderResultsSummaryBar(
                 filledCount: filledCount,
                 totalCount: _results.length,
+                visibleCount: visibleCount,
                 alertCount: alertCount,
                 differentialSum: differentialSum,
               ),
@@ -584,6 +591,8 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                         isAutoCalculated: _autoCalculatedFieldIds.contains(r.labTestId),
                         formulaDisplay: _autoCalculatedFormulas[r.labTestId],
                         qualitativeValue: _qualitativeValues[r.labTestId],
+                        showInPrint: _visibilityMap[r.labTestId] ?? true,
+                        onToggleVisibility: (show) => _toggleVisibility(r.labTestId, show),
                         onQualitativeChanged: (val) {
                           setState(() => _qualitativeValues[r.labTestId] = val);
                         },
@@ -601,9 +610,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                 isReadOnly: isReadOnly,
                 hasResults: widget.order.results.isNotEmpty,
                 isSubmitting: _isSubmitting,
-                canComplete: filledCount == _results.length &&
-                    widget.order.paidAmount >= widget.order.totalPrice &&
-                    isDiffValid,
+                canComplete: false,
                 onViewReport: () {
                   if (Navigator.of(context).canPop()) {
                     Navigator.pop(context);

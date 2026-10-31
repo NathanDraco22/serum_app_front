@@ -18,6 +18,8 @@ class ParameterCard extends StatelessWidget {
   final String? qualitativeValue;
   final ValueChanged<String> onQualitativeChanged;
   final ValueChanged<String> onNumericChanged;
+  final bool showInPrint;
+  final ValueChanged<bool>? onToggleVisibility;
 
   const ParameterCard({
     super.key,
@@ -34,6 +36,8 @@ class ParameterCard extends StatelessWidget {
     required this.qualitativeValue,
     required this.onQualitativeChanged,
     required this.onNumericChanged,
+    this.showInPrint = true,
+    this.onToggleVisibility,
   });
 
   bool get _hasValue {
@@ -49,20 +53,24 @@ class ParameterCard extends StatelessWidget {
 
     final isNormal = _hasValue && !isAlert;
     // Decoración de borde reactivo
-    final borderColor = isAlert
-        ? Colors.red.shade300
-        : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant);
+    final borderColor = !showInPrint
+        ? theme.colorScheme.outlineVariant.withValues(alpha: 0.5)
+        : (isAlert
+            ? Colors.red.shade300
+            : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant));
 
-    final cardBg = isAlert
-        ? Colors.red.shade50.withValues(alpha: 0.3)
-        : theme.colorScheme.surfaceContainerLowest;
+    final cardBg = !showInPrint
+        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
+        : (isAlert
+            ? Colors.red.shade50.withValues(alpha: 0.3)
+            : theme.colorScheme.surfaceContainerLowest);
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor, width: isAlert ? 1.4 : 1.0),
+        border: Border.all(color: borderColor, width: isAlert && showInPrint ? 1.4 : 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +86,9 @@ class ParameterCard extends StatelessWidget {
                         result.parameterName,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface,
+                          color: !showInPrint
+                              ? theme.colorScheme.onSurfaceVariant
+                              : (isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface),
                         ),
                       ),
                     ),
@@ -136,7 +146,42 @@ class ParameterCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
+              if (!showInPrint) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                  ),
+                  child: Text(
+                    'NO SE IMPRIME',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurfaceVariant,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               _buildStatusBadge(theme),
+              const SizedBox(width: 4),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: Icon(
+                  showInPrint ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  size: 19,
+                  color: showInPrint ? theme.colorScheme.primary : theme.colorScheme.outline,
+                ),
+                tooltip: showInPrint
+                    ? 'Visible en informe (clic para ocultar)'
+                    : 'Oculto de informe (clic para mostrar)',
+                onPressed: onToggleVisibility != null ? () => onToggleVisibility!(!showInPrint) : null,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -196,7 +241,7 @@ class ParameterCard extends StatelessWidget {
           ),
 
           // Alerta contextual explicativa
-          if (isAlert) ...[
+          if (isAlert && showInPrint) ...[
             const SizedBox(height: 6),
             Row(
               children: [
@@ -268,24 +313,30 @@ class ParameterCard extends StatelessWidget {
         final unit = result.unitOfMeasure.isNotEmpty ? ' ${result.unitOfMeasure}' : '';
         return '${ref.minValue} - ${ref.maxValue}$unit';
       }
-      return 'No especificado';
+      return 'Sin rango definido';
     } else if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
-      return result.expectedQualitativeValue ?? 'Negativo';
+      return result.expectedQualitativeValue ?? 'No aplica';
     }
-    return 'Texto libre';
+    return 'Texto descriptivo';
   }
 
   String _getAlertExplanation() {
-    if ((alert == 'HIGH' || alert == 'H') && result.referenceValues.isNotEmpty) {
-      final ref = result.referenceValues.first;
-      return 'El valor está por encima del límite máximo (${ref.maxValue} ${result.unitOfMeasure}) [Flag H]';
-    } else if ((alert == 'LOW' || alert == 'L') && result.referenceValues.isNotEmpty) {
-      final ref = result.referenceValues.first;
-      return 'El valor está por debajo del límite mínimo (${ref.minValue} ${result.unitOfMeasure}) [Flag L]';
+    if (alert == 'HIGH' || alert == 'H') {
+      if (result.referenceValues.isNotEmpty) {
+        final ref = result.referenceValues.first;
+        return 'Valor superior al límite máximo (${ref.maxValue} ${result.unitOfMeasure}).';
+      }
+      return 'Valor clínicamente alto.';
+    } else if (alert == 'LOW' || alert == 'L') {
+      if (result.referenceValues.isNotEmpty) {
+        final ref = result.referenceValues.first;
+        return 'Valor inferior al límite mínimo (${ref.minValue} ${result.unitOfMeasure}).';
+      }
+      return 'Valor clínicamente bajo.';
     } else if (alert == 'ABNORMAL') {
-      return 'El resultado difiere del valor esperado (${result.expectedQualitativeValue ?? "Normal"})';
+      return 'Resultado difiere del valor esperado (${result.expectedQualitativeValue}).';
     }
-    return 'Valor fuera de los parámetros estándar';
+    return '';
   }
 
   Widget _buildInput(ThemeData theme) {
@@ -293,18 +344,12 @@ class ParameterCard extends StatelessWidget {
       final options = result.qualitativeOptions.isNotEmpty
           ? result.qualitativeOptions
           : ['Negativo', 'Positivo'];
-      final selectedValue =
-          (qualitativeValue != null && options.contains(qualitativeValue))
-              ? qualitativeValue
-              : options.first;
 
       return DropdownButtonFormField<String>(
-        focusNode: focusNode,
-        initialValue: selectedValue,
-        isDense: true,
+        initialValue: qualitativeValue,
         decoration: InputDecoration(
           isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -315,16 +360,37 @@ class ParameterCard extends StatelessWidget {
           ),
         ),
         items: options.map((opt) {
-          return DropdownMenuItem(
+          final isAlertOpt = result.expectedQualitativeValue != null &&
+              result.expectedQualitativeValue!.isNotEmpty &&
+              opt != result.expectedQualitativeValue;
+
+          return DropdownMenuItem<String>(
             value: opt,
-            child: Text(opt, style: const TextStyle(fontSize: 14)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  opt,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isAlertOpt ? Colors.orange.shade900 : theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (isAlertOpt)
+                  Text(
+                    ' (Anormal)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange.shade800,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
           );
         }).toList(),
         onChanged: isReadOnly ? null : (val) {
-          if (val != null) {
-            onQualitativeChanged(val);
-            onFieldSubmitted?.call();
-          }
+          if (val != null) onQualitativeChanged(val);
         },
       );
     } else if (result.dataType == 'text') {
@@ -332,10 +398,10 @@ class ParameterCard extends StatelessWidget {
         focusNode: focusNode,
         controller: controller,
         readOnly: isReadOnly,
-        maxLines: 1,
         textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
         onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-        style: const TextStyle(fontSize: 14),
+        onChanged: onNumericChanged,
+        style: const TextStyle(fontWeight: FontWeight.bold),
         decoration: InputDecoration(
           hintText: 'Observación...',
           isDense: true,
@@ -365,7 +431,7 @@ class ParameterCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 15.5,
           fontWeight: FontWeight.bold,
-          color: isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface,
+          color: isAlert && showInPrint ? Colors.red.shade900 : theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: '0.00',
@@ -390,7 +456,10 @@ class ParameterCard extends StatelessWidget {
             borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
           ),
         ),
-        validator: (val) => val == null || val.trim().isEmpty ? 'Requerido' : null,
+        validator: (val) {
+          if (!showInPrint) return null;
+          return val == null || val.trim().isEmpty ? 'Requerido' : null;
+        },
       );
     }
   }

@@ -18,7 +18,7 @@ Este directorio documenta a profundidad cada una de las áreas funcionales de la
 | :--- | :--- | :--- |
 | **[Autenticación y Sesión](auth_y_sesion.md)** | `splash`, `auth`, `cash_register_selection`, `home_menu` | Ciclo de vida de tokens Hive AES-256, login, selección de caja física, guards de navegación y shell lateral. |
 | **[Pacientes y Doctores](pacientes_y_doctores.md)** | `patient`, `doctor` | Expedientes demográficos de pacientes, búsqueda con debounce, directores de médicos referentes y vinculación a sucursales. |
-| **[Pruebas de Laboratorio y Packs](lab_tests_y_packs.md)** | `lab_test` | Catálogo de análisis individuales y paquetes comerciales, selector avanzado con comparador de precios y visor de rangos. |
+| **[Pruebas de Laboratorio y Packs](lab_tests_y_packs.md)** | `lab_test` | Catálogo de análisis y perfiles comerciales, creación directa de parámetros en perfiles, mitigación de ruido visual, doble dropdown en cascada (Clasificación/Subclasificación), selector A-Z y comparador de precios. |
 | **[Órdenes, Pagos y Resultados](ordenes_y_resultados.md)** | `order` | Ciclo de órdenes médicas con snapshots inmutables, modificación arbitraria de precios, bloqueo automático (`isBlocked`), flujo de aprobación por supervisor (`accessLevel > 3`), modal de cobro integrado y captura reactiva de resultados. |
 | **[Cotizaciones](cotizaciones.md)** | `quotation` | Presupuestos comerciales en dos columnas (`/quotations/new`), clientes y médicos opcionales, y exportación e impresión inmediata a PDF como presupuesto informativo independiente. |
 | **[Cajas y Kardex](cajas_y_kardex.md)** | `cash_register`, `cash_transaction` | Apertura formal de caja, arqueo con cálculo de sobrante/faltante, cierre y Kardex inmutable de movimientos financieros. |

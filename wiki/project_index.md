@@ -185,14 +185,16 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 ### 🧪 3.7 Módulo `lab_test` (Catálogo Unificado de Pruebas y Packs)
 * **Ubicación**: `lib/src/modules/lab_test/`
 * **Vistas**: `view/lab_test_screen.dart`, `view/lab_test_form_screen.dart`
-* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/pack_test_selector.dart`
+* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/lab_test_quick_price_dialog.dart`, `widgets/pack_test_selector.dart`, `widgets/quick_create_parameter_dialog.dart`, `widgets/clinical_classification_registry.dart`
 * **Cubits Asociados**: `ReadLabTestCubit`, `WriteLabTestCubit`, `SearchLabTestsCubit`
 * **Funciones Clave**:
   1. **Soporte Híbrido (Individuales vs Packs)**: Gestiona tanto pruebas analíticas individuales como paquetes comerciales (`isPack: true`) que agrupan múltiples análisis.
-  2. **Filtros Multidimensionales**: Permite filtrar entre "Todas", "Pruebas Individuales", "Packs/Perfiles" y por categoría comercial.
-  3. **Selector Avanzado para Packs (`PackTestSelector`)**: Modal interactivo que permite buscar, seleccionar múltiples pruebas existentes y comparar el precio de lista sumado contra el precio de paquete asignado.
-  4. **Definición de Rangos y Valores de Referencia**: Permite configurar rangos por sexo y edad para valores numéricos, listas de opciones para valores cualitativos (ej. Positivo/Negativo) y formato de texto libre.
-  5. **Visor de Ficha Técnica (`LabTestDetailDialog`)**: Diálogo amplio para inspeccionar parámetros clínicos, metodología y desglose de análisis incluidos.
+  2. **Creación Directa de Parámetros en Perfiles (`QuickCreateParameterDialog`)**: Permite dar de alta parámetros analíticos técnicos (ej. *Color*, *Aspecto*, *pH* de un EGO) directamente desde el formulario del perfil, vinculándolos en tiempo real con `isProfileParameter: true` y heredando la categoría/subserie.
+  3. **Mitigación de Ruido Visual en Catálogo**: Filtro *"Ocultar parámetros de perfil"* activo por defecto en `LabTestsScreen`, badge distintivo `PARÁMETRO` y exclusión de búsquedas comerciales de venta rápida para evitar saturar al cajero con parámetros internos.
+  4. **Filtros por Doble Dropdown en Cascada**: Sustituye la lista de chips horizontales por dos selectores desplegables: *Clasificación General* (especialidades clínicas A-Z) y *Subclasificación* (subseries mapeadas reactivamente) con botón de 1-tap *"Limpiar filtros"*.
+  5. **Selector Avanzado para Packs (`PackTestSelector`)**: Modal interactivo ordenado de la A a la Z que permite buscar, seleccionar múltiples pruebas y comparar el precio de lista sumado contra el precio de paquete asignado.
+  6. **Definición de Rangos y Valores de Referencia**: Permite configurar rangos por sexo y edad para valores numéricos, listas de opciones para valores cualitativos (ej. Positivo/Negativo) y formato de texto libre.
+  7. **Visor de Ficha Técnica (`LabTestDetailDialog`)**: Diálogo amplio para inspeccionar parámetros clínicos, metodología, subclasificación y desglose de análisis incluidos.
 
 ---
 

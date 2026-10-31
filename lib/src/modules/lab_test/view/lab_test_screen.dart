@@ -8,6 +8,7 @@ import '../../../cubits/lab_test_cubit/search_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../widgets/lab_tests_list.dart';
 import 'lab_test_form_screen.dart';
+import '../widgets/clinical_classification_registry.dart';
 import '../widgets/lab_test_detail_dialog.dart';
 import '../widgets/lab_test_quick_price_dialog.dart';
 import '../../../widgets/common/app_buttons.dart';
@@ -60,8 +61,10 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   final TextEditingController _searchController = TextEditingController();
-  String _filterType = 'all'; // 'all', 'individual', 'pack'
+  String _filterType = 'all'; // 'all', 'individual', 'pack', 'parameter'
   String _selectedCategory = 'Todas';
+  String _selectedSubclassification = 'Todas';
+  bool _hideProfileParameters = true;
 
   @override
   void dispose() {
@@ -97,6 +100,7 @@ class _BodyState extends State<_Body> {
             context.read<SearchLabTestCubit>().clear();
             setState(() {
               _selectedCategory = 'Todas';
+              _selectedSubclassification = 'Todas';
               _filterType = 'all';
             });
             final branchId = context.read<AppSessionCubit>().currentBranchId;
@@ -140,18 +144,72 @@ class _BodyState extends State<_Body> {
         categories.add(t.commercialCategory.trim());
       }
     }
-    return categories.toList();
+    for (final c in ClinicalClassificationRegistry.classifications) {
+      categories.add(c);
+    }
+    final sorted = categories.toList();
+    sorted.sort((a, b) {
+      if (a == 'Todas') return -1;
+      if (b == 'Todas') return 1;
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+    return sorted;
+  }
+
+  List<String> _extractSubclassifications(
+    List<LabTestInDb> tests,
+    String selectedCategory,
+  ) {
+    final subcategories = <String>{'Todas'};
+    final hasCategory = selectedCategory != 'Todas';
+
+    for (final t in tests) {
+      if (hasCategory &&
+          t.commercialCategory.trim().toLowerCase() != selectedCategory.trim().toLowerCase()) {
+        continue;
+      }
+      if (t.subclassification.trim().isNotEmpty) {
+        subcategories.add(t.subclassification.trim());
+      }
+    }
+
+    if (hasCategory) {
+      for (final s in ClinicalClassificationRegistry.getSubclassificationsFor(selectedCategory)) {
+        subcategories.add(s);
+      }
+    }
+
+    final sorted = subcategories.toList();
+    sorted.sort((a, b) {
+      if (a == 'Todas') return -1;
+      if (b == 'Todas') return 1;
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+    return sorted;
   }
 
   List<LabTestInDb> _applyFilters(List<LabTestInDb> baseList) {
-    return baseList.where((t) {
-      if (_filterType == 'individual' && t.isPack) return false;
+    final filtered = baseList.where((t) {
+      if (_filterType == 'individual' && (t.isPack || t.isProfileParameter)) return false;
       if (_filterType == 'pack' && !t.isPack) return false;
-      if (_selectedCategory != 'Todas' && t.commercialCategory.trim() != _selectedCategory) {
+      if (_filterType == 'parameter' && !t.isProfileParameter) return false;
+      if (_hideProfileParameters && t.isProfileParameter && _filterType == 'all') {
+        return false;
+      }
+      if (_selectedCategory != 'Todas' &&
+          t.commercialCategory.trim().toLowerCase() != _selectedCategory.toLowerCase()) {
+        return false;
+      }
+      if (_selectedSubclassification != 'Todas' &&
+          t.subclassification.trim().toLowerCase() !=
+              _selectedSubclassification.trim().toLowerCase()) {
         return false;
       }
       return true;
     }).toList();
+
+    filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return filtered;
   }
 
   @override
@@ -191,8 +249,10 @@ class _BodyState extends State<_Body> {
 
           final totalCount = allTests.length;
           final packCount = allTests.where((t) => t.isPack).length;
-          final individualCount = totalCount - packCount;
+          final parameterCount = allTests.where((t) => t.isProfileParameter).length;
+          final individualCount = totalCount - packCount - parameterCount;
           final categories = _extractCategories(allTests);
+          final subcategories = _extractSubclassifications(allTests, _selectedCategory);
 
           return Column(
             children: [
@@ -250,6 +310,14 @@ class _BodyState extends State<_Body> {
                           count: packCount,
                           color: theme.colorScheme.tertiary,
                         ),
+                        if (parameterCount > 0) ...[
+                          const SizedBox(width: 8),
+                          _KpiBadge(
+                            label: 'Parámetros',
+                            count: parameterCount,
+                            color: theme.colorScheme.outline,
+                          ),
+                        ],
                         const SizedBox(width: 16),
                         PrimaryButton(
                           onPressed: () => _openLabTestForm(context),
@@ -301,10 +369,11 @@ class _BodyState extends State<_Body> {
                         const SizedBox(width: 16),
                         // Filtro de Tipo (Dropdown)
                         SizedBox(
-                          width: 240,
+                          width: 250,
                           child: DropdownButtonFormField<String>(
                             key: ValueKey(_filterType),
                             initialValue: _filterType,
+                            isExpanded: true,
                             isDense: true,
                             decoration: InputDecoration(
                               labelText: 'Tipo de análisis',
@@ -323,12 +392,38 @@ class _BodyState extends State<_Body> {
                               ),
                             ),
                             items: const [
-                              DropdownMenuItem(value: 'all', child: Text('Todos los análisis')),
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text(
+                                  'Todos los análisis',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
                               DropdownMenuItem(
                                 value: 'individual',
-                                child: Text('Pruebas Individuales'),
+                                child: Text(
+                                  'Pruebas Individuales',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13),
+                                ),
                               ),
-                              DropdownMenuItem(value: 'pack', child: Text('Packs / Perfiles')),
+                              DropdownMenuItem(
+                                value: 'pack',
+                                child: Text(
+                                  'Packs / Perfiles',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'parameter',
+                                child: Text(
+                                  'Parámetros de Perfiles',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
                             ],
                             onChanged: (val) {
                               if (val != null) {
@@ -337,31 +432,155 @@ class _BodyState extends State<_Body> {
                             },
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        FilterChip(
+                          avatar: Icon(
+                            _hideProfileParameters
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 16,
+                          ),
+                          label: const Text(
+                            'Ocultar parámetros de perfil',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          selected: _hideProfileParameters,
+                          onSelected: (val) {
+                            setState(() => _hideProfileParameters = val);
+                          },
+                          visualDensity: VisualDensity.compact,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
 
-                    // Chips de Categorías Comerciales
-                    if (categories.length > 1)
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: categories.map((cat) {
-                            final isSelected = _selectedCategory == cat;
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: FilterChip(
-                                label: Text(cat, style: const TextStyle(fontSize: 12)),
-                                selected: isSelected,
-                                onSelected: (_) {
-                                  setState(() => _selectedCategory = cat);
-                                },
-                                visualDensity: VisualDensity.compact,
+                    // Filtros Secundarios: Dropdowns en cascada de Clasificación y Subclasificación
+                    Wrap(
+                      spacing: 16,
+                      runSpacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        // Dropdown 1: Clasificación General
+                        SizedBox(
+                          width: 280,
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey('filter_category_$_selectedCategory'),
+                            initialValue: categories.contains(_selectedCategory)
+                                ? _selectedCategory
+                                : 'Todas',
+                            isExpanded: true,
+                            isDense: true,
+                            decoration: InputDecoration(
+                              labelText: 'Clasificación General',
+                              prefixIcon: const Icon(Icons.category_outlined, size: 20),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
                               ),
-                            );
-                          }).toList(),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                            ),
+                            items: categories.map((cat) {
+                              return DropdownMenuItem(
+                                value: cat,
+                                child: Text(
+                                  cat == 'Todas' ? 'Todas las clasificaciones' : cat,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _selectedCategory = val;
+                                  _selectedSubclassification = 'Todas';
+                                });
+                              }
+                            },
+                          ),
                         ),
-                      ),
+
+                        // Dropdown 2: Subclasificación
+                        SizedBox(
+                          width: 280,
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey(
+                              'filter_sub_${_selectedCategory}_$_selectedSubclassification',
+                            ),
+                            initialValue: subcategories.contains(_selectedSubclassification)
+                                ? _selectedSubclassification
+                                : 'Todas',
+                            isExpanded: true,
+                            isDense: true,
+                            decoration: InputDecoration(
+                              labelText: 'Subclasificación',
+                              prefixIcon: const Icon(Icons.subdirectory_arrow_right, size: 20),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                            ),
+                            items: subcategories.map((sub) {
+                              return DropdownMenuItem(
+                                value: sub,
+                                child: Text(
+                                  sub == 'Todas' ? 'Todas las subclasificaciones' : sub,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _selectedSubclassification = val;
+                                });
+                              }
+                            },
+                          ),
+                        ),
+
+                        // Botón de Limpiar Filtros
+                        if (_selectedCategory != 'Todas' ||
+                            _selectedSubclassification != 'Todas')
+                          TextButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _selectedCategory = 'Todas';
+                                _selectedSubclassification = 'Todas';
+                              });
+                            },
+                            icon: const Icon(Icons.clear_all, size: 18),
+                            label: const Text(
+                              'Limpiar filtros',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),

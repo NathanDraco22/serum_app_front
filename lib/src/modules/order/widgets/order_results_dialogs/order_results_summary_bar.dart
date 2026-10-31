@@ -5,6 +5,7 @@ import '../../../../tools/calculators/clinical_formulas_registry.dart';
 class OrderResultsSummaryBar extends StatelessWidget {
   final int filledCount;
   final int totalCount;
+  final int? visibleCount;
   final int alertCount;
   final double? differentialSum;
 
@@ -12,6 +13,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
     super.key,
     required this.filledCount,
     required this.totalCount,
+    this.visibleCount,
     required this.alertCount,
     this.differentialSum,
   });
@@ -38,6 +40,35 @@ class OrderResultsSummaryBar extends StatelessWidget {
               color: theme.colorScheme.onSurface,
             ),
           ),
+          if (visibleCount != null && visibleCount! < totalCount) ...[
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.visibility,
+                    size: 11,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$visibleCount a imprimir',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const Spacer(),
           if (differentialSum != null) ...[
             Container(

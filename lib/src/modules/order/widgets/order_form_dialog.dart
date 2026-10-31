@@ -55,6 +55,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
                 labTestId: childTest.id,
                 parameterName: childTest.name,
                 medicalClassification: childTest.commercialCategory,
+                subclassification: childTest.subclassification,
                 dataType: childTest.dataType,
                 unitOfMeasure: childTest.unitOfMeasure,
                 referenceValues: childTest.referenceValues,
@@ -71,6 +72,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
               labTestId: item.id,
               parameterName: item.name,
               medicalClassification: item.commercialCategory,
+              subclassification: item.subclassification,
               dataType: item.dataType,
               unitOfMeasure: item.unitOfMeasure,
               referenceValues: item.referenceValues,
@@ -176,11 +178,12 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
                 displayStringForOption: (option) =>
                     '${option.name} (\$${(option.salePrice / 100).toStringAsFixed(2)})',
                 optionsBuilder: (textEditingValue) {
+                  final availableTests = labTests.where((t) => !t.isProfileParameter);
                   if (textEditingValue.text.isEmpty) {
-                    return labTests;
+                    return availableTests;
                   }
                   final query = textEditingValue.text.toLowerCase();
-                  return labTests.where(
+                  return availableTests.where(
                     (t) =>
                         t.name.toLowerCase().contains(query) ||
                         (t.code != null && t.code!.toLowerCase().contains(query)),

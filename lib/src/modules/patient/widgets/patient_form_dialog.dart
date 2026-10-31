@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/patient_cubit/write_patients_cubit.dart';
@@ -22,9 +23,11 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   String? _email;
   String? _cardId;
   late DateTime _dateOfBirth;
+  late TextEditingController _ageController;
 
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _cardIdFocusNode = FocusNode();
+  final FocusNode _ageFocusNode = FocusNode();
   final FocusNode _phoneFocusNode = FocusNode();
   final FocusNode _emailFocusNode = FocusNode();
   final FocusNode _addressFocusNode = FocusNode();
@@ -49,6 +52,8 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _email = widget.patient!.email;
       _cardId = widget.patient!.cardId;
       _dateOfBirth = DateTime.fromMillisecondsSinceEpoch(widget.patient!.dateOfBirth);
+      final ageVal = widget.patient!.age;
+      _ageController = TextEditingController(text: ageVal > 0 ? ageVal.toString() : '');
     } else {
       _name = '';
       _phone = '';
@@ -57,17 +62,32 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _email = '';
       _cardId = '';
       _dateOfBirth = DateTime.now();
+      _ageController = TextEditingController();
     }
   }
 
   @override
   void dispose() {
+    _ageController.dispose();
     _nameFocusNode.dispose();
     _cardIdFocusNode.dispose();
+    _ageFocusNode.dispose();
     _phoneFocusNode.dispose();
     _emailFocusNode.dispose();
     _addressFocusNode.dispose();
     super.dispose();
+  }
+
+  int _calculateAge(int timestamp) {
+    if (timestamp <= 0) return 0;
+    final birth = DateTime.fromMillisecondsSinceEpoch(timestamp);
+    final today = DateTime.now();
+    int age = today.year - birth.year;
+    if (today.month < birth.month ||
+        (today.month == birth.month && today.day < birth.day)) {
+      age--;
+    }
+    return age >= 0 ? age : 0;
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -80,6 +100,24 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     if (picked != null && picked != _dateOfBirth) {
       setState(() {
         _dateOfBirth = picked;
+        final computedAge = _calculateAge(picked.millisecondsSinceEpoch);
+        _ageController.text = computedAge.toString();
+      });
+    }
+  }
+
+  void _onAgeChanged(String val) {
+    final trimmed = val.trim();
+    if (trimmed.isEmpty) return;
+    final age = int.tryParse(trimmed);
+    if (age != null && age >= 0 && age <= 130) {
+      final now = DateTime.now();
+      final newYear = now.year - age;
+      final newMonth = _dateOfBirth.month;
+      final maxDays = DateTime(newYear, newMonth + 1, 0).day;
+      final newDay = _dateOfBirth.day > maxDays ? maxDays : _dateOfBirth.day;
+      setState(() {
+        _dateOfBirth = DateTime(newYear, newMonth, newDay);
       });
     }
   }
@@ -89,6 +127,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _formKey.currentState!.save();
       final cubit = context.read<WritePatientCubit>();
       final mappedGender = _gender == 'male' ? 'M' : _gender == 'female' ? 'F' : 'O';
+      final parsedAge = int.tryParse(_ageController.text.trim());
 
       if (widget.patient == null) {
         final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
@@ -102,6 +141,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
           originBranch: activeBranchId,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
+          age: parsedAge,
         );
         cubit.create(newPatient).then((_) {
           if (!mounted) return;
@@ -120,6 +160,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
           address: _address?.trim().isNotEmpty == true ? _address!.trim() : null,
           email: _email?.isNotEmpty == true ? _email : null,
           cardId: _cardId?.isNotEmpty == true ? _cardId : null,
+          age: parsedAge,
         );
         cubit.update(widget.patient!.id, updatePatient).then((_) {
           if (!mounted) return;
@@ -183,22 +224,61 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
                   initialValue: _cardId,
                   focusNode: _cardIdFocusNode,
                   textInputAction: TextInputAction.next,
-                  onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
+                  onFieldSubmitted: (_) => _ageFocusNode.requestFocus(),
                   decoration: const InputDecoration(labelText: 'Cédula / Identificación'),
                   onSaved: (val) => _cardId = val,
                 ),
                 const SizedBox(height: 12),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        'Fecha de Nacimiento:\n${_dateOfBirth.day}/${_dateOfBirth.month}/${_dateOfBirth.year}',
-                        style: theme.textTheme.bodyMedium,
+                      flex: 4,
+                      child: TextFormField(
+                        controller: _ageController,
+                        focusNode: _ageFocusNode,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                        onFieldSubmitted: (_) => _phoneFocusNode.requestFocus(),
+                        decoration: const InputDecoration(
+                          labelText: 'Edad (años) *',
+                          hintText: 'Ej. 35',
+                          prefixIcon: Icon(Icons.cake_outlined, size: 20),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Requerido';
+                          }
+                          final a = int.tryParse(val.trim());
+                          if (a == null || a < 0 || a > 130) {
+                            return 'Edad inválida';
+                          }
+                          return null;
+                        },
+                        onChanged: _onAgeChanged,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.calendar_today),
-                      onPressed: () => _selectDate(context),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 5,
+                      child: InkWell(
+                        onTap: () => _selectDate(context),
+                        borderRadius: BorderRadius.circular(8),
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Fecha de Nacimiento',
+                            suffixIcon: Icon(Icons.calendar_month, size: 20),
+                          ),
+                          child: Text(
+                            '${_dateOfBirth.day.toString().padLeft(2, '0')}/${_dateOfBirth.month.toString().padLeft(2, '0')}/${_dateOfBirth.year}',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),

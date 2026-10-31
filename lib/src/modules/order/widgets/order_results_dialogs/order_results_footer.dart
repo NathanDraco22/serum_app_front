@@ -12,10 +12,10 @@ class OrderResultsFooter extends StatelessWidget {
 
   const OrderResultsFooter({
     super.key,
-    required this.isReadOnly,
+    this.isReadOnly = false,
     required this.hasResults,
     required this.isSubmitting,
-    required this.canComplete,
+    this.canComplete = false,
     required this.onViewReport,
     required this.onCancel,
     required this.onSubmit,
@@ -68,9 +68,7 @@ class OrderResultsFooter extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.check, size: 16),
-                  label: Text(
-                    canComplete ? 'Completar y Guardar' : 'Guardar Resultados',
-                  ),
+                  label: const Text('Guardar Resultados'),
                   onPressed: isSubmitting ? null : onSubmit,
                 ),
               ],

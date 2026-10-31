@@ -392,5 +392,58 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye PDF excluyendo parámetros con showInPrint false', () async {
+      final orderWithHidden = OrderInDb(
+        id: 'ord-hidden-test',
+        patientId: 'pat-1',
+        doctorId: 'doc-1',
+        branchId: 'br-1',
+        items: mockOrder.items,
+        status: 'completed',
+        totalPrice: 35000,
+        paidAmount: 35000,
+        createdAt: nowMs,
+        patientInfo: mockOrder.patientInfo,
+        doctorInfo: mockOrder.doctorInfo,
+        results: [
+          OrderTestResult(
+            labTestId: 'lt-1',
+            parameterName: 'Colesterol Total',
+            medicalClassification: 'Bioquímica',
+            dataType: 'numeric',
+            resultValue: '185',
+            showInPrint: true,
+          ),
+          OrderTestResult(
+            labTestId: 'lt-2',
+            parameterName: 'Triglicéridos',
+            medicalClassification: 'Bioquímica',
+            dataType: 'numeric',
+            resultValue: '120',
+            showInPrint: false, // Oculto
+          ),
+        ],
+      );
+
+      final branch = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Matriz',
+        address: 'Calle 10 #20',
+        phone: '1234-5678',
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: orderWithHidden,
+        branch: branch,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }

@@ -59,11 +59,14 @@ class LabTestsList extends StatelessWidget {
       );
     }
 
+    final sortedTests = List<LabTestInDb>.from(labTests);
+    sortedTests.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      itemCount: labTests.length,
+      itemCount: sortedTests.length,
       itemBuilder: (context, index) {
-        final labTest = labTests[index];
+        final labTest = sortedTests[index];
         final priceFormatted = (labTest.salePrice / 100.0).toStringAsFixed(2);
 
         return Card(
@@ -124,6 +127,22 @@ class LabTestsList extends StatelessWidget {
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color: theme.colorScheme.onTertiary,
+                                  ),
+                                ),
+                              ),
+                            if (labTest.isProfileParameter)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'PARÁMETRO',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSecondaryContainer,
                                   ),
                                 ),
                               ),
@@ -241,6 +260,22 @@ class LabTestsList extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            if (labTest.subclassification.isNotEmpty) ...[
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.account_tree_outlined, size: 14, color: theme.colorScheme.tertiary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    labTest.subclassification,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.tertiary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                             if (!labTest.isPack) ...[
                               Row(
                                 mainAxisSize: MainAxisSize.min,

@@ -680,7 +680,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 titleUpper.contains('ANTIGEN')) {
               clinicalArea = 'INMUNOLOGÍA / SEROLOGÍA';
             } else {
-              for (final r in order.results) {
+              final visibleResults = order.results.where((r) => r.showInPrint).toList();
+              final resultsToEvaluate = visibleResults.isNotEmpty ? visibleResults : order.results;
+              for (final r in resultsToEvaluate) {
                 final mc = r.medicalClassification.trim().toUpperCase();
                 if (mc.contains('HEMAT')) {
                   clinicalArea = 'HEMATOLOGÍA';
@@ -697,13 +699,15 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 ? order.examName.toUpperCase()
                 : 'ESTUDIO CLÍNICO';
 
-            // Agrupar por series/clasificación médica
+            // Agrupar por subclasificación médica (subseries como SERIE ROJA, SERIE BLANCA, etc.) o clasificación general
             final Map<String, List<OrderTestResult>> groups = {};
             for (final r in order.results) {
+              if (!r.showInPrint) continue;
+              final sub = r.subclassification.trim();
               final classification = r.medicalClassification.trim();
-              final groupKey = classification.isNotEmpty
-                  ? classification.toUpperCase()
-                  : '';
+              final groupKey = sub.isNotEmpty
+                  ? sub.toUpperCase()
+                  : (classification.isNotEmpty ? classification.toUpperCase() : '');
               groups.putIfAbsent(groupKey, () => []).add(r);
             }
 
@@ -951,7 +955,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                           if (referenceNotesItems.isEmpty) return const SizedBox.shrink();
 
                           final showParameterName = order.results
-                                  .where((x) => x.referenceText.trim().isNotEmpty)
+                                  .where((x) => x.showInPrint && x.referenceText.trim().isNotEmpty)
                                   .length >
                               1;
 

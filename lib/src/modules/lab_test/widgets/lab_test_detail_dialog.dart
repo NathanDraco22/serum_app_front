@@ -83,6 +83,24 @@ class LabTestDetailDialog extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            if (labTest.isProfileParameter) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'PARÁMETRO',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSecondaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         if (labTest.code != null && labTest.code!.isNotEmpty) ...[
@@ -146,13 +164,23 @@ class LabTestDetailDialog extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: _InfoTile(
-                            label: 'Categoría Comercial',
+                            label: 'Categoría / Área',
                             value: labTest.commercialCategory.isNotEmpty
                                 ? labTest.commercialCategory
                                 : 'Sin Asignar',
                             icon: Icons.category,
                           ),
                         ),
+                        if (labTest.subclassification.isNotEmpty) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _InfoTile(
+                              label: 'Subclasificación',
+                              value: labTest.subclassification,
+                              icon: Icons.account_tree_outlined,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 16),

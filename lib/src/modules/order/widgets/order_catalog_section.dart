@@ -30,6 +30,7 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
   String _searchQuery = '';
   LabTestFilterType _selectedFilterType = LabTestFilterType.all;
   String? _selectedCategory;
+  bool _hideProfileParameters = true;
 
   @override
   Widget build(BuildContext context) {
@@ -46,21 +47,28 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
         if (!matchName && !matchCode && !matchCat) return false;
       }
 
-      // 2. Type Filter
-      if (_selectedFilterType == LabTestFilterType.individual && test.isPack) {
+      // 2. Hide Profile Parameters
+      if (_hideProfileParameters && test.isProfileParameter) {
+        return false;
+      }
+
+      // 3. Type Filter
+      if (_selectedFilterType == LabTestFilterType.individual && (test.isPack || test.isProfileParameter)) {
         return false;
       }
       if (_selectedFilterType == LabTestFilterType.packs && !test.isPack) {
         return false;
       }
 
-      // 3. Category Filter
+      // 4. Category Filter
       if (_selectedCategory != null && test.commercialCategory != _selectedCategory) {
         return false;
       }
 
       return true;
     }).toList();
+
+    filteredTests.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
     // Available categories
     final categories = widget.allLabTests
@@ -161,6 +169,26 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
                     setState(() {
                       _selectedFilterType = val ? LabTestFilterType.individual : LabTestFilterType.all;
                     });
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  avatar: Icon(
+                    _hideProfileParameters
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 14,
+                    color: _hideProfileParameters
+                        ? theme.colorScheme.onSecondaryContainer
+                        : theme.colorScheme.outline,
+                  ),
+                  label: const Text(
+                    'Ocultar parámetros de perfil',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  selected: _hideProfileParameters,
+                  onSelected: (val) {
+                    setState(() => _hideProfileParameters = val);
                   },
                 ),
                 const VerticalDivider(width: 24, indent: 8, endIndent: 8),
@@ -299,17 +327,50 @@ class _OrderCatalogSectionState extends State<OrderCatalogSection> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        test.isPack
-                            ? 'Pack (${test.childTestIds.length} análisis)'
-                            : (test.commercialCategory.isNotEmpty ? test.commercialCategory : 'General'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      if (test.isProfileParameter)
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              margin: const EdgeInsets.only(right: 4),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'PARÁMETRO',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                test.commercialCategory.isNotEmpty ? test.commercialCategory : 'General',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          test.isPack
+                              ? 'Pack (${test.childTestIds.length} análisis)'
+                              : (test.commercialCategory.isNotEmpty ? test.commercialCategory : 'General'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),

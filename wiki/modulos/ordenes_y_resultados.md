@@ -96,8 +96,10 @@ La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src
   - Pruebas cualitativas que difieren del esperado $\to$ Flag **`ABNORMAL`** (`ANORMAL`).
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
-- **Informe Clínico PDF (`ClinicalOrderViewer` y `SingleClinicalOrderTemplate`)**:
-  - Emisión del documento A4 oficial con membrete de sucursal, subseries clínicas (`SERIE ROJA`, `SERIE BLANCA`, `DIFERENCIAL`, etc.) y alertas clínicas discretas `H`/`L` en rojo al rebasar límites biológicos.
+- **Informe Clínico PDF (`ClinicalOrderViewer` y `ClinicalOrderPdfTemplate`)**:
+  - Emisión del documento A4 oficial con membrete de sucursal y datos del paciente.
+  - **Agrupación Dinámica por Subclasificación**: Las pruebas y parámetros analíticos se estructuran y renderizan agrupados por su subserie clínica (`subclassification`: ej. `SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, etc.), precedidos por un encabezado distintivo de sección para lectura médica clara.
+  - Alertas clínicas discretas `H` / `L` en rojo al rebasar límites biológicos de referencia.
 - **Sobre Físico de Entrega (`OrderEnvelopeViewer` y `ClinicalOrderEnvelopePdfTemplate`)**:
   - Rotulación directa de sobres comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) alimentados en vertical en la bandeja manual de la impresora.
   - Recuadro central delimitado con línea negra que incluye médico tratante (condicional: solo si existe), paciente y fecha.

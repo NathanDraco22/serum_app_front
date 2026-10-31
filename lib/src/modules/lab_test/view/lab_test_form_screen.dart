@@ -7,6 +7,8 @@ import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../../../widgets/common/app_buttons.dart';
 import '../widgets/pack_test_selector.dart';
+import '../widgets/clinical_classification_registry.dart';
+import '../widgets/quick_create_parameter_dialog.dart';
 
 class LabTestFormScreen extends StatefulWidget {
   final LabTestInDb? labTest;
@@ -22,6 +24,10 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
   late String _name;
   late String _code;
   late String _commercialCategory;
+  late String _subclassification;
+  late bool _isProfileParameter;
+  bool _isCustomCategory = false;
+  bool _isCustomSubclass = false;
   late double _salePrice;
   late double _salePrice2;
   late bool _isPack;
@@ -34,6 +40,8 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
   late String _expectedQualitativeValue;
 
   final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _customCategoryController = TextEditingController();
+  final TextEditingController _customSubclassController = TextEditingController();
   final TextEditingController _unitController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _price2Controller = TextEditingController();
@@ -61,17 +69,6 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       'options': ['Normal', 'Alterado'],
       'expected': 'Normal',
     },
-  ];
-
-  static const List<String> _commonCategories = [
-    'Bioquímica Clínica',
-    'Hematología',
-    'Inmunología',
-    'Urianálisis',
-    'Coprología',
-    'Microbiología',
-    'Endocrinología / Hormonas',
-    'Perfiles Especiales',
   ];
 
   static const List<String> _commonUnits = [
@@ -108,6 +105,8 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       _name = widget.labTest!.name;
       _code = widget.labTest!.code ?? '';
       _commercialCategory = widget.labTest!.commercialCategory;
+      _subclassification = widget.labTest!.subclassification;
+      _isProfileParameter = widget.labTest!.isProfileParameter;
       _salePrice = widget.labTest!.salePrice / 100.0;
       _salePrice2 = widget.labTest!.salePrice2 / 100.0;
       _isPack = widget.labTest!.isPack;
@@ -137,7 +136,9 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     } else {
       _name = '';
       _code = '';
-      _commercialCategory = 'Bioquímica Clínica';
+      _commercialCategory = 'Hematología';
+      _subclassification = 'General';
+      _isProfileParameter = false;
       _salePrice = 0.0;
       _salePrice2 = 0.0;
       _isPack = false;
@@ -159,6 +160,19 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       _expectedQualitativeValue = 'Negativo';
     }
 
+    final allCats = ClinicalClassificationRegistry.classifications;
+    if (_commercialCategory.isNotEmpty && !allCats.contains(_commercialCategory)) {
+      _isCustomCategory = true;
+      _customCategoryController.text = _commercialCategory;
+    }
+    final allSubs = ClinicalClassificationRegistry.getSubclassificationsFor(
+      _isCustomCategory ? _customCategoryController.text : _commercialCategory,
+    );
+    if (_subclassification.isNotEmpty && !allSubs.contains(_subclassification)) {
+      _isCustomSubclass = true;
+      _customSubclassController.text = _subclassification;
+    }
+
     _categoryController.text = _commercialCategory;
     _unitController.text = _unitOfMeasure;
     _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '';
@@ -170,12 +184,47 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
   @override
   void dispose() {
     _categoryController.dispose();
+    _customCategoryController.dispose();
+    _customSubclassController.dispose();
     _unitController.dispose();
     _priceController.dispose();
     _price2Controller.dispose();
     _qualitativeOptionsController.dispose();
     _referenceTextController.dispose();
     super.dispose();
+  }
+
+  Future<void> _openQuickCreateParameter(List<LabTestInDb> allAvailableTests) async {
+    final branchId = context.read<AppSessionCubit>().currentBranchId;
+    final finalCat = _isCustomCategory ? _customCategoryController.text : _commercialCategory;
+    final finalSub = _isCustomSubclass ? _customSubclassController.text : _subclassification;
+
+    final created = await QuickCreateParameterDialog.show(
+      context,
+      initialCategory: finalCat,
+      initialSubclassification: finalSub,
+      branchId: branchId,
+    );
+
+    if (created != null && mounted) {
+      setState(() {
+        if (!_childTestIds.contains(created.id)) {
+          _childTestIds.add(created.id);
+        }
+        if (_useChildTestsPriceSum) {
+          final updatedAvailable = [...allAvailableTests, created];
+          _salePrice = _calculateChildrenSum(updatedAvailable);
+          _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+        }
+      });
+      context.read<ReadLabTestCubit>().getAll(branchId: branchId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Parámetro "${created.name}" creado e incluido en este perfil.'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
   }
 
   void _submit() {
@@ -198,12 +247,20 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       final price2InCents = (_salePrice2 * 100).round();
       final branchId = context.read<AppSessionCubit>().currentBranchId;
 
+      final finalCategory = _isCustomCategory
+          ? _customCategoryController.text.trim()
+          : _commercialCategory.trim();
+      final finalSubclass = _isCustomSubclass
+          ? _customSubclassController.text.trim()
+          : _subclassification.trim();
+
       if (widget.labTest == null) {
         final newTest = CreateLabTest(
           branchId: branchId,
           name: _name.trim(),
           code: _code.trim().isNotEmpty ? _code.trim() : null,
-          commercialCategory: _commercialCategory.trim(),
+          commercialCategory: finalCategory,
+          subclassification: finalSubclass,
           salePrice: priceInCents,
           salePrice2: price2InCents,
           isPack: _isPack,
@@ -218,6 +275,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
               ? _expectedQualitativeValue.trim()
               : null,
           referenceText: !_isPack ? _referenceTextController.text.trim() : '',
+          isProfileParameter: _isProfileParameter,
         );
         cubit.create(newTest);
       } else {
@@ -225,7 +283,8 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
           branchId: branchId,
           name: _name.trim(),
           code: _code.trim().isNotEmpty ? _code.trim() : null,
-          commercialCategory: _commercialCategory.trim(),
+          commercialCategory: finalCategory,
+          subclassification: finalSubclass,
           salePrice: priceInCents,
           salePrice2: price2InCents,
           isPack: _isPack,
@@ -240,6 +299,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
               ? _expectedQualitativeValue.trim()
               : null,
           referenceText: !_isPack ? _referenceTextController.text.trim() : '',
+          isProfileParameter: _isProfileParameter,
         );
         cubit.update(widget.labTest!.id, updateTest);
       }
@@ -269,6 +329,25 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     final allAvailableTests = (readState is ReadLabTestSuccess)
         ? readState.items.where((t) => !t.isPack && t.id != widget.labTest?.id).toList()
         : <LabTestInDb>[];
+
+    final availableCategories = ClinicalClassificationRegistry.classifications;
+    if (_commercialCategory.isNotEmpty &&
+        !_isCustomCategory &&
+        !availableCategories.contains(_commercialCategory)) {
+      availableCategories.add(_commercialCategory);
+      availableCategories.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    }
+
+    final currentCatForSubs =
+        _isCustomCategory ? _customCategoryController.text : _commercialCategory;
+    final availableSubs =
+        ClinicalClassificationRegistry.getSubclassificationsFor(currentCatForSubs);
+    if (_subclassification.isNotEmpty &&
+        !_isCustomSubclass &&
+        !availableSubs.contains(_subclassification)) {
+      availableSubs.add(_subclassification);
+      availableSubs.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    }
 
     return BlocListener<WriteLabTestCubit, WriteLabTestState>(
       listener: (context, state) {
@@ -494,58 +573,152 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
+                            // FILA 2: CLASIFICACIÓN GENERAL Y SUBCLASIFICACIÓN
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  flex: 3,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      TextFormField(
-                                        controller: _categoryController,
-                                        decoration: InputDecoration(
-                                          labelText: 'Categoría Comercial / Especialidad *',
-                                          hintText: 'ej. Bioquímica Clínica',
-                                          prefixIcon: const Icon(Icons.category_outlined, size: 20),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                        ),
-                                        validator: (val) =>
-                                            val == null || val.trim().isEmpty ? 'Requerido' : null,
-                                        onSaved: (val) => _commercialCategory = val ?? '',
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey(
+                                        'form_cat_${_isCustomCategory ? "__custom__" : _commercialCategory}'),
+                                    initialValue: _isCustomCategory
+                                        ? '__custom__'
+                                        : _commercialCategory,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Clasificación General *',
+                                      prefixIcon: const Icon(Icons.category_outlined, size: 20),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                      const SizedBox(height: 8),
-                                      SingleChildScrollView(
-                                        scrollDirection: Axis.horizontal,
-                                        child: Row(
-                                          children: _commonCategories.map((cat) {
-                                            return Padding(
-                                              padding: const EdgeInsets.only(right: 6),
-                                              child: ActionChip(
-                                                label: Text(
-                                                  cat,
-                                                  style: const TextStyle(fontSize: 11),
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _categoryController.text = cat;
-                                                    _commercialCategory = cat;
-                                                  });
-                                                },
-                                                visualDensity: VisualDensity.compact,
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
+                                    ),
+                                    items: [
+                                      ...availableCategories.map((c) => DropdownMenuItem(
+                                            value: c,
+                                            child: Text(c, overflow: TextOverflow.ellipsis),
+                                          )),
+                                      const DropdownMenuItem(
+                                        value: '__custom__',
+                                        child: Text('+ Otra clasificación...'),
                                       ),
                                     ],
+                                    onChanged: (val) {
+                                      if (val == null) return;
+                                      setState(() {
+                                        if (val == '__custom__') {
+                                          _isCustomCategory = true;
+                                          _commercialCategory = '__custom__';
+                                        } else {
+                                          _isCustomCategory = false;
+                                          _commercialCategory = val;
+                                          final subs = ClinicalClassificationRegistry
+                                              .getSubclassificationsFor(val);
+                                          _subclassification = subs.firstOrNull ?? 'General';
+                                          _isCustomSubclass = false;
+                                        }
+                                      });
+                                    },
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  flex: 2,
+                                  child: DropdownButtonFormField<String>(
+                                    key: ValueKey(
+                                        'form_sub_${_commercialCategory}_${_isCustomSubclass ? "__custom__" : _subclassification}'),
+                                    initialValue: _isCustomSubclass
+                                        ? '__custom__'
+                                        : _subclassification,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Subclasificación *',
+                                      prefixIcon:
+                                          const Icon(Icons.account_tree_outlined, size: 20),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    items: [
+                                      ...availableSubs.map((s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(s, overflow: TextOverflow.ellipsis),
+                                          )),
+                                      const DropdownMenuItem(
+                                        value: '__custom__',
+                                        child: Text('+ Otra subclasificación...'),
+                                      ),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val == null) return;
+                                      setState(() {
+                                        if (val == '__custom__') {
+                                          _isCustomSubclass = true;
+                                          _subclassification = '__custom__';
+                                        } else {
+                                          _isCustomSubclass = false;
+                                          _subclassification = val;
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_isCustomCategory || _isCustomSubclass) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  if (_isCustomCategory)
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _customCategoryController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Especifica la Clasificación Personalizada *',
+                                          hintText: 'Ej. Biología Molecular...',
+                                          prefixIcon: const Icon(Icons.edit_note, size: 20),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        validator: (v) {
+                                          if (_isCustomCategory && (v == null || v.trim().isEmpty)) {
+                                            return 'Ingresa la clasificación';
+                                          }
+                                          return null;
+                                        },
+                                        onChanged: (_) => setState(() {}),
+                                      ),
+                                    ),
+                                  if (_isCustomCategory && _isCustomSubclass)
+                                    const SizedBox(width: 12),
+                                  if (_isCustomSubclass)
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _customSubclassController,
+                                        decoration: InputDecoration(
+                                          labelText: 'Especifica la Subclasificación Personalizada *',
+                                          hintText: 'Ej. Serie Plaquetaria, Físico-Químico...',
+                                          prefixIcon: const Icon(Icons.edit_note, size: 20),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        validator: (v) {
+                                          if (_isCustomSubclass && (v == null || v.trim().isEmpty)) {
+                                            return 'Ingresa la subclasificación';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+
+                            // FILA 3: PRECIO DE VENTA
+                            Row(
+                              children: [
+                                Expanded(
                                   child: TextFormField(
                                     controller: _priceController,
                                     readOnly: _isPack && _useChildTestsPriceSum,
@@ -600,43 +773,6 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                         _salePrice = double.tryParse(val ?? '0') ?? 0.0,
                                   ),
                                 ),
-                                /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  flex: 2,
-                                  child: TextFormField(
-                                    controller: _price2Controller,
-                                    decoration: InputDecoration(
-                                      labelText: 'Precio 2 (\$ USD)',
-                                      hintText: 'Tarifa especial',
-                                      prefixIcon: const Icon(Icons.attach_money, size: 20),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    keyboardType: const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                    validator: (val) {
-                                      if (val != null && val.trim().isNotEmpty) {
-                                        final parsed = double.tryParse(val);
-                                        if (parsed == null || parsed < 0) {
-                                          return 'Precio inválido';
-                                        }
-                                      }
-                                      return null;
-                                    },
-                                    onChanged: (val) {
-                                      final parsed = double.tryParse(val);
-                                      if (parsed != null) {
-                                        setState(() => _salePrice2 = parsed);
-                                      }
-                                    },
-                                    onSaved: (val) =>
-                                        _salePrice2 = double.tryParse(val ?? '0') ?? 0.0,
-                                  ),
-                                ),
-                                */
                               ],
                             ),
                             if (_isPack) ...[
@@ -735,20 +871,33 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                     size: 22,
                                   ),
                                   const SizedBox(width: 10),
-                                  Text(
-                                    'Selección de Análisis para este Pack',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Selección de Análisis para este Pack / Perfil',
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Seleccione los análisis incluidos o cree parámetros nuevos directamente.',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  FilledButton.icon(
+                                    onPressed: () => _openQuickCreateParameter(allAvailableTests),
+                                    icon: const Icon(Icons.add, size: 18),
+                                    label: const Text('Crear Parámetro en este Perfil'),
+                                  ),
                                 ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Seleccione los análisis clínicos individuales que estarán incluidos en este paquete.',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
                               ),
                               const SizedBox(height: 16),
                               PackTestSelector(

@@ -74,7 +74,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       return 'HORMONAS / ENDOCRINOLOGIA';
     }
 
-    for (final r in order.results) {
+    final visibleResults = order.results.where((r) => r.showInPrint).toList();
+    final resultsToEvaluate = visibleResults.isNotEmpty ? visibleResults : order.results;
+    for (final r in resultsToEvaluate) {
       final mc = r.medicalClassification.trim().toUpperCase();
       if (mc.contains('HEMAT')) return 'HEMATOLOGIA';
       if (mc.contains('QUIMIC')) return 'QUIMICA CLINICA';
@@ -505,11 +507,15 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         ? order.examName.toUpperCase()
         : 'ESTUDIO CLÍNICO';
 
-    // Agrupar resultados por clasificación médica (subseries como SERIE ROJA, SERIE BLANCA, etc.)
+    // Agrupar resultados visibles por subclasificación médica (subseries como SERIE ROJA, SERIE BLANCA, etc.) o clasificación general
     final Map<String, List<OrderTestResult>> groups = {};
     for (final r in order.results) {
+      if (!r.showInPrint) continue;
+      final sub = r.subclassification.trim();
       final classification = r.medicalClassification.trim();
-      final groupKey = classification.isNotEmpty ? classification.toUpperCase() : '';
+      final groupKey = sub.isNotEmpty
+          ? sub.toUpperCase()
+          : (classification.isNotEmpty ? classification.toUpperCase() : '');
       groups.putIfAbsent(groupKey, () => []).add(r);
     }
 
@@ -737,7 +743,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 pw.SizedBox(height: 3),
                 ...referenceNotesItems.map((r) {
                   final showParameterName =
-                      order.results.where((x) => x.referenceText.trim().isNotEmpty).length > 1;
+                      order.results.where((x) => x.showInPrint && x.referenceText.trim().isNotEmpty).length > 1;
                   final title = showParameterName
                       ? 'NOTAS DE REFERENCIA (${r.parameterName.toUpperCase()}):'
                       : 'NOTAS DE REFERENCIA:';
