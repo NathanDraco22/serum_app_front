@@ -13,18 +13,6 @@ class OrderPatientCard extends StatelessWidget {
     required this.onRemove,
   });
 
-  int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
-    final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-    if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) {
-      age--;
-    }
-    return age >= 0 ? age : 0;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -144,7 +132,7 @@ class OrderPatientCard extends StatelessWidget {
                           style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                         ),
                       Text(
-                        'Edad: ${_calculateAge(patient!.dateOfBirth)} años (${patient!.gender == 'male' ? 'M' : 'F'})',
+                        'Edad: ${patient!.age} años (${patient!.gender.toLowerCase().startsWith('f') ? 'F' : 'M'})',
                         style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                       ),
                       if (patient!.phone.isNotEmpty)

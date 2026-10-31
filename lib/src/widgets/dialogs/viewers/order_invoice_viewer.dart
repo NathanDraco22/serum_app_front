@@ -245,18 +245,6 @@ class OrderInvoiceViewerContent extends StatelessWidget {
   final PatientInfo? patientInfo;
   final DoctorInfo? doctorInfo;
 
-  int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
-    final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-    if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) {
-      age--;
-    }
-    return age >= 0 ? age : 0;
-  }
-
   String _formatGender(String gender) {
     final g = gender.trim().toLowerCase();
     if (g == 'm' || g == 'male' || g == 'masculino') return 'Masculino';
@@ -551,7 +539,7 @@ class OrderInvoiceViewerContent extends StatelessWidget {
                     _buildRow('Identificación / Cédula:', patientInfo?.cardId ?? 'N/D'),
                     _buildRow(
                       'Edad / Sexo:',
-                      '${patientInfo != null ? _calculateAge(patientInfo!.dateOfBirth) : 0} años  •  ${patientInfo != null ? _formatGender(patientInfo!.gender) : 'N/D'}',
+                      '${patientInfo != null ? patientInfo!.age : 0} años  •  ${patientInfo != null ? _formatGender(patientInfo!.gender) : 'N/D'}',
                     ),
                     _buildRow('Teléfono:', patientInfo?.phone.isNotEmpty == true ? patientInfo!.phone : 'N/D'),
                   ],

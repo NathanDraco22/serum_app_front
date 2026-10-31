@@ -12,6 +12,7 @@ class PatientDisplayData {
   final int? dateOfBirth;
   final String? gender;
   final String? address;
+  final int? age;
 
   const PatientDisplayData({
     this.patientId,
@@ -22,6 +23,7 @@ class PatientDisplayData {
     this.dateOfBirth,
     this.gender,
     this.address,
+    this.age,
   });
 
   factory PatientDisplayData.fromPatientInfo(PatientInfo info, [String? patientId]) {
@@ -34,6 +36,7 @@ class PatientDisplayData {
       dateOfBirth: info.dateOfBirth > 0 ? info.dateOfBirth : null,
       gender: info.gender,
       address: info.address.isNotEmpty ? info.address : null,
+      age: info.age > 0 ? info.age : null,
     );
   }
 
@@ -47,6 +50,7 @@ class PatientDisplayData {
       dateOfBirth: patient.dateOfBirth > 0 ? patient.dateOfBirth : null,
       gender: patient.gender,
       address: patient.address != null && patient.address!.isNotEmpty ? patient.address : null,
+      age: patient.age > 0 ? patient.age : null,
     );
   }
 
@@ -77,6 +81,7 @@ class PatientDisplayData {
         address: info.address.isNotEmpty
             ? info.address
             : fallbackPatient?.address,
+        age: info.age > 0 ? info.age : (fallbackPatient?.age != null && fallbackPatient!.age > 0 ? fallbackPatient.age : null),
       );
     }
 
@@ -216,7 +221,9 @@ class _PatientInfoDialogState extends State<PatientInfoDialog> {
     final theme = Theme.of(context);
     final patient = widget.patient;
 
-    final age = _calculateAge(patient.dateOfBirth);
+    final age = patient.age != null && patient.age! > 0
+        ? patient.age!
+        : _calculateAge(patient.dateOfBirth);
     final birthDateStr = _formatBirthDate(patient.dateOfBirth);
     final genderStr = _formatGender(patient.gender);
 

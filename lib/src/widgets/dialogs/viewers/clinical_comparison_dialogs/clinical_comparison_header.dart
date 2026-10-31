@@ -39,7 +39,8 @@ class ClinicalComparisonHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final patientAge = _calculateAge(resolvedPatient.dateOfBirth);
+    final patientAge =
+        resolvedPatient.age > 0 ? resolvedPatient.age : _calculateAge(resolvedPatient.dateOfBirth);
 
     return Card(
       elevation: 0,

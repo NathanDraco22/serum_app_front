@@ -238,6 +238,7 @@ class _CreateQuotationContentState extends State<_CreateQuotationContent> {
             address: _selectedPatient!.address ?? '',
             cardId: _selectedPatient!.cardId,
             email: _selectedPatient!.email,
+            age: _selectedPatient!.age,
           )
         : (casualText.isNotEmpty ? PatientInfo(name: casualText) : null);
 

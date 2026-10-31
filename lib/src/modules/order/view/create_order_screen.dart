@@ -459,6 +459,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
         address: _selectedPatient!.address ?? '',
         cardId: _selectedPatient!.cardId,
         email: _selectedPatient!.email,
+        age: _selectedPatient!.age,
       ),
       doctorInfo: _selectedDoctor != null
           ? DoctorInfo(

@@ -290,7 +290,8 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
       }
     }
 
-    final patientAge = _calculateAge(patientInfo.dateOfBirth);
+    final patientAge =
+        patientInfo.age > 0 ? patientInfo.age : _calculateAge(patientInfo.dateOfBirth);
     final genderStr = _formatGender(patientInfo.gender);
 
     // Agrupar filas

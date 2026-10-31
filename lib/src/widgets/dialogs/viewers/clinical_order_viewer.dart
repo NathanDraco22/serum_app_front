@@ -126,6 +126,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
               address: p.address ?? '',
               cardId: p.cardId,
               email: p.email,
+              age: p.age,
             );
           });
         }
@@ -339,7 +340,8 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     final orderDate = DateTime.fromMillisecondsSinceEpoch(order.createdAt);
     final formattedDate =
         '${DateTimeTool.formatddMMyy(orderDate)} ${DateTimeTool.formatHHmm(orderDate)}';
-    final patientAge = _calculateAge(patientInfo.dateOfBirth);
+    final patientAge =
+        patientInfo.age > 0 ? patientInfo.age : _calculateAge(patientInfo.dateOfBirth);
     final genderStr = _formatGender(patientInfo.gender);
     final shortId = order.id.length > 8
         ? order.id.substring(order.id.length - 8).toUpperCase()

@@ -121,6 +121,7 @@ class _QuotationViewerState extends State<_QuotationViewer> {
             address: p.address ?? '',
             cardId: p.cardId,
             email: p.email,
+            age: p.age,
           );
         });
       }
@@ -434,10 +435,10 @@ class QuotationViewerContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     _buildRowText('Nombre:', clientDisplayName, isBold: true),
-                    if (clientInfo != null && clientInfo!.dateOfBirth > 0)
+                    if (clientInfo != null && (clientInfo!.age > 0 || clientInfo!.dateOfBirth > 0))
                       _buildRowText(
                         'Edad / Sexo:',
-                        '${_calculateAge(clientInfo!.dateOfBirth)} años | ${_formatGender(clientInfo!.gender)}',
+                        '${clientInfo!.age > 0 ? clientInfo!.age : _calculateAge(clientInfo!.dateOfBirth)} años | ${_formatGender(clientInfo!.gender)}',
                       ),
                     if (clientInfo?.cardId != null && clientInfo!.cardId!.isNotEmpty)
                       _buildRowText('Identificación:', clientInfo!.cardId!),

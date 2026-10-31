@@ -209,10 +209,10 @@ class SingleQuotationTemplate implements PdfTemplate {
                 ),
                 pw.SizedBox(height: 4),
                 _buildInfoLine('Nombre:', displayName, isBold: true),
-                if (client != null && client.dateOfBirth > 0)
+                if (client != null && (client.age > 0 || client.dateOfBirth > 0))
                   _buildInfoLine(
                     'Edad / Sexo:',
-                    '${_calculateAge(client.dateOfBirth)} años | ${_formatGender(client.gender)}',
+                    '${client.age > 0 ? client.age : _calculateAge(client.dateOfBirth)} años | ${_formatGender(client.gender)}',
                   ),
                 if (client?.cardId != null && client!.cardId!.isNotEmpty)
                   _buildInfoLine('Identificación:', client.cardId!),

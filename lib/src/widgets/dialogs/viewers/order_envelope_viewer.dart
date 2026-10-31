@@ -100,6 +100,7 @@ class _OrderEnvelopeViewerState extends State<_OrderEnvelopeViewer> {
               address: p.address ?? '',
               cardId: p.cardId,
               email: p.email,
+              age: p.age,
             );
           });
         }

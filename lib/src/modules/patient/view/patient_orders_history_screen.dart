@@ -165,6 +165,7 @@ class _PatientOrdersHistoryScreenState
                 address: _patient!.address ?? '',
                 cardId: _patient!.cardId,
                 email: _patient!.email,
+                age: _patient!.age,
               )
             : null);
   }

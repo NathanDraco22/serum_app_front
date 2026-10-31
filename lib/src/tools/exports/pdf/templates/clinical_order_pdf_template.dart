@@ -252,7 +252,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           dateOfBirth: 0,
           gender: 'M',
         );
-    final patientAge = _calculateAge(patient.dateOfBirth);
+    final patientAge =
+        patient.age > 0 ? patient.age : _calculateAge(patient.dateOfBirth);
     final genderStr = _formatGender(patient.gender);
 
     doc.addPage(
