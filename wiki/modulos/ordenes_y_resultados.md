@@ -97,9 +97,17 @@ La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
 - **Informe Clínico PDF (`ClinicalOrderViewer` y `ClinicalOrderPdfTemplate`)**:
-  - Emisión del documento A4 oficial con membrete de sucursal y datos del paciente.
-  - **Agrupación Dinámica por Subclasificación**: Las pruebas y parámetros analíticos se estructuran y renderizan agrupados por su subserie clínica (`subclassification`: ej. `SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, etc.), precedidos por un encabezado distintivo de sección para lectura médica clara.
+  - Emisión del documento A4 oficial con membrete institucional de sucursal, datos completos del paciente y fecha/hora de proceso.
+  - **Agrupación Dinámica por Subclasificación**: Las pruebas y parámetros analíticos se estructuran y renderizan agrupados por su subserie clínica (`subclassification`: ej. `SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, etc.), precedidos por un encabezado formal sin barras de acento cromáticas que saturen el espacio.
   - Alertas clínicas discretas `H` / `L` en rojo al rebasar límites biológicos de referencia.
+  - **Firma y Sello de Validación Clínica**:
+    - Disposición vertical secuencial: el sello del bioanalista representante se posiciona en el espacio superior a la línea de firma con una rotación realista de -5° (`-0.087 rad`), tolerando imágenes con fondo blanco o transparencia PNG sin tapar textos ni líneas.
+    - Línea continua divisoria de firma inmediatamente bajo el sello.
+    - Datos del profesional: nombre en negrita, título/cargo y registro oficial MINSA.
+    - Si la sucursal no cuenta con sello digital configurado, se reserva un espacio en blanco de 48 px para firma física manuscrita y sellado en papel.
+  - **Optimización Vertical y Paginación**:
+    - Se prescinde de recuadros o notas legales aclaratorias extensas para asegurar que el informe entre limpiamente en una sola página sin desbordes.
+    - En el pie de página institucional se renderiza la paginación oficial en negrita (`Página X de Y`) junto a los canales de contacto de la sede.
 - **Sobre Físico de Entrega (`OrderEnvelopeViewer` y `ClinicalOrderEnvelopePdfTemplate`)**:
   - Rotulación directa de sobres comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) alimentados en vertical en la bandeja manual de la impresora.
   - Recuadro central delimitado con línea negra que incluye médico tratante (condicional: solo si existe), paciente y fecha.

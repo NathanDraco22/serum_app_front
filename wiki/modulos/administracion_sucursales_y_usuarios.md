@@ -66,9 +66,13 @@ El módulo combina dos patrones de navegación mediante `go_router`:
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`
 * **Funciones Clave**:
   1. **Supervisión de Sedes**: Tarjetas estilizadas en `BranchesList` con nombre, dirección completa, teléfono y distinción especial mediante badge temático para la sede matriz (`ORIGIN_BRANCH`).
-  2. **Búsqueda en Tiempo Real**: Filtrado dinámico y sin peticiones innecesarias de red por nombre de sede, calle o teléfono.
-  3. **Registro y Edición (`BranchFormDialog`)**: Formulario modal con validación estricta de campos obligatorios (nombre, dirección y teléfono de contacto).
-  4. **Eliminación Segura**: Diálogo modal de confirmación con alerta visual roja antes de invocar `WriteBranchCubit.delete()`, con protección para impedir la eliminación accidental de la sede matriz inicial.
+  2. **Bioanalista Representante y Sello Digital**:
+     - Cada sede permite registrar los datos del profesional que valida clínicamente los análisis: nombre completo, título profesional/especialidad y código o registro MINSA.
+     - **Sello Físico de Tinta Digital (`sealUrl`)**: Permite subir la imagen del sello del profesional (PNG transparente o JPG/WEBP). Dispone de tarjeta interactiva con previsualización inclinada a -5° que simula el estampado físico sobre el papel.
+     - En `BranchesList` se despliega el badge distintivo `SELLO` cuando la sede cuenta con sello de tinta configurado.
+  3. **Búsqueda en Tiempo Real**: Filtrado dinámico y sin peticiones innecesarias de red por nombre de sede, calle o teléfono.
+  4. **Registro y Edición (`BranchFormDialog`)**: Formulario modal con validación estricta de campos obligatorios (nombre, dirección y teléfono de contacto), carga de logotipos institucionales e isologos mediante `ImageUploader`.
+  5. **Eliminación Segura**: Diálogo modal de confirmación con alerta visual roja antes de invocar `WriteBranchCubit.delete()`, con protección para impedir la eliminación accidental de la sede matriz inicial.
 
 ---
 
