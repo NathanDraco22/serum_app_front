@@ -363,6 +363,7 @@ void main() {
     expect(fakeDataSource.lastCreated!['qualitativeOptions'], ['No reactivo', 'Reactivo débil', 'Reactivo']);
     expect(fakeDataSource.lastCreated!['expectedQualitativeValue'], 'No reactivo');
     expect(fakeDataSource.lastCreated!['referenceText'], 'Confirmar muestras reactivas mediante FTA-ABS');
+    expect(result, isNotNull);
   });
 
   testWidgets('QuickCreateParameterDialog.showEdit precarga dropdown cualitativo y notas de referencia', (tester) async {
