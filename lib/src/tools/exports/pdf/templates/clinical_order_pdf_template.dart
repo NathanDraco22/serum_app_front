@@ -521,6 +521,170 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       groups.putIfAbsent(groupKey, () => []).add(r);
     }
 
+    final hasTabularTests =
+        order.results.any((r) => r.showInPrint && r.dataType != 'text');
+
+    pw.TableRow buildPdfTableRow(OrderTestResult r, bool hasGroupHeader) {
+      final alertFlag = _resolveAlertFlag(r, patientAge, gender);
+      final hasAlert = alertFlag != null && alertFlag.isNotEmpty;
+      final refText = _resolveReferenceText(r, patientAge, gender);
+      final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
+
+      return pw.TableRow(
+        decoration: isTotalRow
+            ? const pw.BoxDecoration(
+                border: pw.Border(
+                  top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                ),
+              )
+            : null,
+        children: [
+          // Nombre del parámetro con indentación
+          pw.Padding(
+            padding: pw.EdgeInsets.only(
+              left: hasGroupHeader ? 10 : 2,
+              top: 3.0,
+              bottom: 3.0,
+              right: 4,
+            ),
+            child: pw.Text(
+              r.parameterName,
+              style: pw.TextStyle(
+                fontSize: 9.5,
+                fontWeight: isTotalRow ? pw.FontWeight.bold : pw.FontWeight.normal,
+                color: PdfColors.black,
+              ),
+            ),
+          ),
+
+          // Resultado con letra H / L en rojo
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  child: pw.Text(
+                    r.dataType == 'numeric' && r.resultValue != null
+                        ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
+                        : (r.resultValue ?? '-'),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      lineSpacing: 1.15,
+                      fontWeight: hasAlert || isTotalRow
+                          ? pw.FontWeight.bold
+                          : pw.FontWeight.normal,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+                if (hasAlert) ...[
+                  pw.SizedBox(width: 4),
+                  pw.Text(
+                    alertFlag,
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColor.fromHex('#D32F2F'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Unidad de medida
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
+            child: pw.Text(
+              r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
+              style: const pw.TextStyle(
+                fontSize: 8.5,
+                color: PdfColors.grey800,
+              ),
+            ),
+          ),
+
+          // Valores de referencia (alineados a la derecha)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
+            child: pw.Text(
+              refText,
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(
+                fontSize: refText.contains('\n') ? 8.5 : 9.0,
+                lineSpacing: refText.contains('\n') ? 1.2 : 1.0,
+                color: PdfColors.grey700,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    pw.Widget buildPdfTextResultBlock(OrderTestResult r, bool hasGroupHeader) {
+      final hasContent =
+          r.resultValue != null && r.resultValue!.trim().isNotEmpty;
+      final displayValue = hasContent ? r.resultValue!.trim() : '-';
+      final refText = _resolveReferenceText(r, patientAge, gender);
+
+      return pw.Padding(
+        padding: pw.EdgeInsets.only(
+          left: hasGroupHeader ? 10 : 2,
+          top: 4.0,
+          bottom: 5.0,
+          right: 2,
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              r.parameterName,
+              style: pw.TextStyle(
+                fontSize: 9.5,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.black,
+              ),
+            ),
+            pw.SizedBox(height: 2),
+            pw.Container(
+              width: double.infinity,
+              padding:
+                  const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#F9FAFB'),
+                borderRadius:
+                    const pw.BorderRadius.all(pw.Radius.circular(2)),
+                border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+              ),
+              child: pw.Text(
+                displayValue,
+                style: const pw.TextStyle(
+                  fontSize: 9.0,
+                  lineSpacing: 1.25,
+                  color: PdfColors.black,
+                ),
+              ),
+            ),
+            if (refText.isNotEmpty && refText != '—' && refText != '-') ...[
+              pw.SizedBox(height: 2),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 2),
+                child: pw.Text(
+                  'Criterio / Valor de Referencia: $refText',
+                  style: pw.TextStyle(
+                    fontSize: 8.0,
+                    fontStyle: pw.FontStyle.italic,
+                    lineSpacing: 1.15,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -543,53 +707,57 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         ),
         pw.SizedBox(height: 3),
 
-        // 4. Encabezados de la tabla: Nombre del Test | Resultado | Valores de Referencia
-        pw.Row(
-          children: [
-            pw.Expanded(
-              flex: 42,
-              child: pw.Text(
-                'Nombre del Test',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+        // 4. Encabezados de la tabla si hay pruebas tabulares
+        if (hasTabularTests) ...[
+          pw.Row(
+            children: [
+              pw.Expanded(
+                flex: 42,
+                child: pw.Text(
+                  'Nombre del Test',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.black,
+                  ),
                 ),
               ),
-            ),
-            pw.Expanded(
-              flex: 31,
-              child: pw.Text(
-                'Resultado',
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+              pw.Expanded(
+                flex: 31,
+                child: pw.Text(
+                  'Resultado',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.black,
+                  ),
                 ),
               ),
-            ),
-            pw.Expanded(
-              flex: 27,
-              child: pw.Text(
-                'Valores de Referencia',
-                textAlign: pw.TextAlign.right,
-                style: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.black,
+              pw.Expanded(
+                flex: 27,
+                child: pw.Text(
+                  'Valores de Referencia',
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.black,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 3),
+            ],
+          ),
+          pw.SizedBox(height: 3),
 
-        // 5. Línea negra inferior del encabezado
-        pw.Container(
-          height: 1.0,
-          color: PdfColors.black,
-        ),
-        pw.SizedBox(height: 7),
+          // 5. Línea negra inferior del encabezado
+          pw.Container(
+            height: 1.0,
+            color: PdfColors.black,
+          ),
+          pw.SizedBox(height: 7),
+        ] else ...[
+          pw.SizedBox(height: 5),
+        ],
 
         // 6. Nombre del Estudio (ej. BIOMETRÍA HEMÁTICA COMPLETA)
         pw.Padding(
@@ -608,7 +776,40 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         ...groups.entries.map((entry) {
           final groupTitle = entry.key;
           final items = entry.value;
-          final bool hasGroupHeader = groupTitle.isNotEmpty && groupTitle != clinicalArea;
+          final bool hasGroupHeader =
+              groupTitle.isNotEmpty && groupTitle != clinicalArea;
+
+          final List<pw.Widget> groupWidgets = [];
+          List<OrderTestResult> currentTabularChunk = [];
+
+          void flushTabularChunk() {
+            if (currentTabularChunk.isEmpty) return;
+            final chunk = List<OrderTestResult>.from(currentTabularChunk);
+            currentTabularChunk.clear();
+            groupWidgets.add(
+              pw.Table(
+                columnWidths: {
+                  0: const pw.FlexColumnWidth(4.2), // Parámetro
+                  1: const pw.FlexColumnWidth(1.8), // Resultado (+ Flag H/L)
+                  2: const pw.FlexColumnWidth(1.3), // Unidad
+                  3: const pw.FlexColumnWidth(2.7), // Valores de Referencia
+                },
+                children: chunk
+                    .map((r) => buildPdfTableRow(r, hasGroupHeader))
+                    .toList(),
+              ),
+            );
+          }
+
+          for (final r in items) {
+            if (r.dataType == 'text') {
+              flushTabularChunk();
+              groupWidgets.add(buildPdfTextResultBlock(r, hasGroupHeader));
+            } else {
+              currentTabularChunk.add(r);
+            }
+          }
+          flushTabularChunk();
 
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -616,7 +817,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               if (hasGroupHeader) ...[
                 pw.Container(
                   width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 5),
+                  padding:
+                      const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 5),
                   margin: const pw.EdgeInsets.only(top: 5, bottom: 3),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromHex('#F4F6F6'),
@@ -632,108 +834,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                   ),
                 ),
               ],
-              pw.Table(
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(4.2), // Parámetro
-                  1: const pw.FlexColumnWidth(1.8), // Resultado (+ Flag H/L)
-                  2: const pw.FlexColumnWidth(1.3), // Unidad
-                  3: const pw.FlexColumnWidth(2.7), // Valores de Referencia
-                },
-                children: items.map((r) {
-                  final alertFlag = _resolveAlertFlag(r, patientAge, gender);
-                  final hasAlert = alertFlag != null && alertFlag.isNotEmpty;
-                  final refText = _resolveReferenceText(r, patientAge, gender);
-                  final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
-
-                  return pw.TableRow(
-                    decoration: isTotalRow
-                        ? const pw.BoxDecoration(
-                            border: pw.Border(
-                              top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                            ),
-                          )
-                        : null,
-                    children: [
-                      // Nombre del parámetro con indentación
-                      pw.Padding(
-                        padding: pw.EdgeInsets.only(
-                          left: hasGroupHeader ? 10 : 2,
-                          top: 3.0,
-                          bottom: 3.0,
-                          right: 4,
-                        ),
-                        child: pw.Text(
-                          r.parameterName,
-                          style: pw.TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: isTotalRow ? pw.FontWeight.bold : pw.FontWeight.normal,
-                            color: PdfColors.black,
-                          ),
-                        ),
-                      ),
-
-                      // Resultado con letra H / L en rojo
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
-                        child: pw.Row(
-                          mainAxisSize: pw.MainAxisSize.min,
-                          children: [
-                            pw.Text(
-                              r.dataType == 'numeric' && r.resultValue != null
-                                   ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
-                                  : (r.resultValue ?? '-'),
-                              style: pw.TextStyle(
-                                fontSize: 10,
-                                fontWeight: hasAlert || isTotalRow
-                                    ? pw.FontWeight.bold
-                                    : pw.FontWeight.normal,
-                                color: PdfColors.black,
-                              ),
-                            ),
-                            if (hasAlert) ...[
-                              pw.SizedBox(width: 6),
-                              pw.Text(
-                                alertFlag,
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: PdfColor.fromHex('#D32F2F'),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      // Unidad de medida
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
-                        child: pw.Text(
-                          r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
-                          style: const pw.TextStyle(
-                            fontSize: 8.5,
-                            color: PdfColors.grey800,
-                          ),
-                        ),
-                      ),
-
-                      // Valores de referencia (alineados a la derecha)
-                      pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
-                        child: pw.Text(
-                          refText,
-                          textAlign: pw.TextAlign.right,
-                          style: pw.TextStyle(
-                            fontSize: refText.contains('\n') ? 8.5 : 9.0,
-                            lineSpacing: refText.contains('\n') ? 1.2 : 1.0,
-                            color: PdfColors.grey700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
+              ...groupWidgets,
               pw.SizedBox(height: 3),
             ],
           );

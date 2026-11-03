@@ -9,7 +9,63 @@ class ClinicalFormulasRegistry {
   /// Lista de fórmulas clínicas activas en el sistema.
   static final List<ClinicalFormula> formulas = [
     // -------------------------------------------------------------------------
-    // 1. SERIE ROJA / HEMATOLOGÍA — ÍNDICES ERITROCITARIOS DE WINTROBE (1929)
+    // 1. SERIE ROJA / HEMATOLOGÍA — ESTIMACIONES BASE Y REGLA DE LOS 3
+    // -------------------------------------------------------------------------
+
+    /// Hemoglobina (Regla de los 3: Hematocrito / 3)
+    /// Unidades: g/dL
+    ClinicalFormula(
+      id: 'hemoglobina_rule_of_three',
+      name: 'Hemoglobina (Regla de los 3)',
+      targetCanonical: 'HB',
+      targetAliases: const [
+        'HB',
+        'HGB',
+        'Hemoglobina',
+        'Hemoglobin',
+      ],
+      requiredInputs: const ['HTC'],
+      formulaDisplay: 'Hematocrito / 3',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final htc = inputs['HTC'];
+        if (htc == null || htc <= 0) return null;
+        return htc / 3.0;
+      },
+    ),
+
+    /// Eritrocitos / Glóbulos Rojos (Regla de los 3: Hemoglobina / 3 o Hematocrito / 9)
+    /// Unidades: x mm3 (en escala millones con 3 decimales, ej. 5.000)
+    ClinicalFormula(
+      id: 'eritrocitos_rule_of_three',
+      name: 'Eritrocitos (Regla de los 3)',
+      targetCanonical: 'ERI',
+      targetAliases: const [
+        'ERI',
+        'RBC',
+        'Eritrocitos',
+        'Eritrocito',
+        'Hematíes',
+        'Glóbulos Rojos',
+      ],
+      requiredInputs: const ['HB', 'HTC'],
+      formulaDisplay: 'Hemoglobina / 3',
+      decimalPlaces: 3,
+      compute: (inputs) {
+        final hb = inputs['HB'];
+        if (hb != null && hb > 0) {
+          return hb / 3.0;
+        }
+        final htc = inputs['HTC'];
+        if (htc != null && htc > 0) {
+          return htc / 9.0;
+        }
+        return null;
+      },
+    ),
+
+    // -------------------------------------------------------------------------
+    // 2. SERIE ROJA / HEMATOLOGÍA — ÍNDICES ERITROCITARIOS DE WINTROBE (1929)
     // -------------------------------------------------------------------------
 
     /// VCM (Volumen Corpuscular Medio)
@@ -84,58 +140,6 @@ class ClinicalFormulasRegistry {
         final htc = inputs['HTC'];
         if (hb == null || htc == null || htc <= 0) return null;
         return (hb * 100.0) / htc;
-      },
-    ),
-
-    /// Hemoglobina (Regla de los 3: Hematocrito / 3)
-    /// Unidades: g/dL
-    ClinicalFormula(
-      id: 'hemoglobina_rule_of_three',
-      name: 'Hemoglobina (Regla de los 3)',
-      targetCanonical: 'HB',
-      targetAliases: const [
-        'HB',
-        'HGB',
-        'Hemoglobina',
-        'Hemoglobin',
-      ],
-      requiredInputs: const ['HTC'],
-      formulaDisplay: 'Hematocrito / 3',
-      decimalPlaces: 1,
-      compute: (inputs) {
-        final htc = inputs['HTC'];
-        if (htc == null || htc <= 0) return null;
-        return htc / 3.0;
-      },
-    ),
-
-    /// Eritrocitos / Glóbulos Rojos (Regla de los 3: Hemoglobina / 3 o Hematocrito / 9)
-    /// Unidades: x mm3 (en escala millones con 3 decimales, ej. 5.000)
-    ClinicalFormula(
-      id: 'eritrocitos_rule_of_three',
-      name: 'Eritrocitos (Regla de los 3)',
-      targetCanonical: 'ERI',
-      targetAliases: const [
-        'ERI',
-        'RBC',
-        'Eritrocitos',
-        'Eritrocito',
-        'Hematíes',
-        'Glóbulos Rojos',
-      ],
-      requiredInputs: const ['HTC'],
-      formulaDisplay: 'Hemoglobina / 3',
-      decimalPlaces: 3,
-      compute: (inputs) {
-        final hb = inputs['HB'];
-        if (hb != null && hb > 0) {
-          return hb / 3.0;
-        }
-        final htc = inputs['HTC'];
-        if (htc != null && htc > 0) {
-          return htc / 9.0;
-        }
-        return null;
       },
     ),
 
@@ -260,6 +264,7 @@ class ClinicalFormulasRegistry {
     'ERI': [
       'eri',
       'rbc',
+      'r.b.c.',
       'eritrocitos',
       'eritrocito',
       'hematies',
@@ -267,6 +272,13 @@ class ClinicalFormulasRegistry {
       'globulos rojos',
       'glóbulos rojos',
       'recuento de eritrocitos',
+      'recuento de globulos rojos',
+      'recuento de glóbulos rojos',
+      'conteo de eritrocitos',
+      'conteo de globulos rojos',
+      'conteo de glóbulos rojos',
+      'recuento globular',
+      'conteo globular',
     ],
     'HB': [
       'hb',
@@ -561,10 +573,17 @@ class ClinicalFormulasRegistry {
     ClinicalFormula formula,
     Map<String, double> availableCanonicalInputs,
   ) {
-    // Verificar que todos los insumos necesarios tengan valor numérico
-    for (final req in formula.requiredInputs) {
-      if (!availableCanonicalInputs.containsKey(req)) {
+    // Verificar que los insumos necesarios tengan valor numérico
+    if (formula.id == 'eritrocitos_rule_of_three') {
+      // Eritrocitos puede derivar de Hemoglobina o Hematocrito
+      if (!availableCanonicalInputs.containsKey('HB') && !availableCanonicalInputs.containsKey('HTC')) {
         return null;
+      }
+    } else {
+      for (final req in formula.requiredInputs) {
+        if (!availableCanonicalInputs.containsKey(req)) {
+          return null;
+        }
       }
     }
 
@@ -573,10 +592,19 @@ class ClinicalFormulasRegistry {
       return null;
     }
 
+    final String displayFormula;
+    if (formula.id == 'eritrocitos_rule_of_three') {
+      displayFormula = (availableCanonicalInputs['HB'] != null && availableCanonicalInputs['HB']! > 0)
+          ? 'Hemoglobina / 3'
+          : 'Hematocrito / 9';
+    } else {
+      displayFormula = formula.formulaDisplay;
+    }
+
     return ClinicalCalculationResult(
       formulaId: formula.id,
       formulaName: formula.name,
-      formulaDisplay: formula.formulaDisplay,
+      formulaDisplay: displayFormula,
       value: computed,
       formattedValue: formatClinicalValue(computed, formula.decimalPlaces),
     );
@@ -592,6 +620,10 @@ class ClinicalFormulasRegistry {
     final workingInputs = Map<String, double>.from(availableInputs);
 
     for (final formula in formulas) {
+      // Si el parámetro ya fue provisto explícitamente en los insumos, respetarlo y no sobreescribir
+      if (availableInputs.containsKey(formula.targetCanonical)) {
+        continue;
+      }
       final res = evaluateFormula(formula, workingInputs);
       if (res != null) {
         results[formula.targetCanonical] = res;

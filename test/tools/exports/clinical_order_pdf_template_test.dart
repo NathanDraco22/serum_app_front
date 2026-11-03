@@ -318,6 +318,68 @@ void main() {
       expect(bytes.isNotEmpty, isTrue);
     });
 
+    test('Genera PDF correctamente para orden con parámetros de texto libre (dataType: text) multilínea', () async {
+      final textOrder = OrderInDb(
+        id: 'ord-text-1',
+        patientId: 'pat-1',
+        doctorId: 'doc-1',
+        branchId: 'br-1',
+        items: [
+          OrderItem(
+            labTestId: 'lt-biopsia',
+            name: 'Biopsia de Piel y Tejidos Blandos',
+            salePriceApplied: 5000,
+          ),
+        ],
+        status: 'completed',
+        totalPrice: 5000,
+        paidAmount: 5000,
+        results: [
+          OrderTestResult(
+            labTestId: 'lt-macro',
+            parameterName: 'Descripción Macroscópica',
+            medicalClassification: 'Histopatología',
+            dataType: 'text',
+            resultValue: 'Se recibe espécimen fijado en formol que mide 2.5 x 1.8 x 0.6 cm.\nSuperficie cutánea parda clara con lesión sobreelevada central.',
+          ),
+          OrderTestResult(
+            labTestId: 'lt-micro',
+            parameterName: 'Diagnóstico Histopatológico',
+            medicalClassification: 'Histopatología',
+            dataType: 'text',
+            resultValue: 'Los cortes histológicos confirman Queratoacantoma bien diferenciado con bordes quirúrgicos libres de lesión.\nNo se observan signos de invasión vascular ni perineural.',
+            referenceText: 'Clasificación de malignidad según criterios OMS.',
+          ),
+        ],
+        createdAt: nowMs,
+        patientInfo: PatientInfo(
+          name: 'Carlos Mendoza',
+          dateOfBirth: nowMs - (45 * 365 * 86400000),
+          gender: 'M',
+        ),
+      );
+
+      final branchWithoutImage = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Serum Matriz',
+        address: 'Calle Principal 456',
+        phone: 'PBX 2222-0000',
+        imageUrl: null,
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: textOrder,
+        branch: branchWithoutImage,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
     test('Construye PDF con Bioanalista Representante configurado en la sucursal', () async {
       final branchWithBioanalyst = BranchInDb(
         id: 'br-bio',

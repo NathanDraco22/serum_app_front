@@ -805,6 +805,215 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               groups.putIfAbsent(groupKey, () => []).add(r);
             }
 
+            final hasTabularTests =
+                order.results.any((r) => r.showInPrint && r.dataType != 'text');
+
+            TableRow buildTableRow(OrderTestResult r, bool hasGroupHeader) {
+              final isNumeric = r.dataType == 'numeric';
+              final numVal = isNumeric && r.resultValue != null
+                  ? ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue)
+                  : null;
+
+              String? alertFlag = r.alertFlag;
+              if (alertFlag == null &&
+                  numVal != null &&
+                  r.referenceValues.isNotEmpty) {
+                final ref = r.referenceValues.first;
+                if (numVal > ref.maxValue) {
+                  alertFlag = 'H';
+                } else if (numVal < ref.minValue) {
+                  alertFlag = 'L';
+                }
+              } else if (alertFlag != null) {
+                final f = alertFlag.toUpperCase();
+                if (f == 'HIGH' || f == 'ALTO') alertFlag = 'H';
+                if (f == 'LOW' || f == 'BAJO') alertFlag = 'L';
+                if (f == 'ABNORMAL' || f == 'ANORMAL') alertFlag = '*';
+              }
+
+              final hasAlert =
+                  alertFlag != null && alertFlag.isNotEmpty;
+
+              String referenceText = '—';
+              if (r.referenceText.trim().isNotEmpty) {
+                referenceText = r.referenceText.trim();
+              } else if (isNumeric && r.referenceValues.isNotEmpty) {
+                final ref = r.referenceValues.first;
+                final unit = r.unitOfMeasure.isNotEmpty
+                    ? ' ${r.unitOfMeasure}'
+                    : '';
+                referenceText =
+                    '${ref.minValue} - ${ref.maxValue}$unit';
+              } else if (r.dataType == 'boolean' &&
+                  r.expectedQualitativeValue != null) {
+                referenceText =
+                    'Esperado: ${r.expectedQualitativeValue}';
+              } else if (r.expectedQualitativeValue != null) {
+                referenceText = r.expectedQualitativeValue!;
+              }
+
+              final isTotalRow =
+                  r.parameterName.trim().toUpperCase() == 'TOTAL';
+
+              return TableRow(
+                decoration: isTotalRow
+                    ? BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                              color: Colors.grey.shade300,
+                              width: 0.8),
+                        ),
+                      )
+                    : null,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: hasGroupHeader ? 12 : 4,
+                      top: 4,
+                      bottom: 4,
+                      right: 4,
+                    ),
+                    child: Text(
+                      r.parameterName,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isTotalRow
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            isNumeric && r.resultValue != null
+                                ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
+                                : (r.resultValue ?? '—'),
+                            softWrap: true,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: hasAlert || isTotalRow
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        if (hasAlert) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            alertFlag,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD32F2F),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      r.unitOfMeasure.isNotEmpty
+                          ? r.unitOfMeasure
+                          : '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      referenceText,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: referenceText.contains('\n')
+                            ? 11.5
+                            : 12,
+                        height: referenceText.contains('\n')
+                            ? 1.25
+                            : null,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            Widget buildTextResultBlock(OrderTestResult r, bool hasGroupHeader) {
+              final hasContent =
+                  r.resultValue != null && r.resultValue!.trim().isNotEmpty;
+              final displayValue = hasContent ? r.resultValue!.trim() : '—';
+              final refText = r.referenceText.trim();
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: hasGroupHeader ? 12 : 4,
+                  top: 6,
+                  bottom: 8,
+                  right: 4,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      r.parameterName,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.grey.shade300, width: 0.8),
+                      ),
+                      child: Text(
+                        displayValue,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.35,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    if (refText.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Text(
+                          'Criterio / Valor de Referencia: $refText',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontStyle: FontStyle.italic,
+                            height: 1.25,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -819,44 +1028,48 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 const SizedBox(height: 4),
                 const Divider(color: Colors.black, thickness: 1.2, height: 1),
                 const SizedBox(height: 6),
-                const Row(
-                  children: [
-                    Expanded(
-                      flex: 42,
-                      child: Text(
-                        'Nombre del Test',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                if (hasTabularTests) ...[
+                  const Row(
+                    children: [
+                      Expanded(
+                        flex: 42,
+                        child: Text(
+                          'Nombre del Test',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 31,
-                      child: Text(
-                        'Resultado',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        flex: 31,
+                        child: Text(
+                          'Resultado',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 27,
-                      child: Text(
-                        'Valores de Referencia',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        flex: 27,
+                        child: Text(
+                          'Valores de Referencia',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Divider(color: Colors.black, thickness: 1.2, height: 1),
-                const SizedBox(height: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                  const SizedBox(height: 10),
+                ] else ...[
+                  const SizedBox(height: 8),
+                ],
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
@@ -872,6 +1085,38 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                   final items = entry.value;
                   final bool hasGroupHeader =
                       groupTitle.isNotEmpty && groupTitle != clinicalArea;
+
+                  final List<Widget> groupWidgets = [];
+                  List<OrderTestResult> currentTabularChunk = [];
+
+                  void flushTabularChunk() {
+                    if (currentTabularChunk.isEmpty) return;
+                    final chunk = List<OrderTestResult>.from(currentTabularChunk);
+                    currentTabularChunk.clear();
+                    groupWidgets.add(
+                      Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(4.2),
+                          1: FlexColumnWidth(1.8),
+                          2: FlexColumnWidth(1.3),
+                          3: FlexColumnWidth(2.7),
+                        },
+                        children: chunk
+                            .map((r) => buildTableRow(r, hasGroupHeader))
+                            .toList(),
+                      ),
+                    );
+                  }
+
+                  for (final r in items) {
+                    if (r.dataType == 'text') {
+                      flushTabularChunk();
+                      groupWidgets.add(buildTextResultBlock(r, hasGroupHeader));
+                    } else {
+                      currentTabularChunk.add(r);
+                    }
+                  }
+                  flushTabularChunk();
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -896,155 +1141,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                           ),
                         ),
                       ],
-                      Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(4.2),
-                          1: FlexColumnWidth(1.8),
-                          2: FlexColumnWidth(1.3),
-                          3: FlexColumnWidth(2.7),
-                        },
-                        children: items.map((r) {
-                          final isNumeric = r.dataType == 'numeric';
-                          final numVal = isNumeric && r.resultValue != null
-                              ? ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue)
-                              : null;
-
-                          String? alertFlag = r.alertFlag;
-                          if (alertFlag == null &&
-                              numVal != null &&
-                              r.referenceValues.isNotEmpty) {
-                            final ref = r.referenceValues.first;
-                            if (numVal > ref.maxValue) {
-                              alertFlag = 'H';
-                            } else if (numVal < ref.minValue) {
-                              alertFlag = 'L';
-                            }
-                          } else if (alertFlag != null) {
-                            final f = alertFlag.toUpperCase();
-                            if (f == 'HIGH' || f == 'ALTO') alertFlag = 'H';
-                            if (f == 'LOW' || f == 'BAJO') alertFlag = 'L';
-                            if (f == 'ABNORMAL' || f == 'ANORMAL') alertFlag = '*';
-                          }
-
-                          final hasAlert =
-                              alertFlag != null && alertFlag.isNotEmpty;
-
-                          String referenceText = '—';
-                          if (r.referenceText.trim().isNotEmpty) {
-                            referenceText = r.referenceText.trim();
-                          } else if (isNumeric && r.referenceValues.isNotEmpty) {
-                            final ref = r.referenceValues.first;
-                            final unit = r.unitOfMeasure.isNotEmpty
-                                ? ' ${r.unitOfMeasure}'
-                                : '';
-                            referenceText =
-                                '${ref.minValue} - ${ref.maxValue}$unit';
-                          } else if (r.dataType == 'boolean' &&
-                              r.expectedQualitativeValue != null) {
-                            referenceText =
-                                'Esperado: ${r.expectedQualitativeValue}';
-                          } else if (r.expectedQualitativeValue != null) {
-                            referenceText = r.expectedQualitativeValue!;
-                          }
-
-                          final isTotalRow =
-                              r.parameterName.trim().toUpperCase() == 'TOTAL';
-
-                          return TableRow(
-                            decoration: isTotalRow
-                                ? BoxDecoration(
-                                    border: Border(
-                                      top: BorderSide(
-                                          color: Colors.grey.shade300,
-                                          width: 0.8),
-                                    ),
-                                  )
-                                : null,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                  left: hasGroupHeader ? 12 : 4,
-                                  top: 4,
-                                  bottom: 4,
-                                  right: 4,
-                                ),
-                                child: Text(
-                                  r.parameterName,
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: isTotalRow
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      isNumeric && r.resultValue != null
-                                          ? ThousandsSeparatorInputFormatter.formatText(r.resultValue!)
-                                          : (r.resultValue ?? '—'),
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: hasAlert || isTotalRow
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    if (hasAlert) ...[
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        alertFlag,
-                                        style: const TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFD32F2F),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Text(
-                                  r.unitOfMeasure.isNotEmpty
-                                      ? r.unitOfMeasure
-                                      : '',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Text(
-                                  referenceText,
-                                  textAlign: TextAlign.right,
-                                  style: TextStyle(
-                                    fontSize: referenceText.contains('\n')
-                                        ? 11.5
-                                        : 12,
-                                    height: referenceText.contains('\n')
-                                        ? 1.25
-                                        : null,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
+                      ...groupWidgets,
                       const SizedBox(height: 6),
                     ],
                   );

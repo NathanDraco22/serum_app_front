@@ -188,50 +188,52 @@ class ParameterCard extends StatelessWidget {
 
           // Fila 2: Valor de Referencia destacado + Input
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Caja de Referencia
-              Tooltip(
-                message: _getReferenceText(),
-                child: Container(
-                  constraints: const BoxConstraints(minWidth: 160, maxWidth: 260),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        result.referenceText.isNotEmpty
-                            ? 'ESCALA REFERENCIAL'
-                            : (result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO'),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.4,
-                          color: theme.colorScheme.onSurfaceVariant,
+              // Caja de Referencia (solo si no es texto libre o si tiene referenceText definido)
+              if (result.dataType != 'text' || result.referenceText.trim().isNotEmpty) ...[
+                Tooltip(
+                  message: _getReferenceText(),
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 160, maxWidth: 260),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          result.referenceText.isNotEmpty
+                              ? 'ESCALA REFERENCIAL'
+                              : (result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO'),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.4,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        _getReferenceText(),
-                        maxLines: result.referenceText.isNotEmpty ? 4 : 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: result.referenceText.isNotEmpty ? 11 : 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+                        const SizedBox(height: 3),
+                        Text(
+                          _getReferenceText(),
+                          maxLines: result.referenceText.isNotEmpty ? 4 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: result.referenceText.isNotEmpty ? 11 : 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
+              ],
 
               // Control de Entrada
               Expanded(
@@ -398,12 +400,15 @@ class ParameterCard extends StatelessWidget {
         focusNode: focusNode,
         controller: controller,
         readOnly: isReadOnly,
-        textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
+        keyboardType: TextInputType.multiline,
+        minLines: 3,
+        maxLines: null,
+        textInputAction: TextInputAction.newline,
         onFieldSubmitted: (_) => onFieldSubmitted?.call(),
         onChanged: onNumericChanged,
         style: const TextStyle(fontWeight: FontWeight.bold),
         decoration: InputDecoration(
-          hintText: 'Observación...',
+          hintText: 'Ingrese observaciones o resultado descriptivo...',
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           border: OutlineInputBorder(

@@ -245,7 +245,12 @@ class OrdersList extends StatelessWidget {
                         style: theme.textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 4),
-                      _buildDoctorTag(context, order, theme),
+                      _buildDoctorTag(
+                        context,
+                        order,
+                        theme,
+                        isEditable: !isCompleted && order.status != 'cancelled',
+                      ),
                       if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
                         const SizedBox(height: 3),
                         Row(
@@ -724,8 +729,9 @@ class OrdersList extends StatelessWidget {
   Widget _buildDoctorTag(
     BuildContext context,
     OrderInDb order,
-    ThemeData theme,
-  ) {
+    ThemeData theme, {
+    required bool isEditable,
+  }) {
     final hasDoctor =
         (order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty) ||
         (order.doctorId != null && order.doctorId!.trim().isNotEmpty);
@@ -734,6 +740,54 @@ class OrdersList extends StatelessWidget {
       final doctorName = order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty
           ? order.doctorInfo!.name.trim()
           : 'Dr. #${order.doctorId}';
+
+      final doctorContent = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.secondaryContainer.withValues(alpha: isEditable ? 0.35 : 0.2),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: theme.colorScheme.secondary.withValues(alpha: isEditable ? 0.35 : 0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.medical_services_outlined,
+              size: 13,
+              color: isEditable ? theme.colorScheme.secondary : theme.colorScheme.outline,
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                'Médico: $doctorName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isEditable ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (isEditable) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.edit_outlined,
+                size: 12,
+                color: theme.colorScheme.secondary,
+              ),
+            ],
+          ],
+        ),
+      );
+
+      if (!isEditable) {
+        return Tooltip(
+          message: 'Orden completada: el médico remitente no puede modificarse',
+          child: doctorContent,
+        );
+      }
 
       return Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -745,44 +799,7 @@ class OrdersList extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: () => _handleAssignOrChangeDoctor(context, order),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: theme.colorScheme.secondary.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.medical_services_outlined,
-                      size: 13,
-                      color: theme.colorScheme.secondary,
-                    ),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(
-                        'Médico: $doctorName',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.edit_outlined,
-                      size: 12,
-                      color: theme.colorScheme.secondary,
-                    ),
-                  ],
-                ),
-              ),
+              child: doctorContent,
             ),
           ),
           Tooltip(
@@ -804,43 +821,52 @@ class OrdersList extends StatelessWidget {
       );
     }
 
+    final noDoctorContent = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: isEditable ? 0.35 : 0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: isEditable ? 1.0 : 0.5),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isEditable ? Icons.person_add_alt_1_outlined : Icons.medical_services_outlined,
+            size: 13,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: isEditable ? 1.0 : 0.6),
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              isEditable ? 'Sin médico remitente (Click para asignar)' : 'Sin médico remitente',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: isEditable ? 1.0 : 0.6),
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!isEditable) {
+      return Tooltip(
+        message: 'Orden completada: sin médico asignado',
+        child: noDoctorContent,
+      );
+    }
+
     return Tooltip(
       message: 'Click para asignar médico remitente',
       child: InkWell(
         borderRadius: BorderRadius.circular(6),
         onTap: () => _handleAssignOrChangeDoctor(context, order),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.person_add_alt_1_outlined,
-                size: 13,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  'Sin médico remitente',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: noDoctorContent,
       ),
     );
   }
@@ -849,6 +875,15 @@ class OrdersList extends StatelessWidget {
     BuildContext context,
     OrderInDb order,
   ) async {
+    if (order.status == 'completed' || order.status == 'cancelled') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede modificar el médico de una orden completada o cerrada.'),
+        ),
+      );
+      return;
+    }
+
     final selectedDoctor = await showDoctorSelectionDialog(context);
     if (selectedDoctor == null || !context.mounted) return;
 
@@ -875,6 +910,15 @@ class OrdersList extends StatelessWidget {
     BuildContext context,
     OrderInDb order,
   ) async {
+    if (order.status == 'completed' || order.status == 'cancelled') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se puede modificar el médico de una orden completada o cerrada.'),
+        ),
+      );
+      return;
+    }
+
     final doctorName = order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty
         ? order.doctorInfo!.name.trim()
         : 'asignado';

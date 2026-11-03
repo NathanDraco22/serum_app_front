@@ -281,5 +281,76 @@ void main() {
       expect(fakeOrdersDataSource.lastUpdatedData?['doctorId'], isNull);
       expect(fakeOrdersDataSource.lastUpdatedData?['doctorInfo'], isNull);
     });
+
+    testWidgets('Orden completada con médico no permite editar ni desvincular (solo lectura)', (tester) async {
+      final completedOrderWithDoctor = OrderInDb(
+        id: 'ord-400',
+        patientId: 'pat-4',
+        branchId: 'branch-1',
+        patientInfo: PatientInfo(name: 'Sofía Reyes', age: 35),
+        doctorId: 'doc-123',
+        doctorInfo: DoctorInfo(name: 'Dra. María Elena Ramos', specialty: 'Pediatría'),
+        items: [
+          OrderItem(
+            labTestId: 'lt-4',
+            name: 'Examen General de Orina',
+            salePriceApplied: 10000,
+          ),
+        ],
+        totalPrice: 10000,
+        paidAmount: 10000,
+        status: 'completed',
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+
+      await tester.pumpWidget(buildTestWidget([completedOrderWithDoctor]));
+      await tester.pumpAndSettle();
+
+      // Muestra el nombre del médico
+      expect(find.text('Médico: Dra. María Elena Ramos'), findsOneWidget);
+      // No debe existir el botón de desvincular 'x'
+      expect(find.byIcon(Icons.close), findsNothing);
+      // No debe existir el icono de edición rápida
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+    });
+
+    testWidgets('Orden completada sin médico muestra estado informativo sin opción de asignar', (tester) async {
+      final completedOrderWithoutDoctor = OrderInDb(
+        id: 'ord-500',
+        patientId: 'pat-5',
+        branchId: 'branch-1',
+        patientInfo: PatientInfo(name: 'Luis Castillo', age: 50),
+        doctorId: null,
+        doctorInfo: null,
+        items: [
+          OrderItem(
+            labTestId: 'lt-5',
+            name: 'Ácido Úrico',
+            salePriceApplied: 12000,
+          ),
+        ],
+        totalPrice: 12000,
+        paidAmount: 12000,
+        status: 'completed',
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        updatedAt: DateTime.now().millisecondsSinceEpoch,
+      );
+
+      await tester.pumpWidget(buildTestWidget([completedOrderWithoutDoctor]));
+      await tester.pumpAndSettle();
+
+      // Muestra el texto de solo lectura
+      expect(find.text('Sin médico remitente'), findsOneWidget);
+      // NO debe mostrar la invitación interactiva
+      expect(find.text('Sin médico remitente (Click para asignar)'), findsNothing);
+      // No debe existir el icono interactivo de agregar
+      expect(find.byIcon(Icons.person_add_alt_1_outlined), findsNothing);
+
+      // Al tocar el tag no debe abrir el diálogo de selección de médico
+      await tester.tap(find.text('Sin médico remitente'));
+      await tester.pumpAndSettle();
+      expect(find.text('Seleccionar Médico Remitente'), findsNothing);
+    });
   });
 }

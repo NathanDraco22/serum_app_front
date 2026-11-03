@@ -20,6 +20,36 @@ void main() {
       expect(results['ERI'], isNotNull);
       expect(results['ERI']!.value, closeTo(5.0, 0.001));
       expect(results['ERI']!.formattedValue, '5.000');
+
+      // Índices de Wintrobe derivados automáticamente en cascada completa
+      expect(results['VCM'], isNotNull);
+      expect(results['VCM']!.value, 90.0);
+      expect(results['HCM'], isNotNull);
+      expect(results['HCM']!.value, 30.0);
+      expect(results['CHCM'], isNotNull);
+      expect(results['CHCM']!.value, closeTo(33.33, 0.05));
+    });
+
+    test('1.b. Cálculo de Eritrocitos e Índices directamente desde Hemoglobina sola', () {
+      final inputs = {
+        'HB': 15.0,
+      };
+
+      final results = ClinicalFormulasRegistry.evaluateAll(inputs);
+
+      // Eritrocitos = Hemoglobina / 3 = 5.000 millones
+      expect(results['ERI'], isNotNull);
+      expect(results['ERI']!.value, closeTo(5.0, 0.001));
+      expect(results['ERI']!.formattedValue, '5.000');
+      expect(results['ERI']!.formulaDisplay, 'Hemoglobina / 3');
+
+      // HCM = (15.0 * 10) / 5.0 = 30
+      expect(results['HCM'], isNotNull);
+      expect(results['HCM']!.value, 30.0);
+
+      // VCM y CHCM requieren Hematocrito, por lo que son null
+      expect(results['VCM'], isNull);
+      expect(results['CHCM'], isNull);
     });
 
     test('2. Índices de Wintrobe con Serie Roja Completa (Valores Canónicos)', () {

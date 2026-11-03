@@ -161,29 +161,71 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
         if (htcVal != null && htcVal > 0) {
           // A) Hemoglobina = Hematocrito / 3 (1 decimal)
           if (hbResult != null) {
-            final isHbManual = _manuallyOverriddenFieldIds.contains(hbResult.labTestId);
-            if (!isHbManual) {
-              final approxHb = htcVal / 3.0;
-              final formattedHb = ClinicalFormulasRegistry.formatClinicalValue(approxHb, 1);
-              _controllers[hbResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedHb);
-              available['HB'] = approxHb;
-              _autoCalculatedFieldIds.add(hbResult.labTestId);
-              _autoCalculatedFormulas[hbResult.labTestId] = 'Hematocrito / 3';
-            }
+            final approxHb = htcVal / 3.0;
+            final formattedHb = ClinicalFormulasRegistry.formatClinicalValue(approxHb, 1);
+            _controllers[hbResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedHb);
+            available['HB'] = approxHb;
+            _autoCalculatedFieldIds.add(hbResult.labTestId);
+            _autoCalculatedFormulas[hbResult.labTestId] = 'Hematocrito / 3';
           }
 
           // B) Eritrocitos = Hemoglobina / 3 (o Hematocrito / 9) (3 decimales en millones)
           if (eriResult != null) {
+            final currentHb = available['HB'] ?? (htcVal / 3.0);
+            final approxEri = currentHb / 3.0;
+            final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
+            _controllers[eriResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedEri);
+            available['ERI'] = approxEri;
+            _autoCalculatedFieldIds.add(eriResult.labTestId);
+            _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
+          }
+        }
+      } else if (triggeredCanonical == 'HB' && hbResult != null) {
+        // Disparador directo de Hemoglobina (ej. captura sin Hematocrito o ajuste de HB)
+        final hbVal = available['HB'];
+        if (hbVal != null && hbVal > 0) {
+          if (eriResult != null) {
             final isEriManual = _manuallyOverriddenFieldIds.contains(eriResult.labTestId);
             if (!isEriManual) {
-              final currentHb = available['HB'] ?? (htcVal / 3.0);
-              final approxEri = currentHb / 3.0;
+              final approxEri = hbVal / 3.0;
               final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
               _controllers[eriResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedEri);
               available['ERI'] = approxEri;
               _autoCalculatedFieldIds.add(eriResult.labTestId);
               _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
             }
+          }
+        }
+      } else if (triggeredTestId == null) {
+        // Evaluación preventiva al abrir modal con valores preexistentes
+        final htcVal = available['HTC'];
+        final hbVal = available['HB'];
+        if (htcVal != null && htcVal > 0) {
+          if (hbResult != null && (_controllers[hbResult.labTestId]?.text.trim().isEmpty ?? true)) {
+            final approxHb = htcVal / 3.0;
+            final formattedHb = ClinicalFormulasRegistry.formatClinicalValue(approxHb, 1);
+            _controllers[hbResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedHb);
+            available['HB'] = approxHb;
+            _autoCalculatedFieldIds.add(hbResult.labTestId);
+            _autoCalculatedFormulas[hbResult.labTestId] = 'Hematocrito / 3';
+          }
+          if (eriResult != null && (_controllers[eriResult.labTestId]?.text.trim().isEmpty ?? true)) {
+            final currentHb = available['HB'] ?? (htcVal / 3.0);
+            final approxEri = currentHb / 3.0;
+            final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
+            _controllers[eriResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedEri);
+            available['ERI'] = approxEri;
+            _autoCalculatedFieldIds.add(eriResult.labTestId);
+            _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
+          }
+        } else if (hbVal != null && hbVal > 0) {
+          if (eriResult != null && (_controllers[eriResult.labTestId]?.text.trim().isEmpty ?? true)) {
+            final approxEri = hbVal / 3.0;
+            final formattedEri = ClinicalFormulasRegistry.formatClinicalValue(approxEri, 3);
+            _controllers[eriResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(formattedEri);
+            available['ERI'] = approxEri;
+            _autoCalculatedFieldIds.add(eriResult.labTestId);
+            _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
           }
         }
       }
@@ -262,6 +304,19 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     } else if (canonical != 'HTC') {
       // Si el usuario teclea en HB, ERI o índices de Wintrobe, se registra sobreescritura manual
       _manuallyOverriddenFieldIds.add(r.labTestId);
+    } else if (canonical == 'HTC') {
+      // Hematocrito es el disparador maestro de la Serie Roja:
+      // Al escribir en él, se desbloquean los campos dependientes para que se recalculen siempre
+      for (final other in _results) {
+        final otherCanonical = ClinicalFormulasRegistry.resolveCanonicalKey(other.parameterName);
+        if (otherCanonical == 'HB' ||
+            otherCanonical == 'ERI' ||
+            otherCanonical == 'VCM' ||
+            otherCanonical == 'HCM' ||
+            otherCanonical == 'CHCM') {
+          _manuallyOverriddenFieldIds.remove(other.labTestId);
+        }
+      }
     }
     _autoCalculatedFieldIds.remove(r.labTestId);
     _autoCalculatedFormulas.remove(r.labTestId);
