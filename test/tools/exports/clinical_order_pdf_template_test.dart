@@ -473,5 +473,49 @@ void main() {
       expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
       expect(bytes.isNotEmpty, isTrue);
     });
+
+    test('Construye PDF con Bioanalista Auxiliar seleccionado (signer explícito)', () async {
+      final titular = BioanalystInfo(
+        name: 'Lic. Titular Central',
+        title: 'DIRECTOR TECNICO',
+        code: 'MINSA 11223',
+      );
+
+      final auxiliar = BioanalystInfo(
+        name: 'Lic. Auxiliar de Turno',
+        title: 'MICROBIOLOGA CLINICA',
+        code: 'MINSA 99887',
+      );
+
+      final branch = BranchInDb(
+        id: 'br-aux-test',
+        name: 'Laboratorio Biomedic',
+        address: 'Calle Real #10',
+        phone: '1234-5678',
+        bioanalyst: titular,
+        auxBio: [
+          AuxBioanalyst(
+            user: UserInfo(id: 'usr-9', name: 'Lic. Auxiliar de Turno'),
+            bioanalyst: auxiliar,
+          ),
+        ],
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: mockOrder,
+        branch: branch,
+        signer: auxiliar,
+      );
+
+      expect(template.signer, equals(auxiliar));
+      expect(template.signer!.name, equals('Lic. Auxiliar de Turno'));
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
   });
 }

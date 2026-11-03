@@ -11,14 +11,17 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   final BranchInDb branch;
   final PatientInfo? patientInfo;
   final DoctorInfo? doctorInfo;
+  final BioanalystInfo? signer;
 
   SingleClinicalOrderTemplate({
     required this.order,
     required this.branch,
     PatientInfo? patientInfo,
     DoctorInfo? doctorInfo,
+    BioanalystInfo? signer,
   })  : patientInfo = patientInfo ?? order.patientInfo,
-        doctorInfo = doctorInfo ?? order.doctorInfo;
+        doctorInfo = doctorInfo ?? order.doctorInfo,
+        signer = signer ?? branch.bioanalyst;
 
   int _calculateAge(int birthDateMs) {
     if (birthDateMs <= 0) return 0;
@@ -206,7 +209,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
     final headerImageUrl = branch.effectiveIsoLogo;
     final watermarkImageUrl = branch.effectiveLogo ?? branch.effectiveIsoLogo;
-    final sealImageUrl = branch.bioanalyst?.sealUrl;
+    final effectiveSigner = signer ?? branch.bioanalyst;
+    final sealImageUrl = effectiveSigner?.sealUrl;
 
     if (headerImageUrl != null && headerImageUrl.isNotEmpty) {
       final bytes = await AppImageCache.getImageBytes(headerImageUrl);
@@ -794,6 +798,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }
 
   pw.Widget _buildSignatureAndNotes(pw.MemoryImage? sealImage) {
+    final effectiveSigner = signer ?? branch.bioanalyst;
     final hasClinicalNotes = order.notes != null && order.notes!.trim().isNotEmpty;
 
     return pw.Column(
@@ -852,27 +857,27 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 color: PdfColors.black,
               ),
               pw.SizedBox(height: 4),
-              if (branch.bioanalyst != null &&
-                  branch.bioanalyst!.name.trim().isNotEmpty) ...[
+              if (effectiveSigner != null &&
+                  effectiveSigner.name.trim().isNotEmpty) ...[
                 pw.Text(
-                  branch.bioanalyst!.name.trim(),
+                  effectiveSigner.name.trim(),
                   style: pw.TextStyle(
                     fontSize: 9,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
-                if (branch.bioanalyst!.title.trim().isNotEmpty)
+                if (effectiveSigner.title.trim().isNotEmpty)
                   pw.Text(
-                    branch.bioanalyst!.title.trim(),
+                    effectiveSigner.title.trim(),
                     style: pw.TextStyle(
                       fontSize: 8,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.blueGrey800,
                     ),
                   ),
-                if (branch.bioanalyst!.code.trim().isNotEmpty)
+                if (effectiveSigner.code.trim().isNotEmpty)
                   pw.Text(
-                    branch.bioanalyst!.code.trim(),
+                    effectiveSigner.code.trim(),
                     style: const pw.TextStyle(
                       fontSize: 7.5,
                       color: PdfColors.grey700,

@@ -38,7 +38,7 @@ Future<void> showClinicalOrderViewerDialog(
     context,
     MaterialPageRoute(
       builder: (context) {
-        return _ClinicalOrderViewer(
+        return ClinicalOrderViewer(
           order: order,
           branch: branch,
           patientInfo: patientInfo ?? order.patientInfo,
@@ -71,8 +71,9 @@ Future<void> showClinicalOrderViewerDialogFromId(
   await showClinicalOrderViewerDialog(context, order);
 }
 
-class _ClinicalOrderViewer extends StatefulWidget {
-  const _ClinicalOrderViewer({
+class ClinicalOrderViewer extends StatefulWidget {
+  const ClinicalOrderViewer({
+    super.key,
     required this.order,
     required this.branch,
     this.patientInfo,
@@ -85,18 +86,20 @@ class _ClinicalOrderViewer extends StatefulWidget {
   final DoctorInfo? doctorInfo;
 
   @override
-  State<_ClinicalOrderViewer> createState() => _ClinicalOrderViewerState();
+  State<ClinicalOrderViewer> createState() => _ClinicalOrderViewerState();
 }
 
-class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
+class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
   late PatientInfo? _patientInfo;
   late DoctorInfo? _doctorInfo;
+  late BioanalystInfo? _selectedSigner;
 
   @override
   void initState() {
     super.initState();
     _patientInfo = widget.patientInfo ?? widget.order.patientInfo;
     _doctorInfo = widget.doctorInfo ?? widget.order.doctorInfo;
+    _selectedSigner = widget.branch.bioanalyst;
 
     // Solo si se trata de una orden previa que no guardó snapshots, resolver en background sin trabar la UI
     if (_patientInfo == null ||
@@ -159,6 +162,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
       branch: widget.branch,
       patientInfo: _patientInfo,
       doctorInfo: _doctorInfo,
+      signer: _selectedSigner,
     );
     final fileName =
         'orden_clinica_${widget.order.id.length > 8 ? widget.order.id.substring(widget.order.id.length - 8) : widget.order.id}.pdf';
@@ -171,6 +175,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
       branch: widget.branch,
       patientInfo: _patientInfo,
       doctorInfo: _doctorInfo,
+      signer: _selectedSigner,
     );
     final doc = await template.buildDocument();
     await Printing.layoutPdf(
@@ -185,6 +190,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
       branch: widget.branch,
       patientInfo: _patientInfo,
       doctorInfo: _doctorInfo,
+      signer: _selectedSigner,
     );
     final doc = await template.buildDocument();
     final fileName =
@@ -209,11 +215,101 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
           gender: 'M',
         );
 
+    final auxBioList = widget.branch.auxBio ?? [];
+    final hasAuxBio = auxBioList.isNotEmpty;
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainerHighest,
       appBar: AppBar(
         title: Text('Informe Clínico - Folio #$shortId'),
         actions: [
+          if (hasAuxBio) ...[
+            PopupMenuButton<BioanalystInfo>(
+              tooltip: 'Seleccionar Bioanalista Firmante',
+              initialValue: _selectedSigner,
+              onSelected: (signer) {
+                setState(() {
+                  _selectedSigner = signer;
+                });
+              },
+              itemBuilder: (context) => [
+                if (widget.branch.bioanalyst != null)
+                  PopupMenuItem(
+                    value: widget.branch.bioanalyst,
+                    child: Row(
+                      children: [
+                        Icon(Icons.verified_user_outlined,
+                            size: 18, color: Colors.teal.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${widget.branch.bioanalyst!.name} (Titular)',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ...auxBioList.map((aux) {
+                  return PopupMenuItem(
+                    value: aux.bioanalyst,
+                    child: Row(
+                      children: [
+                        Icon(Icons.badge_outlined,
+                            size: 18, color: Colors.blue.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${aux.bioanalyst.name.isNotEmpty ? aux.bioanalyst.name : aux.user.name} (Auxiliar)',
+                            style: const TextStyle(fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.draw_outlined,
+                        size: 16, color: theme.colorScheme.primary),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(
+                        _selectedSigner?.name.isNotEmpty == true
+                            ? _selectedSigner!.name
+                            : 'Seleccionar Firmante',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.arrow_drop_down,
+                        size: 18, color: theme.colorScheme.primary),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
           IconButton(
             tooltip: 'Exportar PDF (A4)',
             onPressed: () => _exportPdf(context),
@@ -289,6 +385,7 @@ class _ClinicalOrderViewerState extends State<_ClinicalOrderViewer> {
                         branch: widget.branch,
                         patientInfo: resolvedPatient,
                         doctorInfo: _doctorInfo,
+                        signer: _selectedSigner,
                       ),
                     ),
                   ],
@@ -309,12 +406,14 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     required this.branch,
     required this.patientInfo,
     this.doctorInfo,
+    this.signer,
   });
 
   final OrderInDb order;
   final BranchInDb branch;
   final PatientInfo patientInfo;
   final DoctorInfo? doctorInfo;
+  final BioanalystInfo? signer;
 
   int _calculateAge(int birthDateMs) {
     if (birthDateMs <= 0) return 0;
@@ -1085,71 +1184,81 @@ class ClinicalOrderViewerContent extends StatelessWidget {
         const SizedBox(height: 28),
 
         // 6. Firma y Sello del Responsable
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (branch.bioanalyst?.sealUrl != null &&
-                  branch.bioanalyst!.sealUrl!.trim().isNotEmpty) ...[
-                Transform.rotate(
-                  angle: -0.087, // ~ -5 grados de inclinación realista
-                  child: AppCachedImage(
-                    imageUrl: branch.bioanalyst!.sealUrl!,
-                    width: 125,
-                    height: 95,
-                    fit: BoxFit.contain,
+        Builder(
+          builder: (context) {
+            final effectiveSigner = signer ?? branch.bioanalyst;
+
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (effectiveSigner?.sealUrl != null &&
+                      effectiveSigner!.sealUrl!.trim().isNotEmpty) ...[
+                    Transform.rotate(
+                      angle: -0.087, // ~ -5 grados de inclinación realista
+                      child: AppCachedImage(
+                        imageUrl: effectiveSigner.sealUrl!,
+                        width: 125,
+                        height: 95,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ] else ...[
+                    const SizedBox(height: 48), // Espacio para firma manuscrita y sello manual
+                  ],
+                  Container(
+                    width: 220,
+                    height: 1,
+                    color: Colors.black87,
                   ),
-                ),
-                const SizedBox(height: 6),
-              ] else ...[
-                const SizedBox(height: 48), // Espacio para firma manuscrita y sello manual
-              ],
-              Container(
-                width: 220,
-                height: 1,
-                color: Colors.black87,
+                  const SizedBox(height: 6),
+                  if (effectiveSigner != null &&
+                      effectiveSigner.name.trim().isNotEmpty) ...[
+                    Text(
+                      effectiveSigner.name.trim(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (effectiveSigner.title.trim().isNotEmpty)
+                      Text(
+                        effectiveSigner.title.trim(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blueGrey.shade800,
+                        ),
+                      ),
+                    if (effectiveSigner.code.trim().isNotEmpty)
+                      Text(
+                        effectiveSigner.code.trim(),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                  ] else ...[
+                    const Text(
+                      'Responsable de Laboratorio',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Firma y Sello de Validación Clínica',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 6),
-              if (branch.bioanalyst != null &&
-                  branch.bioanalyst!.name.trim().isNotEmpty) ...[
-                Text(
-                  branch.bioanalyst!.name.trim(),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (branch.bioanalyst!.title.trim().isNotEmpty)
-                  Text(
-                    branch.bioanalyst!.title.trim(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blueGrey.shade800,
-                    ),
-                  ),
-                if (branch.bioanalyst!.code.trim().isNotEmpty)
-                  Text(
-                    branch.bioanalyst!.code.trim(),
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-              ] else ...[
-                const Text(
-                  'Responsable de Laboratorio',
-                  style: TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Firma y Sello de Validación Clínica',
-                  style: TextStyle(
-                      fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ],
-          ),
+            );
+          },
         ),
 
         const SizedBox(height: 36),

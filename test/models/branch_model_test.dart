@@ -158,5 +158,59 @@ void main() {
       final updateJson = updateWithBio.toJson();
       expect(updateJson['bioanalyst'], equals(bioJson));
     });
+
+    test('Serialización y deserialización de AuxBioanalyst y auxBio en Branch', () {
+      final auxJson = {
+        'user': {'id': 'user-101', 'name': 'Lic. Auxiliar Maria'},
+        'bioanalyst': {
+          'name': 'Lic. Auxiliar Maria',
+          'title': 'MICROBIOLOGA',
+          'code': 'MINSA 77112',
+          'sealUrl': 'https://cdn.example.com/seals/aux_maria.png',
+        },
+      };
+
+      final aux = AuxBioanalyst.fromJson(auxJson);
+      expect(aux.user.id, equals('user-101'));
+      expect(aux.user.name, equals('Lic. Auxiliar Maria'));
+      expect(aux.bioanalyst.name, equals('Lic. Auxiliar Maria'));
+      expect(aux.bioanalyst.title, equals('MICROBIOLOGA'));
+      expect(aux.bioanalyst.code, equals('MINSA 77112'));
+      expect(aux.bioanalyst.sealUrl, equals('https://cdn.example.com/seals/aux_maria.png'));
+      expect(aux.toJson(), equals(auxJson));
+
+      final branchJson = {
+        'id': 'BR-AUX',
+        'name': 'Sucursal con Auxiliares',
+        'address': 'Avenida Central',
+        'phone': '12345678',
+        'bioanalyst': {
+          'name': 'Lic. Titular',
+          'title': 'TITULAR',
+          'code': '123',
+        },
+        'auxBio': [auxJson],
+        'createdAt': 1700000000000,
+      };
+
+      final branch = BranchInDb.fromJson(branchJson);
+      expect(branch.auxBio, isNotNull);
+      expect(branch.auxBio!.length, equals(1));
+      expect(branch.auxBio!.first.user.name, equals('Lic. Auxiliar Maria'));
+      expect(branch.auxBio!.first.bioanalyst.sealUrl, equals('https://cdn.example.com/seals/aux_maria.png'));
+
+      final createBranch = CreateBranch(
+        name: 'Sede Aux',
+        address: 'Dir',
+        phone: '111',
+        auxBio: [aux],
+      );
+      expect(createBranch.toJson()['auxBio'], equals([auxJson]));
+
+      final updateBranch = UpdateBranch(
+        auxBio: [aux],
+      );
+      expect(updateBranch.toJson()['auxBio'], equals([auxJson]));
+    });
   });
 }
