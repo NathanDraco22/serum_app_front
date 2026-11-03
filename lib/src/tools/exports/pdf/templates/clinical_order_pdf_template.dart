@@ -717,14 +717,12 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                         ),
                       ),
 
-                      // Valores de referencia (alineados a la derecha si una sola línea, a la izquierda si multilínea)
+                      // Valores de referencia (alineados a la derecha)
                       pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
                         child: pw.Text(
                           refText,
-                          textAlign: refText.contains('\n')
-                              ? pw.TextAlign.left
-                              : pw.TextAlign.right,
+                          textAlign: pw.TextAlign.right,
                           style: pw.TextStyle(
                             fontSize: refText.contains('\n') ? 8.5 : 9.0,
                             lineSpacing: refText.contains('\n') ? 1.2 : 1.0,

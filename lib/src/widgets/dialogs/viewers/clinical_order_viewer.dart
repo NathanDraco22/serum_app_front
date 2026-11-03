@@ -1029,9 +1029,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                                     const EdgeInsets.symmetric(vertical: 4),
                                 child: Text(
                                   referenceText,
-                                  textAlign: referenceText.contains('\n')
-                                      ? TextAlign.left
-                                      : TextAlign.right,
+                                  textAlign: TextAlign.right,
                                   style: TextStyle(
                                     fontSize: referenceText.contains('\n')
                                         ? 11.5
