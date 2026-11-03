@@ -227,6 +227,36 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     }
   }
 
+  Future<void> _openQuickEditParameter(
+    LabTestInDb testToEdit,
+    List<LabTestInDb> allAvailableTests,
+  ) async {
+    final branchId = context.read<AppSessionCubit>().currentBranchId;
+
+    final updated = await QuickCreateParameterDialog.showEdit(
+      context,
+      parameter: testToEdit,
+      branchId: branchId,
+    );
+
+    if (updated != null && mounted) {
+      final updatedList = allAvailableTests.map((t) => t.id == updated.id ? updated : t).toList();
+      setState(() {
+        if (_useChildTestsPriceSum) {
+          _salePrice = _calculateChildrenSum(updatedList);
+          _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+        }
+      });
+      context.read<ReadLabTestCubit>().getAll(branchId: branchId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Parámetro "${updated.name}" actualizado exitosamente.'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+  }
+
   void _submit() {
     if (_isPack && _childTestIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -905,6 +935,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                                 selectedTestIds: _childTestIds,
                                 packSalePrice: _salePrice,
                                 useChildTestsPriceSum: _useChildTestsPriceSum,
+                                onEditTest: (test) => _openQuickEditParameter(test, allAvailableTests),
                                 onSelectionChanged: (updated) {
                                   setState(() {
                                     _childTestIds = updated;

@@ -9,6 +9,7 @@ import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
 import '../../../widgets/dialogs/viewers/order_invoice_viewer.dart';
 import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import '../../../widgets/dialogs/confirm_delete_dialog.dart';
+import '../../../widgets/dialogs/selectors/doctor_selection_dialog.dart';
 import 'supervisor_auth_dialog.dart';
 
 class OrdersList extends StatelessWidget {
@@ -51,9 +52,9 @@ class OrdersList extends StatelessWidget {
       );
       if (confirmed && context.mounted) {
         await context.read<WriteOrderCubit>().update(
-              order.id,
-              UpdateOrder(status: 'completed'),
-            );
+          order.id,
+          UpdateOrder(status: 'completed'),
+        );
         if (context.mounted) {
           context.read<ReadOrderCubit>().getAll();
         }
@@ -77,9 +78,9 @@ class OrdersList extends StatelessWidget {
             ? 'paid'
             : (order.paidAmount > 0 ? 'partiallyPaid' : 'pending');
         await context.read<WriteOrderCubit>().update(
-              order.id,
-              UpdateOrder(status: revertedStatus),
-            );
+          order.id,
+          UpdateOrder(status: revertedStatus),
+        );
         if (context.mounted) {
           context.read<ReadOrderCubit>().getAll();
         }
@@ -106,18 +107,19 @@ class OrdersList extends StatelessWidget {
       itemBuilder: (context, index) {
         final order = orders[index];
         final isBlocked = order.isBlocked;
-        final patientName =
-            order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
-        final totalPrice =
-            order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-        final isFullyPaid = order.status == 'paid' ||
+        final patientName = order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
+        final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
+        final isFullyPaid =
+            order.status == 'paid' ||
             order.status == 'completed' ||
             (totalPrice > 0 && order.paidAmount >= totalPrice);
-        final hasResults = order.results.isNotEmpty &&
+        final hasResults =
+            order.results.isNotEmpty &&
             order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
         final isCompleted = order.status == 'completed';
         final isPartiallyPaid = order.paidAmount > 0 && !isFullyPaid;
-        final showPayButton = !isFullyPaid &&
+        final showPayButton =
+            !isFullyPaid &&
             order.status != 'completed' &&
             order.status != 'paid' &&
             order.status != 'cancelled';
@@ -139,48 +141,48 @@ class OrdersList extends StatelessWidget {
                   message: isBlocked
                       ? 'Orden bloqueada'
                       : (isCompleted
-                          ? 'Orden completada (clic para reabrir)'
-                          : 'Clic para marcar como completada'),
+                            ? 'Orden completada (clic para reabrir)'
+                            : 'Clic para marcar como completada'),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(24),
                     onTap: isBlocked
                         ? null
                         : () => _handleOrderStatusToggle(
-                              context,
-                              order,
-                              isCompleted,
-                              isFullyPaid,
-                              patientName,
-                            ),
+                            context,
+                            order,
+                            isCompleted,
+                            isFullyPaid,
+                            patientName,
+                          ),
                     child: CircleAvatar(
                       backgroundColor: isBlocked
                           ? Colors.red.shade100
                           : (isCompleted
-                              ? Colors.green.shade100
-                              : isFullyPaid
-                                  ? Colors.blue.shade100
-                                  : hasResults
-                                      ? Colors.amber.shade100
-                                      : theme.colorScheme.primaryContainer),
+                                ? Colors.green.shade100
+                                : isFullyPaid
+                                ? Colors.blue.shade100
+                                : hasResults
+                                ? Colors.amber.shade100
+                                : theme.colorScheme.primaryContainer),
                       foregroundColor: isBlocked
                           ? Colors.red.shade800
                           : (isCompleted
-                              ? Colors.green.shade800
-                              : isFullyPaid
-                                  ? Colors.blue.shade800
-                                  : hasResults
-                                      ? Colors.amber.shade900
-                                      : theme.colorScheme.onPrimaryContainer),
+                                ? Colors.green.shade800
+                                : isFullyPaid
+                                ? Colors.blue.shade800
+                                : hasResults
+                                ? Colors.amber.shade900
+                                : theme.colorScheme.onPrimaryContainer),
                       child: Icon(
                         isBlocked
                             ? Icons.lock
                             : (isCompleted
-                                ? Icons.check_circle
-                                : isFullyPaid
-                                    ? Icons.paid
-                                    : hasResults
-                                        ? Icons.assignment_turned_in
-                                        : Icons.pending_actions),
+                                  ? Icons.check_circle
+                                  : isFullyPaid
+                                  ? Icons.paid
+                                  : hasResults
+                                  ? Icons.assignment_turned_in
+                                  : Icons.pending_actions),
                       ),
                     ),
                   ),
@@ -242,11 +244,17 @@ class OrdersList extends StatelessWidget {
                         'Examen: ${order.examName}',
                         style: theme.textTheme.bodyMedium,
                       ),
+                      const SizedBox(height: 4),
+                      _buildDoctorTag(context, order, theme),
                       if (order.notes != null && order.notes!.trim().isNotEmpty) ...[
                         const SizedBox(height: 3),
                         Row(
                           children: [
-                            Icon(Icons.sticky_note_2_outlined, size: 13, color: theme.colorScheme.primary),
+                            Icon(
+                              Icons.sticky_note_2_outlined,
+                              size: 13,
+                              color: theme.colorScheme.primary,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -271,7 +279,11 @@ class OrdersList extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.calendar_today, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                               const SizedBox(width: 4),
                               Text(_formatDate(order.createdAt), style: theme.textTheme.bodySmall),
                             ],
@@ -279,9 +291,18 @@ class OrdersList extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.payments, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                              Icon(
+                                Icons.payments,
+                                size: 12,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                               const SizedBox(width: 4),
-                              Text(NumberFormatter.convertToMoneyLike(totalPrice), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+                              Text(
+                                NumberFormatter.convertToMoneyLike(totalPrice),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ],
                           ),
                           // Badge de Bloqueo
@@ -312,7 +333,8 @@ class OrdersList extends StatelessWidget {
                                 ],
                               ),
                             )
-                          else if (order.approval?.isApproved == true && order.approval?.approvedBy != null)
+                          else if (order.approval?.isApproved == true &&
+                              order.approval?.approvedBy != null)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
@@ -323,7 +345,11 @@ class OrdersList extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.verified_user_outlined, size: 11, color: Colors.teal.shade800),
+                                  Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 11,
+                                    color: Colors.teal.shade800,
+                                  ),
                                   const SizedBox(width: 4),
                                   Flexible(
                                     child: Text(
@@ -344,30 +370,34 @@ class OrdersList extends StatelessWidget {
                             message: isBlocked
                                 ? 'Orden bloqueada'
                                 : (isCompleted
-                                    ? 'Completada (clic para reabrir)'
-                                    : 'Clic para marcar como completada'),
+                                      ? 'Completada (clic para reabrir)'
+                                      : 'Clic para marcar como completada'),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(4),
                               onTap: isBlocked
                                   ? null
                                   : () => _handleOrderStatusToggle(
-                                        context,
-                                        order,
-                                        isCompleted,
-                                        isFullyPaid,
-                                        patientName,
-                                      ),
+                                      context,
+                                      order,
+                                      isCompleted,
+                                      isFullyPaid,
+                                      patientName,
+                                    ),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: isCompleted
                                       ? Colors.green.shade50
-                                      : (hasResults ? Colors.purple.shade50 : Colors.orange.shade50),
+                                      : (hasResults
+                                            ? Colors.purple.shade50
+                                            : Colors.orange.shade50),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: isCompleted
                                         ? Colors.green.shade200
-                                        : (hasResults ? Colors.purple.shade200 : Colors.orange.shade200),
+                                        : (hasResults
+                                              ? Colors.purple.shade200
+                                              : Colors.orange.shade200),
                                   ),
                                 ),
                                 child: Row(
@@ -376,11 +406,15 @@ class OrdersList extends StatelessWidget {
                                     Icon(
                                       isCompleted
                                           ? Icons.check_circle
-                                          : (hasResults ? Icons.check_circle_outline : Icons.hourglass_top),
+                                          : (hasResults
+                                                ? Icons.check_circle_outline
+                                                : Icons.hourglass_top),
                                       size: 11,
                                       color: isCompleted
                                           ? Colors.green.shade800
-                                          : (hasResults ? Colors.purple.shade800 : Colors.orange.shade900),
+                                          : (hasResults
+                                                ? Colors.purple.shade800
+                                                : Colors.orange.shade900),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -392,7 +426,9 @@ class OrdersList extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                         color: isCompleted
                                             ? Colors.green.shade800
-                                            : (hasResults ? Colors.purple.shade800 : Colors.orange.shade900),
+                                            : (hasResults
+                                                  ? Colors.purple.shade800
+                                                  : Colors.orange.shade900),
                                       ),
                                     ),
                                   ],
@@ -407,15 +443,15 @@ class OrdersList extends StatelessWidget {
                               color: isFullyPaid
                                   ? Colors.green.shade50
                                   : isPartiallyPaid
-                                      ? Colors.blue.shade50
-                                      : Colors.amber.shade50,
+                                  ? Colors.blue.shade50
+                                  : Colors.amber.shade50,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: isFullyPaid
-                                  ? Colors.green.shade200
-                                  : isPartiallyPaid
-                                      ? Colors.blue.shade200
-                                      : Colors.amber.shade200,
+                                    ? Colors.green.shade200
+                                    : isPartiallyPaid
+                                    ? Colors.blue.shade200
+                                    : Colors.amber.shade200,
                               ),
                             ),
                             child: Row(
@@ -425,30 +461,30 @@ class OrdersList extends StatelessWidget {
                                   isFullyPaid
                                       ? Icons.check
                                       : isPartiallyPaid
-                                          ? Icons.pie_chart_outline
-                                          : Icons.attach_money,
+                                      ? Icons.pie_chart_outline
+                                      : Icons.attach_money,
                                   size: 11,
                                   color: isFullyPaid
                                       ? Colors.green.shade800
                                       : isPartiallyPaid
-                                          ? Colors.blue.shade800
-                                          : Colors.amber.shade900,
+                                      ? Colors.blue.shade800
+                                      : Colors.amber.shade900,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   isFullyPaid
                                       ? 'PAGADA'
                                       : isPartiallyPaid
-                                          ? 'ABONO: ${NumberFormatter.convertToMoneyLike(order.paidAmount)} / ${NumberFormatter.convertToMoneyLike(totalPrice)}'
-                                          : 'PENDIENTE DE PAGO',
+                                      ? 'ABONO: ${NumberFormatter.convertToMoneyLike(order.paidAmount)} / ${NumberFormatter.convertToMoneyLike(totalPrice)}'
+                                      : 'PENDIENTE DE PAGO',
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: isFullyPaid
                                         ? Colors.green.shade800
                                         : isPartiallyPaid
-                                            ? Colors.blue.shade800
-                                            : Colors.amber.shade900,
+                                        ? Colors.blue.shade800
+                                        : Colors.amber.shade900,
                                   ),
                                 ),
                               ],
@@ -506,7 +542,9 @@ class OrdersList extends StatelessWidget {
                       if (fresh == null) {
                         messenger.showSnackBar(
                           const SnackBar(
-                            content: Text('No se pudo verificar el estado de la orden. Verifica tu conexión.'),
+                            content: Text(
+                              'No se pudo verificar el estado de la orden. Verifica tu conexión.',
+                            ),
                           ),
                         );
                       } else if (!fresh.isBlocked) {
@@ -584,7 +622,9 @@ class OrdersList extends StatelessWidget {
                           context.read<WriteOrderCubit>().approveOrder(order.id, req).then((_) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Orden autorizada y desbloqueada exitosamente')),
+                                const SnackBar(
+                                  content: Text('Orden autorizada y desbloqueada exitosamente'),
+                                ),
                               );
                               context.read<ReadOrderCubit>().getAll();
                             }
@@ -662,8 +702,7 @@ class OrdersList extends StatelessWidget {
                         title: 'Eliminar Orden',
                         message:
                             '¿Está seguro de eliminar esta orden del sistema? Esta acción no se puede deshacer.',
-                        itemName:
-                            'Orden #${order.id} ($patientName - ${order.examName})',
+                        itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
                       );
                       if (confirmed && context.mounted) {
                         context.read<WriteOrderCubit>().delete(order.id).then((_) {
@@ -680,5 +719,186 @@ class OrdersList extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget _buildDoctorTag(
+    BuildContext context,
+    OrderInDb order,
+    ThemeData theme,
+  ) {
+    final hasDoctor =
+        (order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty) ||
+        (order.doctorId != null && order.doctorId!.trim().isNotEmpty);
+
+    if (hasDoctor) {
+      final doctorName = order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty
+          ? order.doctorInfo!.name.trim()
+          : 'Dr. #${order.doctorId}';
+
+      return Wrap(
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          Tooltip(
+            message: 'Click para cambiar médico remitente',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => _handleAssignOrChangeDoctor(context, order),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.medical_services_outlined,
+                      size: 13,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        'Médico: $doctorName',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.edit_outlined,
+                      size: 12,
+                      color: theme.colorScheme.secondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Tooltip(
+            message: 'Desvincular médico remitente',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _handleRemoveDoctor(context, order),
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Icon(
+                  Icons.close,
+                  size: 14,
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Tooltip(
+      message: 'Click para asignar médico remitente',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => _handleAssignOrChangeDoctor(context, order),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.person_add_alt_1_outlined,
+                size: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  'Sin médico remitente',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAssignOrChangeDoctor(
+    BuildContext context,
+    OrderInDb order,
+  ) async {
+    final selectedDoctor = await showDoctorSelectionDialog(context);
+    if (selectedDoctor == null || !context.mounted) return;
+
+    final doctorInfo = DoctorInfo(
+      name: selectedDoctor.name,
+      specialty: selectedDoctor.specialty.isNotEmpty
+          ? selectedDoctor.specialty
+          : 'Medicina General',
+      phone: selectedDoctor.phone ?? '',
+      cardId: selectedDoctor.cardId,
+      email: selectedDoctor.email,
+    );
+
+    await context.read<WriteOrderCubit>().update(
+      order.id,
+      UpdateOrder(
+        doctorId: selectedDoctor.id,
+        doctorInfo: doctorInfo,
+      ),
+    );
+  }
+
+  Future<void> _handleRemoveDoctor(
+    BuildContext context,
+    OrderInDb order,
+  ) async {
+    final doctorName = order.doctorInfo != null && order.doctorInfo!.name.trim().isNotEmpty
+        ? order.doctorInfo!.name.trim()
+        : 'asignado';
+
+    final confirmed = await ConfirmDeleteDialog.show(
+      context,
+      title: 'Quitar Médico Remitente',
+      message: '¿Deseas desvincular el médico "$doctorName" de la orden #${order.id}?',
+      itemName: 'Médico: $doctorName',
+      confirmLabel: 'Quitar Médico',
+      cancelLabel: 'Cancelar',
+      countdownSeconds: 0,
+      icon: Icons.person_remove_outlined,
+      confirmIcon: Icons.delete_outline,
+      isDestructive: true,
+    );
+
+    if (confirmed == true && context.mounted) {
+      await context.read<WriteOrderCubit>().update(
+        order.id,
+        UpdateOrder(
+          clearDoctor: true,
+        ),
+      );
+    }
   }
 }

@@ -9,6 +9,7 @@ class QuickCreateParameterDialog extends StatefulWidget {
   final String? initialSubclassification;
   final String branchId;
   final LabTestsRepository? repository;
+  final LabTestInDb? parameterToEdit;
 
   const QuickCreateParameterDialog({
     super.key,
@@ -16,6 +17,7 @@ class QuickCreateParameterDialog extends StatefulWidget {
     this.initialSubclassification,
     required this.branchId,
     this.repository,
+    this.parameterToEdit,
   });
 
   static Future<LabTestInDb?> show(
@@ -38,6 +40,26 @@ class QuickCreateParameterDialog extends StatefulWidget {
     );
   }
 
+  static Future<LabTestInDb?> showEdit(
+    BuildContext context, {
+    required LabTestInDb parameter,
+    required String branchId,
+    LabTestsRepository? repository,
+  }) {
+    final repo = repository ?? RepositoryProvider.of<LabTestsRepository>(context);
+    return showDialog<LabTestInDb>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => QuickCreateParameterDialog(
+        initialCategory: parameter.commercialCategory,
+        initialSubclassification: parameter.subclassification,
+        branchId: branchId,
+        repository: repo,
+        parameterToEdit: parameter,
+      ),
+    );
+  }
+
   @override
   State<QuickCreateParameterDialog> createState() => _QuickCreateParameterDialogState();
 }
@@ -51,15 +73,19 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
   late TextEditingController _minValueController;
   late TextEditingController _maxValueController;
   late TextEditingController _qualitativeOptionsController;
-  late TextEditingController _expectedQualitativeController;
   late TextEditingController _referenceTextController;
   late TextEditingController _customSubclassController;
+
+  late List<String> _qualitativeOptions;
+  late String _expectedQualitativeValue;
 
   late String _category;
   late String _subclassification;
   bool _isCustomSubclass = false;
   String _dataType = 'numeric'; // 'numeric', 'qualitative', 'text'
   bool _isSubmitting = false;
+
+  bool get _isEditing => widget.parameterToEdit != null;
 
   static const List<Map<String, dynamic>> _qualitativePresets = [
     {
@@ -87,35 +113,87 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
   @override
   void initState() {
     super.initState();
-    _category = widget.initialCategory.trim().isNotEmpty
-        ? widget.initialCategory.trim()
-        : (ClinicalClassificationRegistry.classifications.firstOrNull ?? 'Hematología');
+    final p = widget.parameterToEdit;
 
-    final availableSubs = ClinicalClassificationRegistry.getSubclassificationsFor(_category);
-    if (widget.initialSubclassification != null &&
-        widget.initialSubclassification!.trim().isNotEmpty) {
-      final initialSub = widget.initialSubclassification!.trim();
-      if (availableSubs.contains(initialSub)) {
-        _subclassification = initialSub;
+    if (p != null) {
+      _category = p.commercialCategory.trim().isNotEmpty
+          ? p.commercialCategory.trim()
+          : (ClinicalClassificationRegistry.classifications.firstOrNull ?? 'Hematología');
+
+      final availableSubs = ClinicalClassificationRegistry.getSubclassificationsFor(_category);
+      final rawSub = p.subclassification.trim();
+      if (rawSub.isNotEmpty) {
+        if (availableSubs.contains(rawSub)) {
+          _subclassification = rawSub;
+        } else {
+          _subclassification = '__custom__';
+          _isCustomSubclass = true;
+        }
       } else {
-        _subclassification = '__custom__';
-        _isCustomSubclass = true;
+        _subclassification = availableSubs.firstOrNull ?? 'General';
       }
-    } else {
-      _subclassification = availableSubs.firstOrNull ?? 'General';
-    }
 
-    _nameController = TextEditingController();
-    _codeController = TextEditingController();
-    _unitController = TextEditingController(text: 'mg/dL');
-    _minValueController = TextEditingController(text: '0');
-    _maxValueController = TextEditingController(text: '100');
-    _qualitativeOptionsController = TextEditingController(text: 'Negativo, Positivo');
-    _expectedQualitativeController = TextEditingController(text: 'Negativo');
-    _referenceTextController = TextEditingController();
-    _customSubclassController = TextEditingController(
-      text: _isCustomSubclass ? widget.initialSubclassification ?? '' : '',
-    );
+      _dataType = p.dataType.trim().isNotEmpty ? p.dataType.trim() : 'numeric';
+      _nameController = TextEditingController(text: p.name);
+      _codeController = TextEditingController(text: p.code ?? '');
+      _unitController = TextEditingController(text: p.unitOfMeasure);
+
+      final firstRef = p.referenceValues.isNotEmpty ? p.referenceValues.first : null;
+      _minValueController = TextEditingController(
+        text: firstRef != null ? firstRef.minValue.toString() : '0',
+      );
+      _maxValueController = TextEditingController(
+        text: firstRef != null ? firstRef.maxValue.toString() : '100',
+      );
+
+      _qualitativeOptions = p.qualitativeOptions.isNotEmpty
+          ? List.from(p.qualitativeOptions)
+          : ['Negativo', 'Positivo'];
+      _expectedQualitativeValue = (p.expectedQualitativeValue != null &&
+              p.expectedQualitativeValue!.trim().isNotEmpty)
+          ? p.expectedQualitativeValue!.trim()
+          : (_qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : 'Negativo');
+      _qualitativeOptionsController = TextEditingController(
+        text: p.qualitativeOptions.isNotEmpty
+            ? p.qualitativeOptions.join(', ')
+            : 'Negativo, Positivo',
+      );
+      _referenceTextController = TextEditingController(text: p.referenceText);
+      _customSubclassController = TextEditingController(
+        text: _isCustomSubclass ? rawSub : '',
+      );
+    } else {
+      _category = widget.initialCategory.trim().isNotEmpty
+          ? widget.initialCategory.trim()
+          : (ClinicalClassificationRegistry.classifications.firstOrNull ?? 'Hematología');
+
+      final availableSubs = ClinicalClassificationRegistry.getSubclassificationsFor(_category);
+      if (widget.initialSubclassification != null &&
+          widget.initialSubclassification!.trim().isNotEmpty) {
+        final initialSub = widget.initialSubclassification!.trim();
+        if (availableSubs.contains(initialSub)) {
+          _subclassification = initialSub;
+        } else {
+          _subclassification = '__custom__';
+          _isCustomSubclass = true;
+        }
+      } else {
+        _subclassification = availableSubs.firstOrNull ?? 'General';
+      }
+
+      _nameController = TextEditingController();
+      _codeController = TextEditingController();
+      _unitController = TextEditingController(text: 'mg/dL');
+      _minValueController = TextEditingController(text: '0');
+      _maxValueController = TextEditingController(text: '100');
+      _qualitativeOptions = ['Negativo', 'Positivo'];
+      _expectedQualitativeValue = 'Negativo';
+      _qualitativeOptionsController = TextEditingController(text: 'Negativo, Positivo');
+      _referenceTextController = TextEditingController();
+      _customSubclassController = TextEditingController(
+        text: _isCustomSubclass ? widget.initialSubclassification ?? '' : '',
+      );
+    }
   }
 
   @override
@@ -126,10 +204,23 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
     _minValueController.dispose();
     _maxValueController.dispose();
     _qualitativeOptionsController.dispose();
-    _expectedQualitativeController.dispose();
     _referenceTextController.dispose();
     _customSubclassController.dispose();
     super.dispose();
+  }
+
+  void _updateQualitativeOptionsFromText(String text) {
+    final parsed = text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+    _qualitativeOptions = parsed;
+    if (!_qualitativeOptions.contains(_expectedQualitativeValue)) {
+      _expectedQualitativeValue =
+          _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
+    }
   }
 
   void _onCategoryChanged(String? newCategory) {
@@ -171,50 +262,69 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
       List<String> qualOptions = [];
       String? expectedQual;
       if (_dataType == 'qualitative') {
-        qualOptions = _qualitativeOptionsController.text
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
-        expectedQual = _expectedQualitativeController.text.trim().isNotEmpty
-            ? _expectedQualitativeController.text.trim()
-            : null;
+        _updateQualitativeOptionsFromText(_qualitativeOptionsController.text);
+        qualOptions = _qualitativeOptions;
+        expectedQual = _expectedQualitativeValue.trim().isNotEmpty
+            ? _expectedQualitativeValue.trim()
+            : (qualOptions.isNotEmpty ? qualOptions.first : null);
       }
 
-      final newLabTest = CreateLabTest(
-        branchId: widget.branchId,
-        name: _nameController.text.trim(),
-        code: _codeController.text.trim().isNotEmpty ? _codeController.text.trim() : null,
-        commercialCategory: _category,
-        subclassification: finalSubclassification,
-        salePrice: 0,
-        salePrice2: 0,
-        costPrice: 0,
-        currency: 'USD',
-        isPack: false,
-        useChildTestsPriceSum: false,
-        childTestIds: const [],
-        dataType: _dataType,
-        unitOfMeasure: _dataType == 'numeric' ? _unitController.text.trim() : '',
-        referenceValues: refs,
-        qualitativeOptions: qualOptions,
-        expectedQualitativeValue: expectedQual,
-        referenceText: _referenceTextController.text.trim(),
-        isProfileParameter: true, // Parámetro interno de perfil
-      );
-
       final repo = widget.repository ?? RepositoryProvider.of<LabTestsRepository>(context);
-      final created = await repo.createLabTest(newLabTest);
 
-      if (mounted) {
-        Navigator.of(context).pop(created);
+      if (_isEditing) {
+        final updateData = UpdateLabTest(
+          name: _nameController.text.trim(),
+          code: _codeController.text.trim().isNotEmpty ? _codeController.text.trim() : null,
+          commercialCategory: _category,
+          subclassification: finalSubclassification,
+          dataType: _dataType,
+          unitOfMeasure: _dataType == 'numeric' ? _unitController.text.trim() : '',
+          referenceValues: refs,
+          qualitativeOptions: qualOptions,
+          expectedQualitativeValue: expectedQual,
+          referenceText: _referenceTextController.text.trim(),
+        );
+
+        final updated = await repo.updateLabTestById(widget.parameterToEdit!.id, updateData);
+
+        if (mounted) {
+          Navigator.of(context).pop(updated);
+        }
+      } else {
+        final newLabTest = CreateLabTest(
+          branchId: widget.branchId,
+          name: _nameController.text.trim(),
+          code: _codeController.text.trim().isNotEmpty ? _codeController.text.trim() : null,
+          commercialCategory: _category,
+          subclassification: finalSubclassification,
+          salePrice: 0,
+          salePrice2: 0,
+          costPrice: 0,
+          currency: 'USD',
+          isPack: false,
+          useChildTestsPriceSum: false,
+          childTestIds: const [],
+          dataType: _dataType,
+          unitOfMeasure: _dataType == 'numeric' ? _unitController.text.trim() : '',
+          referenceValues: refs,
+          qualitativeOptions: qualOptions,
+          expectedQualitativeValue: expectedQual,
+          referenceText: _referenceTextController.text.trim(),
+          isProfileParameter: true, // Parámetro interno de perfil
+        );
+
+        final created = await repo.createLabTest(newLabTest);
+
+        if (mounted) {
+          Navigator.of(context).pop(created);
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al crear parámetro: $e'),
+            content: Text(_isEditing ? 'Error al actualizar parámetro: $e' : 'Error al crear parámetro: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -240,7 +350,7 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
             radius: 18,
             backgroundColor: theme.colorScheme.primaryContainer,
             foregroundColor: theme.colorScheme.onPrimaryContainer,
-            child: const Icon(Icons.add_chart_rounded, size: 20),
+            child: Icon(_isEditing ? Icons.edit_note_rounded : Icons.add_chart_rounded, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -248,11 +358,13 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Crear Parámetro de Perfil',
+                  _isEditing ? 'Editar Parámetro: ${widget.parameterToEdit!.name}' : 'Crear Parámetro de Perfil',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Se asociará automáticamente a este perfil sin saturar el catálogo general',
+                  _isEditing
+                      ? 'Modifique los valores de referencia o configuración técnica de este parámetro'
+                      : 'Se asociará automáticamente a este perfil sin saturar el catálogo general',
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ],
@@ -470,12 +582,16 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                     runSpacing: 4,
                     children: _qualitativePresets.map((preset) {
                       return ActionChip(
+                        avatar: const Icon(Icons.flash_on, size: 14),
                         label: Text(preset['label'] as String, style: const TextStyle(fontSize: 11)),
                         visualDensity: VisualDensity.compact,
                         onPressed: () {
                           setState(() {
-                            _qualitativeOptionsController.text = preset['options'] as String;
-                            _expectedQualitativeController.text = preset['expected'] as String;
+                            final optsStr = preset['options'] as String;
+                            final expStr = preset['expected'] as String;
+                            _qualitativeOptionsController.text = optsStr;
+                            _updateQualitativeOptionsFromText(optsStr);
+                            _expectedQualitativeValue = expStr;
                           });
                         },
                       );
@@ -487,38 +603,117 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                     decoration: const InputDecoration(
                       labelText: 'Opciones posibles (separadas por coma) *',
                       hintText: 'Ej. Negativo, Trazas, Positivo (+), etc.',
+                      prefixIcon: Icon(Icons.list_alt, size: 20),
                       isDense: true,
                       border: OutlineInputBorder(),
                     ),
                     validator: (v) {
-                      if (_dataType == 'qualitative' && (v == null || v.trim().isEmpty)) {
-                        return 'Ingresa al menos una opción';
+                      if (_dataType == 'qualitative') {
+                        final parsed = (v ?? '')
+                            .split(',')
+                            .map((e) => e.trim())
+                            .where((e) => e.isNotEmpty);
+                        if (parsed.isEmpty) {
+                          return 'Ingresa al menos una opción';
+                        }
                       }
                       return null;
                     },
+                    onChanged: (val) {
+                      setState(() {
+                        _updateQualitativeOptionsFromText(val);
+                      });
+                    },
                   ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: _expectedQualitativeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Valor Normal / Esperado',
-                      hintText: 'Ej. Negativo, No se observó...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                  const SizedBox(height: 12),
+                  if (_qualitativeOptions.isNotEmpty)
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('dialog_expected_$_expectedQualitativeValue'),
+                      initialValue: _qualitativeOptions.contains(_expectedQualitativeValue)
+                          ? _expectedQualitativeValue
+                          : _qualitativeOptions.first,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Valor Normal / Esperado *',
+                        helperText: 'Cualquier resultado distinto marcará alerta médica (ANORMAL)',
+                        prefixIcon: Icon(Icons.check_circle_outline, size: 20),
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _qualitativeOptions.toSet().map((opt) {
+                        return DropdownMenuItem<String>(
+                          value: opt,
+                          child: Text(opt, overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _expectedQualitativeValue = val ?? '';
+                        });
+                      },
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: theme.colorScheme.outlineVariant),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Ingrese al menos una opción en el campo superior para seleccionar el valor esperado.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ] else ...[
-                  TextFormField(
-                    controller: _referenceTextController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Texto / Criterio de Referencia (opcional)',
-                      hintText: 'Indicaciones o rangos descriptivos...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.colorScheme.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.notes_rounded, size: 18, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Para resultados descriptivos o patológicos, especifique abajo las notas de referencia o criterios.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
+                const SizedBox(height: 14),
+
+                // Notas / Escala de Referencia Explicativa Universal (Opcional)
+                TextFormField(
+                  controller: _referenceTextController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notas de Referencia / Escala Explicativa (Opcional)',
+                    hintText: 'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
+                    helperText: 'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones.',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                ),
               ],
             ),
           ),
@@ -538,7 +733,7 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
               : const Icon(Icons.check, size: 18),
-          label: Text(_isSubmitting ? 'Guardando...' : 'Crear y Agregar'),
+          label: Text(_isSubmitting ? 'Guardando...' : (_isEditing ? 'Guardar Cambios' : 'Crear y Agregar')),
         ),
       ],
     );

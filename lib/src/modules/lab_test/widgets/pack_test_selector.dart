@@ -7,6 +7,7 @@ class PackTestSelector extends StatefulWidget {
   final ValueChanged<List<String>> onSelectionChanged;
   final double packSalePrice;
   final bool useChildTestsPriceSum;
+  final void Function(LabTestInDb test)? onEditTest;
 
   const PackTestSelector({
     super.key,
@@ -15,6 +16,7 @@ class PackTestSelector extends StatefulWidget {
     required this.onSelectionChanged,
     required this.packSalePrice,
     this.useChildTestsPriceSum = true,
+    this.onEditTest,
   });
 
   @override
@@ -95,30 +97,444 @@ class _PackTestSelectorState extends State<PackTestSelector> {
     widget.onSelectionChanged([]);
   }
 
+  void _onReorderItem(int oldIndex, int newIndex) {
+    final updated = List<String>.from(widget.selectedTestIds);
+    final item = updated.removeAt(oldIndex);
+    updated.insert(newIndex, item);
+    widget.onSelectionChanged(updated);
+  }
+
+  void _moveItem(int currentIndex, int targetIndex) {
+    if (currentIndex < 0 || currentIndex >= widget.selectedTestIds.length) return;
+    if (targetIndex < 0 || targetIndex >= widget.selectedTestIds.length) return;
+    final updated = List<String>.from(widget.selectedTestIds);
+    final item = updated.removeAt(currentIndex);
+    updated.insert(targetIndex, item);
+    widget.onSelectionChanged(updated);
+  }
+
+  String _formatReferenceSummary(LabTestInDb test) {
+    if (test.dataType == 'numeric') {
+      final unit = test.unitOfMeasure.isNotEmpty ? ' ${test.unitOfMeasure}' : '';
+      if (test.referenceValues.isNotEmpty) {
+        final ref = test.referenceValues.first;
+        final minStr =
+            ref.minValue % 1 == 0 ? ref.minValue.toInt().toString() : ref.minValue.toString();
+        final maxStr =
+            ref.maxValue % 1 == 0 ? ref.maxValue.toInt().toString() : ref.maxValue.toString();
+        return 'Ref: $minStr - $maxStr$unit';
+      }
+      return 'Numérico${unit.isNotEmpty ? ' ($unit)' : ''}';
+    } else if (test.dataType == 'qualitative') {
+      final exp = test.expectedQualitativeValue;
+      if (exp != null && exp.isNotEmpty) {
+        return 'Cualitativo [Esperado: $exp]';
+      }
+      if (test.qualitativeOptions.isNotEmpty) {
+        return 'Cualitativo [${test.qualitativeOptions.take(3).join(', ')}${test.qualitativeOptions.length > 3 ? '...' : ''}]';
+      }
+      return 'Cualitativo';
+    } else {
+      if (test.referenceText.isNotEmpty) {
+        final preview = test.referenceText.length > 35
+            ? '${test.referenceText.substring(0, 35)}...'
+            : test.referenceText;
+        return 'Texto: $preview';
+      }
+      return 'Texto Libre';
+    }
+  }
+
+  Widget _buildSelectedTestsSection(
+    BuildContext context,
+    ThemeData theme,
+    List<LabTestInDb> selectedTests,
+  ) {
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(12),
+        topRight: Radius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.playlist_add_check_circle_outlined,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Parámetros y Análisis en este Perfil',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${selectedTests.length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+                if (selectedTests.length > 1) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '(Arrastra o usa ▲▼ para ordenar)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                if (selectedTests.isNotEmpty)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      foregroundColor: theme.colorScheme.error,
+                    ),
+                    onPressed: _clearSelection,
+                    icon: const Icon(Icons.clear_all, size: 16),
+                    label: const Text('Quitar todos', style: TextStyle(fontSize: 11)),
+                  ),
+              ],
+            ),
+          ),
+          if (selectedTests.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Aún no hay análisis o parámetros asignados a este perfil. Búscalos en el catálogo inferior o haz clic en "Crear Parámetro en este Perfil".',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 250, minHeight: 60),
+              child: ReorderableListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                shrinkWrap: true,
+                buildDefaultDragHandles: false,
+                itemCount: selectedTests.length,
+                onReorderItem: _onReorderItem,
+                itemBuilder: (context, index) {
+                  final test = selectedTests[index];
+                  final refSummary = _formatReferenceSummary(test);
+                  final isFirst = index == 0;
+                  final isLast = index == selectedTests.length - 1;
+
+                  return Container(
+                    key: ValueKey(test.id),
+                    margin: const EdgeInsets.only(bottom: 6),
+                    child: Material(
+                      color: theme.colorScheme.surfaceContainerLowest,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                        child: Row(
+                          children: [
+                            // 1. Handle de Arrastre para Reordenar
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: Tooltip(
+                                message: 'Arrastre para reordenar',
+                                child: MouseRegion(
+                                  cursor: SystemMouseCursors.grab,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Icon(
+                                      Icons.drag_indicator_rounded,
+                                      size: 20,
+                                      color: theme.colorScheme.outline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // 2. Botones de Subir y Bajar
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                InkWell(
+                                  onTap: isFirst ? null : () => _moveItem(index, index - 1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Tooltip(
+                                    message: 'Mover arriba',
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(2),
+                                      child: Icon(
+                                        Icons.arrow_drop_up_rounded,
+                                        size: 18,
+                                        color: isFirst
+                                            ? theme.colorScheme.outline.withValues(alpha: 0.25)
+                                            : theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: isLast ? null : () => _moveItem(index, index + 1),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Tooltip(
+                                    message: 'Mover abajo',
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(2),
+                                      child: Icon(
+                                        Icons.arrow_drop_down_rounded,
+                                        size: 18,
+                                        color: isLast
+                                            ? theme.colorScheme.outline.withValues(alpha: 0.25)
+                                            : theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 2),
+
+                            // 3. Número secuencial
+                            Container(
+                              width: 24,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '${index + 1}.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+
+                            // 4. Contenido de nombre y detalles clínicos
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          test.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (test.code != null && test.code!.isNotEmpty) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.surfaceContainerHigh,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            test.code!,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontFamily: 'monospace',
+                                              color: theme.colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (test.isProfileParameter) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.secondaryContainer,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Parámetro',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.onSecondaryContainer,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    children: [
+                                      Text(
+                                        refSummary,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      if (test.subclassification.isNotEmpty) ...[
+                                        const Text(' • ',
+                                            style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                        Text(
+                                          test.subclassification,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: theme.colorScheme.tertiary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+
+                            // 5. Botón de Edición (Lápiz)
+                            if (widget.onEditTest != null)
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                color: theme.colorScheme.primary,
+                                tooltip: 'Editar parámetro "${test.name}"',
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => widget.onEditTest!(test),
+                              ),
+
+                            // 6. Botón de Remover de este perfil
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, size: 18),
+                              color: theme.colorScheme.error,
+                              tooltip: 'Quitar de este perfil',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () => _toggleTest(test.id, false),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final categories = _getCategories();
     final filteredTests = _getFilteredItems();
 
-    // Cálculos de precios acumulados
-    final selectedTests = widget.availableTests
-        .where((t) => widget.selectedTestIds.contains(t.id))
-        .toList();
+    // Cálculos de precios acumulados manteniendo el orden de selectedTestIds
+    final selectedTests = <LabTestInDb>[];
+    for (final id in widget.selectedTestIds) {
+      final found = widget.availableTests.where((t) => t.id == id).firstOrNull;
+      if (found != null) {
+        selectedTests.add(found);
+      }
+    }
     final totalIndividualCents = selectedTests.fold<int>(0, (sum, t) => sum + t.salePrice);
     final totalIndividualPrice = totalIndividualCents / 100.0;
     final packPrice = widget.packSalePrice;
     final savings = totalIndividualPrice - packPrice;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
+    return Material(
+      color: theme.colorScheme.surfaceContainerLowest,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 1. Sección Superior: Parámetros y Análisis Seleccionados en este Perfil
+          _buildSelectedTestsSection(context, theme, selectedTests),
+          const Divider(height: 1),
+
+          // 2. Cabecera y Buscador del Catálogo para Agregar Más Pruebas
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Agregar Más Análisis desde el Catálogo',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Barra de Búsqueda y Filtros
           Padding(
             padding: const EdgeInsets.all(12),
@@ -260,111 +676,114 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                       final isSelected = widget.selectedTestIds.contains(test.id);
                       final testPrice = (test.salePrice / 100.0).toStringAsFixed(2);
 
-                      return CheckboxListTile(
-                        value: isSelected,
-                        onChanged: (val) => _toggleTest(test.id, val ?? false),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        dense: true,
-                        activeColor: theme.colorScheme.primary,
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                test.name,
-                                style: TextStyle(
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            if (test.code != null && test.code!.isNotEmpty) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHigh,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  test.code!,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontFamily: 'monospace',
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(width: 8),
-                            Text(
-                              /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
-                              test.salePrice2 > 0
-                                  ? 'P1: \$$testPrice | P2: \$${(test.salePrice2 / 100.0).toStringAsFixed(2)}'
-                                  : '\$$testPrice USD',
-                              */
-                              '\$$testPrice USD',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                      return Material(
+                        type: MaterialType.transparency,
+                        child: CheckboxListTile(
+                          value: isSelected,
+                          onChanged: (val) => _toggleTest(test.id, val ?? false),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                          activeColor: theme.colorScheme.primary,
+                          title: Row(
                             children: [
-                              Text(
-                                test.commercialCategory.isNotEmpty
-                                    ? test.commercialCategory
-                                    : 'Sin Categoría',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: theme.colorScheme.onSurfaceVariant,
+                              Expanded(
+                                child: Text(
+                                  test.name,
+                                  style: TextStyle(
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
                                 ),
                               ),
-                              if (test.subclassification.isNotEmpty) ...[
-                                const Text(' • ', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                                Text(
-                                  test.subclassification,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.tertiary,
-                                  ),
-                                ),
-                              ],
-                              if (test.unitOfMeasure.isNotEmpty) ...[
-                                const Text(' • ', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                                Text(
-                                  test.unitOfMeasure,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                              if (test.isProfileParameter) ...[
+                              if (test.code != null && test.code!.isNotEmpty) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                   decoration: BoxDecoration(
-                                    color: theme.colorScheme.secondaryContainer,
+                                    color: theme.colorScheme.surfaceContainerHigh,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    'Parámetro',
+                                    test.code!,
                                     style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.onSecondaryContainer,
+                                      fontSize: 10,
+                                      fontFamily: 'monospace',
+                                      color: theme.colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                 ),
                               ],
+                              const SizedBox(width: 8),
+                              Text(
+                                '\$$testPrice USD',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.secondary,
+                                ),
+                              ),
                             ],
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  test.commercialCategory.isNotEmpty
+                                      ? test.commercialCategory
+                                      : 'Sin Categoría',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                if (test.subclassification.isNotEmpty) ...[
+                                  const Text(' • ',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                  Text(
+                                    test.subclassification,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: theme.colorScheme.tertiary,
+                                    ),
+                                  ),
+                                ],
+                                if (test.unitOfMeasure.isNotEmpty) ...[
+                                  const Text(' • ',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                  Text(
+                                    test.unitOfMeasure,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                                if (test.isProfileParameter) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.secondaryContainer,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Parámetro',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onSecondaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
                         ),
                       );

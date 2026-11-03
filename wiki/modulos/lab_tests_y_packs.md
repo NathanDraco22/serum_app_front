@@ -62,3 +62,27 @@ Todas las listas de pruebas, categorías, subclasificaciones y selectores de per
 1. **Alcance Global en `ProviderContainer`**: `ReadLabTestCubit` reside en `GlobalCubitProvider` bajo el scope de la sucursal activa (`branch_scope_$branchId`). Se instancia una única vez y se mantiene reactivamente sincronizado mediante el stream de eventos del repositorio (`labTestsRepository.eventStream`).
 2. **Carga Condicional con `loadIfNotLoaded`**: Los módulos de Crear Orden y Crear Cotización ya no re-instancian cubits ni disparan llamadas HTTP innecesarias; si el catálogo ya está en `ReadLabTestSuccess`, se utiliza de inmediato en memoria (0 ms de retardo).
 3. **Botón de Refrescar en `LabTestsScreen`**: Ubicado en la barra de acciones superior (`Icons.refresh_rounded`, tooltip *"Actualizar catálogo"*). Permite forzar la recarga manual (`getAll()`) emitiendo `ReadLabTestRefreshing` con un indicador circular sutil sin desmontar la interfaz.
+
+### G. Sección Superior de Parámetros Seleccionados, Reordenamiento y Edición en Caliente (Lápiz ✏️)
+Para resolver la dificultad al editar perfiles complejos con múltiples parámetros técnicos:
+1. **Sección Superior de Seleccionados en `PackTestSelector`**:
+   - Ubicada directamente arriba del buscador de catálogo general.
+   - Muestra el listado ordenado de análisis y parámetros actualmente asignados al perfil con su contador dinámico.
+   - Cada fila visualiza: handle de arrastre (`Icons.drag_indicator_rounded`), botones de flechas subir/bajar (`Icons.arrow_drop_up_rounded`, `Icons.arrow_drop_down_rounded`), número secuencial dinámico, nombre, código, badge `PARÁMETRO` si aplica, y resumen clínico de valores de referencia (ej. `Ref: 70 - 100 mg/dL`, `Cualitativo [Esperado: Negativo]`, o texto libre).
+2. **Reordenamiento Dinámico (Drag & Drop y Flechas ▲▼)**:
+   - Implementado con `ReorderableListView.builder` y `onReorderItem`.
+   - Permite arrastrar libremente cualquier parámetro a una nueva posición o pulsar las flechas ▲/▼ para subirlo o bajarlo en 1-tap.
+   - La numeración secuencial (`1.`, `2.`, `3.`) se actualiza reactivamente y el orden exacto de `childTestIds` se persiste en la base de datos para la generación de órdenes clínicas y reportes analíticos.
+3. **Edición Directa en Caliente (Botón Lápiz ✏️)**:
+   - Al tocar el lápiz de cualquier parámetro, se abre `QuickCreateParameterDialog.showEdit(...)` precargado con sus datos actuales.
+   - Permite modificar nombre, código, clasificación, subclasificación, unidad de medida, valores de referencia numéricos mínimos y máximos, o listas cualitativas con selector desplegable (dropdown) de valor esperado y notas de referencia explicativas universales.
+   - Al guardar, actualiza el análisis en la base de datos vía `repo.updateLabTestById`, sincroniza el catálogo y recalcula el precio del perfil sin abandonar ni reiniciar el formulario.
+4. **Deselección Rápida (Botón ✕)**:
+   - Permite desvincular un parámetro del perfil en 1-tap sin tener que navegar por el catálogo inferior.
+5. **Catálogo Inferior Independiente**:
+   - Mantiene la barra de búsqueda por texto, chips de categorías y la lista de selección con checkboxes para agregar pruebas adicionales.
+
+### H. Diálogo Rápido de Parámetros (`QuickCreateParameterDialog`)
+Permite crear o editar parámetros técnicos de forma ágil dentro de un perfil:
+1. **Notas de Referencia Universales (`referenceText`)**: Disponibles para todos los tipos de resultado (Numérico, Cualitativo y Texto Libre), permitiendo ingresar escalas clínicas explicativas multilínea que se reflejan de inmediato en órdenes y reportes PDF.
+2. **Selector Desplegable (Dropdown) de Valor Esperado**: En tipo Cualitativo, el valor normal/esperado se selecciona mediante un dropdown reactivo (`DropdownButtonFormField`) alimentado por las opciones capturadas o las plantillas rápidas (evitando errores tipográficos), con alerta automática si se reciben resultados distintos.

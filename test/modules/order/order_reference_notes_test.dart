@@ -127,7 +127,7 @@ void main() {
     expect(firstResult['referenceText'], testScaleText);
   });
 
-  testWidgets('ClinicalOrderViewerContent despliega sección NOTAS DE REFERENCIA', (tester) async {
+  testWidgets('ClinicalOrderViewerContent despliega nota de referencia en columna Valores de Referencia sin bloque inferior redundante', (tester) async {
     final sampleBranch = BranchInDb(
       id: 'branch-1',
       name: 'Laboratorio Clínico Serum',
@@ -151,8 +151,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('NOTAS DE REFERENCIA:'), findsOneWidget);
+    // La nota explicativa debe aparecer directamente en la tabla (columna de valores de referencia)
     expect(find.textContaining('Menor de 5.6%: Nivel no diabético'), findsOneWidget);
+    // Ya no debe desplegarse el contenedor inferior separado "NOTAS DE REFERENCIA:"
+    expect(find.text('NOTAS DE REFERENCIA:'), findsNothing);
   });
 
   testWidgets('ClinicalOrderViewerContent despliega Bioanalista Representante en la firma si está configurado', (tester) async {

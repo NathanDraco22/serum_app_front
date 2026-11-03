@@ -33,6 +33,18 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
   }
 
   void _toggleBranch(String branchId) {
+    if (widget.branches.length == 1 &&
+        widget.selectedBranchIds.contains(branchId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Esta es la única sucursal del sistema y debe permanecer asignada para el colaborador.',
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     final updated = List<String>.from(widget.selectedBranchIds);
     if (updated.contains(branchId)) {
       updated.remove(branchId);
@@ -81,51 +93,10 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ─── Header Institucional ──────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: (widget.hasError && count == 0)
-                      ? theme.colorScheme.errorContainer.withAlpha(80)
-                      : theme.colorScheme.primaryContainer.withAlpha(90),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.domain_verification_rounded,
-                  size: 20,
-                  color: (widget.hasError && count == 0)
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sedes y Sucursales Autorizadas *',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Determina los establecimientos clínicos en los que este usuario tiene potestad operativa y apertura de turnos.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Badge de contador reactivo
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 460;
+              final badge = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: count > 0
@@ -152,9 +123,11 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      count > 0
-                          ? '$count de $total autorizada${count > 1 ? 's' : ''}'
-                          : 'Sin sedes asignadas',
+                      total == 1 && count == 1
+                          ? 'Sede única asignada'
+                          : (count > 0
+                              ? '$count de $total autorizada${count > 1 ? 's' : ''}'
+                              : 'Sin sedes asignadas'),
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: count > 0
@@ -164,13 +137,143 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                     ),
                   ],
                 ),
-              ),
-            ],
+              );
+
+              if (isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: (widget.hasError && count == 0)
+                                ? theme.colorScheme.errorContainer.withAlpha(80)
+                                : theme.colorScheme.primaryContainer.withAlpha(90),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.domain_verification_rounded,
+                            size: 20,
+                            color: (widget.hasError && count == 0)
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Sedes y Sucursales Autorizadas *',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Determina los establecimientos clínicos en los que este usuario tiene potestad operativa y apertura de turnos.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    badge,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (widget.hasError && count == 0)
+                          ? theme.colorScheme.errorContainer.withAlpha(80)
+                          : theme.colorScheme.primaryContainer.withAlpha(90),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.domain_verification_rounded,
+                      size: 20,
+                      color: (widget.hasError && count == 0)
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Sedes y Sucursales Autorizadas *',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Determina los establecimientos clínicos en los que este usuario tiene potestad operativa y apertura de turnos.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  badge,
+                ],
+              );
+            },
           ),
 
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
+
+          // ─── Mensaje Informativo para Sede Única ──────────────────────
+          if (total == 1) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withAlpha(40),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withAlpha(60),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Esta es la única sede registrada en el sistema y se ha auto-seleccionado automáticamente para este colaborador.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
 
           // ─── Barra de Acciones y Búsqueda (si hay más de 1 sucursal) ──
           if (total > 1) ...[
@@ -339,24 +442,24 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 4,
                                   children: [
-                                    Flexible(
-                                      child: Text(
-                                        branch.name,
-                                        style: theme.textTheme.bodyMedium?.copyWith(
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                          color: isSelected
-                                              ? theme.colorScheme.onSurface
-                                              : theme.colorScheme.onSurface
-                                                  .withAlpha(200),
-                                        ),
+                                    Text(
+                                      branch.name,
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? theme.colorScheme.onSurface
+                                            : theme.colorScheme.onSurface
+                                                .withAlpha(200),
                                       ),
                                     ),
-                                    if (isOrigin) ...[
-                                      const SizedBox(width: 8),
+                                    if (isOrigin)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
@@ -377,9 +480,28 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                                           ),
                                         ),
                                       ),
-                                    ],
-                                    if (isPrimary && widget.selectedBranchIds.length > 1) ...[
-                                      const SizedBox(width: 6),
+                                    if (total == 1)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 1,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primaryContainer
+                                              .withAlpha(80),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Única Sede (Autoasignada)',
+                                          style: theme.textTheme.labelSmall?.copyWith(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                      )
+                                    else if (isPrimary && widget.selectedBranchIds.length > 1)
                                       Container(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 6,
@@ -400,7 +522,6 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                                           ),
                                         ),
                                       ),
-                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 2),
@@ -437,7 +558,7 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              isSelected ? 'Autorizado' : 'Sin acceso',
+                              isSelected ? (total == 1 ? 'Autoasignado' : 'Autorizado') : 'Sin acceso',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 11,

@@ -55,6 +55,16 @@ class _UserFormDialogState extends State<UserFormDialog> {
     _isActive = u?.isActive ?? true;
     _selectedBranches = List<String>.from(u?.branches ?? []);
 
+    // Si solo hay una sucursal en el sistema y estamos creando un usuario,
+    // auto-seleccionarla inmediatamente si el cubit ya tiene el estado cargado.
+    final initialBranchState = context.read<ReadBranchCubit>().state;
+    if (!_isEditing &&
+        _selectedBranches.isEmpty &&
+        initialBranchState is ReadBranchSuccess &&
+        initialBranchState.items.length == 1) {
+      _selectedBranches = [initialBranchState.items.first.id];
+    }
+
     // Cargar sucursales y roles si no están cargadas
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ReadBranchCubit>().getAll();
@@ -309,6 +319,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: _selectedRole,
                           decoration: InputDecoration(
                             labelText: 'Rol Operativo *',
@@ -435,30 +446,44 @@ class _UserFormDialogState extends State<UserFormDialog> {
                         color: theme.colorScheme.outlineVariant.withAlpha(80),
                       ),
                     ),
-                    child: SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        'Usuario Activo',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Usuario Activo',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        _isActive
-                            ? 'El usuario puede iniciar sesión y operar en el sistema'
-                            : 'Usuario deshabilitado; se bloqueará el acceso al sistema',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        subtitle: Text(
+                          _isActive
+                              ? 'El usuario puede iniciar sesión y operar en el sistema'
+                              : 'Usuario deshabilitado; se bloqueará el acceso al sistema',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
+                        value: _isActive,
+                        onChanged: (val) => setState(() => _isActive = val),
                       ),
-                      value: _isActive,
-                      onChanged: (val) => setState(() => _isActive = val),
                     ),
                   ),
                   const SizedBox(height: 20),
 
                   // Selección Institucional de Sucursales
-                  BlocBuilder<ReadBranchCubit, ReadBranchState>(
+                  BlocConsumer<ReadBranchCubit, ReadBranchState>(
+                    listener: (context, branchState) {
+                      if (branchState is ReadBranchSuccess &&
+                          !_isEditing &&
+                          _selectedBranches.isEmpty &&
+                          branchState.items.length == 1) {
+                        setState(() {
+                          _selectedBranches = [branchState.items.first.id];
+                          _hasBranchError = false;
+                        });
+                      }
+                    },
                     builder: (context, branchState) {
                       if (branchState is ReadBranchLoading) {
                         return const Center(
@@ -474,6 +499,13 @@ class _UserFormDialogState extends State<UserFormDialog> {
                             'No hay sucursales registradas en el sistema.',
                             style: TextStyle(color: Colors.orange),
                           );
+                        }
+
+                        // Respaldo preventivo: si solo hay 1 sucursal y creamos usuario, asegurar selección
+                        if (!_isEditing &&
+                            _selectedBranches.isEmpty &&
+                            branches.length == 1) {
+                          _selectedBranches = [branches.first.id];
                         }
 
                         return UserBranchSelector(
