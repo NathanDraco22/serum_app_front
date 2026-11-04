@@ -1,0 +1,120 @@
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:serum_app_front/src/tools/exports/pdf/templates/clinical_order_pdf_template.dart';
+import 'package:serum_business/serum_business.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (methodCall) async => '.',
+    );
+  });
+
+  group('ClinicalOrderPdfTemplate Multi-Study Tests', () {
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+    test('Construye PDF con múltiples estudios (Biometría, EGO, EGH y Glucosa) separando cada estudio con sus subseries', () async {
+      final multiOrder = OrderInDb(
+        id: 'ord-multi-studies-pdf',
+        patientId: 'pat-1',
+        branchId: 'br-1',
+        createdAt: nowMs,
+        items: [
+          OrderItem(labTestId: 'BHC', name: 'Biometría Hemática Completa', salePriceApplied: 30000, isPack: true),
+          OrderItem(labTestId: 'EGO', name: 'Examen General de Orina', salePriceApplied: 15000, isPack: true),
+          OrderItem(labTestId: 'EGH', name: 'Examen General de Heces', salePriceApplied: 15000, isPack: true),
+          OrderItem(labTestId: 'GLU', name: 'Glucosa', salePriceApplied: 5000, isPack: false),
+        ],
+        results: [
+          OrderTestResult(
+            labTestId: 'HB',
+            parameterName: 'Hemoglobina',
+            subclassification: 'Serie Roja',
+            dataType: 'numeric',
+            parentExamName: 'Biometría Hemática Completa',
+            resultValue: '14.0',
+            unitOfMeasure: 'g/dL',
+          ),
+          OrderTestResult(
+            labTestId: 'LEU',
+            parameterName: 'Leucocitos',
+            subclassification: 'Serie Blanca',
+            dataType: 'numeric',
+            parentExamName: 'Biometría Hemática Completa',
+            resultValue: '7500',
+            unitOfMeasure: 'x mm3',
+          ),
+          OrderTestResult(
+            labTestId: 'COL-ORI',
+            parameterName: 'Color',
+            subclassification: 'Examen Físico-Químico',
+            dataType: 'qualitative',
+            parentExamName: 'Examen General de Orina',
+            resultValue: 'Amarillo',
+          ),
+          OrderTestResult(
+            labTestId: 'SED-ORI',
+            parameterName: 'Sedimento',
+            subclassification: 'Sedimento Microscópico',
+            dataType: 'text',
+            parentExamName: 'Examen General de Orina',
+            resultValue: 'Escaso',
+          ),
+          OrderTestResult(
+            labTestId: 'COL-HEC',
+            parameterName: 'Color',
+            subclassification: 'Examen Físico',
+            dataType: 'qualitative',
+            parentExamName: 'Examen General de Heces',
+            resultValue: 'Pardo',
+          ),
+          OrderTestResult(
+            labTestId: 'PAR-HEC',
+            parameterName: 'Parásitos',
+            subclassification: 'Examen Microscópico',
+            dataType: 'text',
+            parentExamName: 'Examen General de Heces',
+            resultValue: 'No se observan',
+          ),
+          OrderTestResult(
+            labTestId: 'GLU',
+            parameterName: 'Glucosa en Ayunas',
+            subclassification: '',
+            dataType: 'numeric',
+            parentExamName: 'Glucosa',
+            resultValue: '92',
+            unitOfMeasure: 'mg/dL',
+          ),
+        ],
+        patientInfo: PatientInfo(
+          name: 'María Alejandra Ramos',
+          dateOfBirth: nowMs - (28 * 365 * 86400000),
+          gender: 'F',
+        ),
+      );
+
+      final branch = BranchInDb(
+        id: 'br-1',
+        name: 'Laboratorio Clínico Serum',
+        address: 'Sede Central',
+        phone: 'PBX 2222',
+        createdAt: nowMs,
+      );
+
+      final template = SingleClinicalOrderTemplate(
+        order: multiOrder,
+        branch: branch,
+      );
+
+      final doc = await template.buildDocument();
+      final bytes = await doc.save();
+
+      expect(doc.document.pdfPageList.pages.isNotEmpty, isTrue);
+      expect(bytes.isNotEmpty, isTrue);
+    });
+  });
+}

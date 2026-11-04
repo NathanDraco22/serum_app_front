@@ -278,15 +278,116 @@ void main() {
       expect(order.items.first.labTestId, 'pack_1');
       expect(order.items.first.isPack, isTrue);
 
-      // Debe expandir los parámetros hijos del pack en results
+      // Debe expandir los parámetros hijos del pack en results con trazabilidad a su examen padre
       expect(order.results.length, 2);
       expect(order.results.map((r) => r.labTestId).toList(), containsAll(['test_1', 'test_2']));
+      expect(order.results.every((r) => r.parentExamName == 'Perfil Lipidico'), isTrue);
 
       // Al ser operador y haber descuento -> nace bloqueada
       expect(order.isBlocked, isTrue);
       expect(order.approval, isNotNull);
       expect(order.approval!.requiresApproval, isTrue);
       expect(order.approval!.isApproved, isFalse);
+    });
+
+    test('generateCreateOrder expande recursivamente packs anidados', () {
+      final operatorUser = UserInDb(
+        id: 'u_op',
+        name: 'Operador Cajero',
+        username: 'cajero',
+        role: 'operator',
+        accessLevel: 1,
+        branches: ['b_1'],
+        isActive: true,
+        isDeleted: false,
+        createdAt: 0,
+      );
+
+      // Parámetros atómicos de nivel hoja
+      final paramCual = LabTestInDb(
+        id: 'pcr_cual',
+        name: 'Proteína C Reactiva',
+        code: 'PCR-CUAL',
+        dataType: 'qualitative',
+        qualitativeOptions: ['Negativo', 'Positivo'],
+        expectedQualitativeValue: 'Negativo',
+        isProfileParameter: true,
+        salePrice: 0,
+        createdAt: 0,
+      );
+      final paramTit = LabTestInDb(
+        id: 'pcr_tit',
+        name: 'Título',
+        code: 'PCR-TIT',
+        dataType: 'text',
+        isProfileParameter: true,
+        salePrice: 0,
+        createdAt: 0,
+      );
+      final paramConc = LabTestInDb(
+        id: 'pcr_conc',
+        name: 'Concentración',
+        code: 'PCR-CONC',
+        dataType: 'text',
+        unitOfMeasure: 'mg/L',
+        isProfileParameter: true,
+        salePrice: 0,
+        createdAt: 0,
+      );
+
+      // Pack de PCR
+      final pcrPack = LabTestInDb(
+        id: 'pcr_pack',
+        name: 'Proteína C Reactiva (PCR)',
+        code: 'PCR',
+        isPack: true,
+        childTestIds: ['pcr_cual', 'pcr_tit', 'pcr_conc'],
+        salePrice: 28000,
+        createdAt: 0,
+      );
+
+      // Prueba atómica adicional
+      final testVsg = LabTestInDb(
+        id: 'vsg_test',
+        name: 'Eritrosedimentación (VSG)',
+        code: 'VSG',
+        dataType: 'numeric',
+        unitOfMeasure: 'mm/h',
+        salePrice: 5000,
+        createdAt: 0,
+      );
+
+      // Pack superior (Perfil Reumático) que contiene a pcr_pack y vsg_test
+      final macroPack = LabTestInDb(
+        id: 'perf_reum',
+        name: 'Perfil Reumático',
+        code: 'PERF-REUM',
+        isPack: true,
+        childTestIds: ['pcr_pack', 'vsg_test'],
+        salePrice: 110000,
+        createdAt: 0,
+      );
+
+      controller.selectPatient(samplePatient);
+      controller.toggleItem(macroPack);
+
+      final allTests = [macroPack, pcrPack, paramCual, paramTit, paramConc, testVsg];
+      final order = controller.generateCreateOrder(
+        branchId: 'b_1',
+        currentUser: operatorUser,
+        allLabTests: allTests,
+      );
+
+      expect(order, isNotNull);
+      expect(order!.items.length, 1);
+      expect(order.items.first.labTestId, 'perf_reum');
+
+      // Debe haber expandido recursivamente pcr_pack en sus 3 parámetros + vsg_test = 4 resultados
+      expect(order.results.length, 4);
+      final resultIds = order.results.map((r) => r.labTestId).toList();
+      expect(resultIds, containsAll(['pcr_cual', 'pcr_tit', 'pcr_conc', 'vsg_test']));
+      // No debe contener el ID del pack intermedio como resultado
+      expect(resultIds.contains('pcr_pack'), isFalse);
     });
 
     test('generateCreateOrder auto-aprueba si el usuario es supervisor/admin (accessLevel > 3)', () {

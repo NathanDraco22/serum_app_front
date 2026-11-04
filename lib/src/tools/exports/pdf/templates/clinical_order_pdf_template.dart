@@ -5,6 +5,7 @@ import '../../../../tools/cache/app_image_cache.dart';
 import '../../../formatters/thousands_separator_input_formatter.dart';
 import '../pdf_font_helper.dart';
 import '../pdf_template.dart';
+import 'clinical_order_study_group.dart';
 
 class SingleClinicalOrderTemplate implements PdfTemplate {
   final OrderInDb order;
@@ -40,55 +41,6 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     if (g == 'm' || g == 'male' || g == 'masculino') return 'Masculino';
     if (g == 'f' || g == 'female' || g == 'femenino') return 'Femenino';
     return gender;
-  }
-
-  String _determineClinicalArea() {
-    final title = order.examName.toUpperCase();
-    if (title.contains('HEMAT') ||
-        title.contains('HEMOGLOBINA') ||
-        title.contains('SANGRE') ||
-        title.contains('BIOMETR')) {
-      return 'HEMATOLOGIA';
-    }
-    if (title.contains('QUIMIC') ||
-        title.contains('GLUCOSA') ||
-        title.contains('PERFIL') ||
-        title.contains('LIPID') ||
-        title.contains('COLESTEROL')) {
-      return 'QUIMICA CLINICA';
-    }
-    if (title.contains('ORINA') ||
-        title.contains('URO') ||
-        title.contains('GENERAL DE ORINA')) {
-      return 'UROANALISIS';
-    }
-    if (title.contains('HECES') ||
-        title.contains('COPRO') ||
-        title.contains('PARASIT')) {
-      return 'COPROLOGIA';
-    }
-    if (title.contains('INMUNO') ||
-        title.contains('SEROLOG') ||
-        title.contains('VIH') ||
-        title.contains('ANTIGEN')) {
-      return 'INMUNOLOGIA / SEROLOGIA';
-    }
-    if (title.contains('HORMON') || title.contains('TIROID')) {
-      return 'HORMONAS / ENDOCRINOLOGIA';
-    }
-
-    final visibleResults = order.results.where((r) => r.showInPrint).toList();
-    final resultsToEvaluate = visibleResults.isNotEmpty ? visibleResults : order.results;
-    for (final r in resultsToEvaluate) {
-      final mc = r.medicalClassification.trim().toUpperCase();
-      if (mc.contains('HEMAT')) return 'HEMATOLOGIA';
-      if (mc.contains('QUIMIC')) return 'QUIMICA CLINICA';
-      if (mc.contains('URO')) return 'UROANALISIS';
-      if (mc.contains('COPRO')) return 'COPROLOGIA';
-      if (mc.contains('INMUNO')) return 'INMUNOLOGIA';
-    }
-
-    return 'LABORATORIO CLINICO';
   }
 
   String _resolveReferenceText(OrderTestResult r, int patientAge, String gender) {
@@ -504,25 +456,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }
 
   pw.Widget _buildClinicalResultsSection(int patientAge, String gender) {
-    final clinicalArea = _determineClinicalArea();
-    final examTitle = order.examName.isNotEmpty
-        ? order.examName.toUpperCase()
-        : 'ESTUDIO CLÍNICO';
-
-    // Agrupar resultados visibles por subclasificación médica (subseries como SERIE ROJA, SERIE BLANCA, etc.) o clasificación general
-    final Map<String, List<OrderTestResult>> groups = {};
-    for (final r in order.results) {
-      if (!r.showInPrint) continue;
-      final sub = r.subclassification.trim();
-      final classification = r.medicalClassification.trim();
-      final groupKey = sub.isNotEmpty
-          ? sub.toUpperCase()
-          : (classification.isNotEmpty ? classification.toUpperCase() : '');
-      groups.putIfAbsent(groupKey, () => []).add(r);
-    }
-
-    final hasTabularTests =
-        order.results.any((r) => r.showInPrint && r.dataType != 'text');
+    final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
+    final overallArea =
+        ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
     pw.TableRow buildPdfTableRow(OrderTestResult r, bool hasGroupHeader) {
       final alertFlag = _resolveAlertFlag(r, patientAge, gender);
@@ -684,141 +620,160 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       );
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        // 1. Encabezado de área (ej. HEMATOLOGIA)
-        pw.Text(
-          clinicalArea,
-          style: pw.TextStyle(
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfColors.black,
-            letterSpacing: 0.5,
+    List<pw.Widget> buildStudySectionWidgets(
+      ClinicalStudyGroup study,
+      bool isFirst,
+      bool isLast,
+    ) {
+      final List<pw.Widget> studyWidgets = [];
+
+      // 1. Separador visual entre estudios
+      if (!isFirst) {
+        studyWidgets.add(pw.SizedBox(height: 12));
+        studyWidgets.add(
+          pw.Container(
+            height: 0.8,
+            color: PdfColor.fromHex('#B0BEC5'),
           ),
-        ),
-        pw.SizedBox(height: 3),
+        );
+        studyWidgets.add(pw.SizedBox(height: 10));
+      }
 
-        // 3. Línea negra superior de la tabla
-        pw.Container(
-          height: 1.0,
-          color: PdfColors.black,
-        ),
-        pw.SizedBox(height: 3),
-
-        // 4. Encabezados de la tabla si hay pruebas tabulares
-        if (hasTabularTests) ...[
-          pw.Row(
+      // 2. Nombre del Estudio (ej. BIOMETRÍA HEMÁTICA COMPLETA, EXAMEN GENERAL DE ORINA)
+      studyWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 5),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
               pw.Expanded(
-                flex: 42,
                 child: pw.Text(
-                  'Nombre del Test',
+                  study.studyTitle,
                   style: pw.TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: pw.FontWeight.bold,
                     color: PdfColors.black,
                   ),
                 ),
               ),
-              pw.Expanded(
-                flex: 31,
-                child: pw.Text(
-                  'Resultado',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.black,
+              if (studyGroups.length > 1 && study.clinicalArea != overallArea)
+                pw.Text(
+                  study.clinicalArea,
+                  style: const pw.TextStyle(
+                    fontSize: 8.5,
+                    color: PdfColors.grey700,
                   ),
                 ),
-              ),
-              pw.Expanded(
-                flex: 27,
-                child: pw.Text(
-                  'Valores de Referencia',
-                  textAlign: pw.TextAlign.right,
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.black,
-                  ),
-                ),
-              ),
             ],
           ),
-          pw.SizedBox(height: 3),
+        ),
+      );
 
-          // 5. Línea negra inferior del encabezado
+      // 3. Encabezados de tabla si contiene pruebas tabulares
+      if (study.hasTabularTests) {
+        studyWidgets.add(
           pw.Container(
-            height: 1.0,
-            color: PdfColors.black,
-          ),
-          pw.SizedBox(height: 7),
-        ] else ...[
-          pw.SizedBox(height: 5),
-        ],
-
-        // 6. Nombre del Estudio (ej. BIOMETRÍA HEMÁTICA COMPLETA)
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 6),
-          child: pw.Text(
-            examTitle,
-            style: pw.TextStyle(
-              fontSize: 11,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.black,
+            padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                top: pw.BorderSide(color: PdfColors.black, width: 0.8),
+                bottom: pw.BorderSide(color: PdfColors.black, width: 0.8),
+              ),
+            ),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  flex: 42,
+                  child: pw.Text(
+                    'Nombre del Test',
+                    style: pw.TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+                pw.Expanded(
+                  flex: 31,
+                  child: pw.Text(
+                    'Resultado',
+                    style: pw.TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+                pw.Expanded(
+                  flex: 27,
+                  child: pw.Text(
+                    'Valores de Referencia',
+                    textAlign: pw.TextAlign.right,
+                    style: pw.TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.black,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+        );
+        studyWidgets.add(pw.SizedBox(height: 5));
+      }
 
-        // 7. Resultados clasificados por subseries o desplegados
-        ...groups.entries.map((entry) {
-          final groupTitle = entry.key;
-          final items = entry.value;
-          final bool hasGroupHeader =
-              groupTitle.isNotEmpty && groupTitle != clinicalArea;
+      // 4. Subclasificaciones clínicas y resultados
+      for (final entry in study.subclassificationGroups.entries) {
+        final groupTitle = entry.key;
+        final items = entry.value;
+        final bool hasGroupHeader = groupTitle.isNotEmpty &&
+            groupTitle != study.studyTitle &&
+            groupTitle != overallArea;
 
-          final List<pw.Widget> groupWidgets = [];
-          List<OrderTestResult> currentTabularChunk = [];
+        final List<pw.Widget> groupWidgets = [];
+        List<OrderTestResult> currentTabularChunk = [];
 
-          void flushTabularChunk() {
-            if (currentTabularChunk.isEmpty) return;
-            final chunk = List<OrderTestResult>.from(currentTabularChunk);
-            currentTabularChunk.clear();
-            groupWidgets.add(
-              pw.Table(
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(4.2), // Parámetro
-                  1: const pw.FlexColumnWidth(1.8), // Resultado (+ Flag H/L)
-                  2: const pw.FlexColumnWidth(1.3), // Unidad
-                  3: const pw.FlexColumnWidth(2.7), // Valores de Referencia
-                },
-                children: chunk
-                    .map((r) => buildPdfTableRow(r, hasGroupHeader))
-                    .toList(),
-              ),
-            );
+        void flushTabularChunk() {
+          if (currentTabularChunk.isEmpty) return;
+          final chunk = List<OrderTestResult>.from(currentTabularChunk);
+          currentTabularChunk.clear();
+          groupWidgets.add(
+            pw.Table(
+              columnWidths: {
+                0: const pw.FlexColumnWidth(4.2),
+                1: const pw.FlexColumnWidth(1.8),
+                2: const pw.FlexColumnWidth(1.3),
+                3: const pw.FlexColumnWidth(2.7),
+              },
+              children: chunk
+                  .map((r) => buildPdfTableRow(r, hasGroupHeader))
+                  .toList(),
+            ),
+          );
+        }
+
+        for (final r in items) {
+          if (r.dataType == 'text') {
+            flushTabularChunk();
+            groupWidgets.add(buildPdfTextResultBlock(r, hasGroupHeader));
+          } else {
+            currentTabularChunk.add(r);
           }
+        }
+        flushTabularChunk();
 
-          for (final r in items) {
-            if (r.dataType == 'text') {
-              flushTabularChunk();
-              groupWidgets.add(buildPdfTextResultBlock(r, hasGroupHeader));
-            } else {
-              currentTabularChunk.add(r);
-            }
-          }
-          flushTabularChunk();
-
-          return pw.Column(
+        studyWidgets.add(
+          pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               if (hasGroupHeader) ...[
                 pw.Container(
                   width: double.infinity,
                   padding:
-                      const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 5),
-                  margin: const pw.EdgeInsets.only(top: 5, bottom: 3),
+                      const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 5),
+                  margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromHex('#F4F6F6'),
                     borderRadius: pw.BorderRadius.circular(2),
@@ -834,10 +789,43 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 ),
               ],
               ...groupWidgets,
-              pw.SizedBox(height: 3),
+              pw.SizedBox(height: 2),
             ],
-          );
-        }),
+          ),
+        );
+      }
+
+      return studyWidgets;
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // 1. Encabezado de área clínica general
+        pw.Text(
+          overallArea,
+          style: pw.TextStyle(
+            fontSize: 12,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.black,
+            letterSpacing: 0.5,
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Container(
+          height: 1.2,
+          color: PdfColors.black,
+        ),
+        pw.SizedBox(height: 8),
+
+        // 2. Renderizar cada estudio clínico con sus clasificaciones y separadores
+        for (int i = 0; i < studyGroups.length; i++) ...[
+          ...buildStudySectionWidgets(
+            studyGroups[i],
+            i == 0,
+            i == studyGroups.length - 1,
+          ),
+        ],
       ],
     );
   }

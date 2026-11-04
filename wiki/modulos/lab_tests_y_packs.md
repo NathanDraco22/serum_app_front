@@ -114,3 +114,24 @@ El formulario `LabTestFormScreen` fue refactorizado siguiendo el estándar OKF v
 4. **Pantalla Delgada (`LabTestFormScreen`)**:
    - Reducida de ~1,400 líneas a ~190 líneas de código conciso y declarativo.
    - Gestiona únicamente la instanciación/desecho del controlador (`initState`/`dispose`), escucha eventos de persistencia (`BlocListener<WriteLabTestCubit, WriteLabTestState>`), y orquesta los modales de creación rápida.
+
+---
+
+## 4. Sincronización y Actualización Incremental (`CatalogUpdateCard`)
+
+Dentro del módulo de importaciones del sistema (`ImportsScreen`), se dispone del componente interactivo `CatalogUpdateCard` para sincronizar la base de datos con el archivo maestro estático (`lab_tests_master.json`):
+
+- **Control de Sobrescritura de Precios (`overridePrice`)**:
+  - Por defecto desactivado (`false`), garantizando que **las tarifas y precios de venta/costo configurados por el usuario se conserven 100% inalterados**.
+  - Si el usuario activa el interruptor a `true`, la UI muestra un distintivo de advertencia (`PRECAUCIÓN`) y el diálogo modal de confirmación resalta en color ámbar que se aplicarán los precios base del archivo estático.
+- **Entidades Actualizadas (`updateLabTest`)**:
+  - Sincroniza metadatos clínicos (nombres, subclasificaciones, categorías analíticas, tipos de datos, opciones cualitativas, valores de referencia demográficos) y re-resuelve las dependencias hijas de los perfiles (`childTestIds`).
+  - Pruebas o packs nuevos ausentes en la base de datos se crean limpiamente con sus cuentas comerciales asociadas (`LabTestAccount`).
+- **Métricas y Resultados (KPIs)**:
+  - Al completar exitosamente la operación, `ImportsScreen` despliega la tarjeta de resultados `_buildUpdateResultsCard` con tarjetas KPI:
+    - **Total Evaluadas** (`totalProcessed`)
+    - **Pruebas Actualizadas** (`updatedTestsCount`)
+    - **Nuevas Creadas** (`createdTestsCount`)
+    - **Cuentas Actualizadas** (`updatedAccountsCount`)
+    - **Precios Preservados** (`skippedPricesCount`)
+

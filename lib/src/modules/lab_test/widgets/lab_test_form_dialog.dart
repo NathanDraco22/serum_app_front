@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
+import '../controllers/lab_test_cycle_guard.dart';
 import 'pack_test_selector.dart';
 
 class LabTestFormDialog extends StatefulWidget {
@@ -271,7 +272,10 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
     final theme = Theme.of(context);
     final readState = context.watch<ReadLabTestCubit>().state;
     final allAvailableTests = (readState is ReadLabTestSuccess)
-        ? readState.items.where((t) => !t.isPack && t.id != widget.labTest?.id).toList()
+        ? filterAvailableTestsForPack(
+            allTests: readState.items,
+            currentPackId: widget.labTest?.id,
+          )
         : <LabTestInDb>[];
 
     return Dialog(

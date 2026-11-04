@@ -108,9 +108,13 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
 - **Sincronización Inmediata y Estado Activo**: Al tocar un chip, se transcribe instantáneamente al campo de texto y se sincroniza reactivamente con el estado de la orden (`onNumericChanged`), marcando el parámetro como completado. El chip seleccionado se resalta con un icono de verificación (`Icons.check`). En modo solo lectura (`isReadOnly`), los chips permanecen deshabilitados.
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
-- **Informe Clínico PDF (`ClinicalOrderViewer` y `ClinicalOrderPdfTemplate`)**:
+- **Informe Clínico PDF y Visor en Pantalla (`ClinicalOrderViewer`, `SingleClinicalOrderTemplate` y `ClinicalOrderGrouper`)**:
   - Emisión del documento A4 oficial con membrete institucional de sucursal, datos completos del paciente y fecha/hora de proceso.
-  - **Agrupación Dinámica por Subclasificación**: Las pruebas y parámetros analíticos se estructuran y renderizan agrupados por su subserie clínica (`subclassification`: ej. `SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, etc.), precedidos por un encabezado formal sin barras de acento cromáticas que saturen el espacio.
+  - **Separación Jerárquica por Estudio (Packs y Pruebas Individuales)**:
+    - En órdenes multi-análisis (ej. Biometría Hemática + Examen General de Orina + Examen General de Heces), los resultados no se muestran concatenados ni corridos. Cada examen cuenta con su bloque independiente encabezado por el título del estudio en negrita (`examTitle`).
+    - **Trazabilidad Inmutable (`parentExamName`)**: Los parámetros capturados en `order.results` registran el estudio de origen, garantizando una agrupación precisa y determinista. Para órdenes legadas, `ClinicalOrderGrouper` resuelve la pertenencia por identificadores clínicos o clasificación médica.
+    - **Separadores Visuales Inter-Estudio**: Divisores sutiles con espaciado armónico delimitan claramente el final de un estudio y el inicio del siguiente sin forzar saltos de página innecesarios.
+    - **Clasificaciones y Subseries por Estudio**: Bajo cada título de estudio se despliegan sus respectivas series (`SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, `SEDIMENTO MICROSCÓPICO`, etc.) con sus tablas y valores de referencia.
   - **Jerarquía Tipográfica Unificada (Texto Libre y Tabulares)**:
     - Los títulos del examen (`examTitle`) y las cabeceras de subgrupo (`groupTitle`) conservan tipografía destacada en negrita (`FontWeight.bold`).
     - Las etiquetas de parámetros de texto libre (`dataType: 'text'`) se renderizan con tipografía estándar (`FontWeight.normal`), alineadas visualmente con los parámetros tabulares normales para no confundirse con subtítulos o secciones mayores. El texto multilínea se encuadra en una caja clara con borde atenuado y criterio de referencia inferior en itálica discreta.

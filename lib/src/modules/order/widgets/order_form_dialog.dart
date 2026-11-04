@@ -62,6 +62,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
                 qualitativeOptions: childTest.qualitativeOptions,
                 expectedQualitativeValue: childTest.expectedQualitativeValue,
                 referenceText: childTest.referenceText,
+                parentExamName: item.name,
               );
             }
           }
@@ -79,6 +80,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
               qualitativeOptions: item.qualitativeOptions,
               expectedQualitativeValue: item.expectedQualitativeValue,
               referenceText: item.referenceText,
+              parentExamName: item.name,
             );
           }
         }

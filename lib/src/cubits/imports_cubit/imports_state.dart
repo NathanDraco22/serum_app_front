@@ -26,6 +26,12 @@ class ImportsPricesSuccess extends ImportsState {
   const ImportsPricesSuccess(this.result);
 }
 
+class ImportsUpdateSuccess extends ImportsState {
+  final UpdateImportResult result;
+
+  const ImportsUpdateSuccess(this.result);
+}
+
 class ImportsFailure extends ImportsState {
   final String message;
 

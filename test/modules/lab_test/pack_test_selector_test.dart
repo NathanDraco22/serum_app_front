@@ -68,7 +68,30 @@ void main() {
     isDeleted: false,
   );
 
-  final List<LabTestInDb> allTests = [testGlucosa, testColesterol];
+  final testPerfilLipidico = LabTestInDb(
+    id: 'pack-lip-3',
+    name: 'Perfil Lipídico',
+    code: 'PERF-LIP',
+    commercialCategory: 'Química Sanguínea',
+    subclassification: 'Lípidos',
+    salePrice: 50000,
+    salePrice2: 0,
+    costPrice: 15000,
+    currency: 'USD',
+    isPack: true,
+    useChildTestsPriceSum: true,
+    childTestIds: const ['test-col-2'],
+    dataType: 'numeric',
+    unitOfMeasure: '',
+    referenceValues: const [],
+    qualitativeOptions: const [],
+    referenceText: '',
+    isProfileParameter: false,
+    createdAt: 3000,
+    isDeleted: false,
+  );
+
+  final List<LabTestInDb> allTests = [testGlucosa, testColesterol, testPerfilLipidico];
 
   testWidgets('PackTestSelector muestra la sección superior de parámetros seleccionados con visor y acciones', (tester) async {
     tester.view.physicalSize = const Size(1280, 900);
@@ -245,5 +268,87 @@ void main() {
 
     // Restaurado al orden original
     expect(selected, ['test-glu-1', 'test-col-2']);
+  });
+
+  testWidgets('PackTestSelector filtra correctamente por tipo: Todos, Perfiles, Pruebas individuales y Parámetros', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    List<String> selected = [];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              return SingleChildScrollView(
+                child: PackTestSelector(
+                  availableTests: allTests,
+                  selectedTestIds: selected,
+                  packSalePrice: 100.0,
+                  useChildTestsPriceSum: true,
+                  onSelectionChanged: (updated) {
+                    setState(() {
+                      selected = updated;
+                    });
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // 1. Por defecto "Todos" está seleccionado -> Se muestran los 3 análisis
+    expect(find.text('Perfil Lipídico'), findsWidgets);
+    expect(find.text('Colesterol Total'), findsWidgets);
+    expect(find.text('Glucosa'), findsWidgets);
+
+    // 2. Filtrar por "Perfiles"
+    final perfilesChip = find.widgetWithText(ChoiceChip, 'Perfiles');
+    expect(perfilesChip, findsOneWidget);
+    await tester.tap(perfilesChip);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perfil Lipídico'), findsWidgets);
+    expect(find.text('Colesterol Total'), findsNothing);
+    expect(find.text('Glucosa'), findsNothing);
+
+    // 3. Filtrar por "Pruebas individuales"
+    final individualesChip = find.widgetWithText(ChoiceChip, 'Pruebas individuales');
+    expect(individualesChip, findsOneWidget);
+    await tester.tap(individualesChip);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perfil Lipídico'), findsNothing);
+    expect(find.text('Colesterol Total'), findsWidgets);
+    expect(find.text('Glucosa'), findsNothing);
+
+    // 4. Filtrar por "Parámetros"
+    final parametrosChip = find.widgetWithText(ChoiceChip, 'Parámetros');
+    expect(parametrosChip, findsOneWidget);
+    await tester.tap(parametrosChip);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perfil Lipídico'), findsNothing);
+    expect(find.text('Colesterol Total'), findsNothing);
+    expect(find.text('Glucosa'), findsWidgets);
+
+    // 5. Regresar a "Todos"
+    final todosChip = find.widgetWithText(ChoiceChip, 'Todos');
+    expect(todosChip, findsOneWidget);
+    await tester.tap(todosChip);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perfil Lipídico'), findsWidgets);
+    expect(find.text('Colesterol Total'), findsWidgets);
+    expect(find.text('Glucosa'), findsWidgets);
   });
 }

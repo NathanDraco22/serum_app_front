@@ -541,6 +541,7 @@ class OrderResultsViewController extends ChangeNotifier {
         qualitativeOptions: r.qualitativeOptions,
         expectedQualitativeValue: r.expectedQualitativeValue,
         referenceText: r.referenceText,
+        parentExamName: r.parentExamName,
         resultValue: val,
         alertFlag: alert,
         showInPrint: _visibilityMap[r.labTestId] ?? true,

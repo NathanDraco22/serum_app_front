@@ -12,6 +12,8 @@ class ImportsCubit extends Cubit<ImportsState> {
   ImportCatalogResult? get lastResult => importsRepository.lastResult;
   ImportBranchPricesResult? get lastPricesResult =>
       importsRepository.lastPricesResult;
+  UpdateImportResult? get lastUpdateResult =>
+      importsRepository.lastUpdateResult;
 
   Future<ImportCatalogResult?> importDefaultCatalog() async {
     emit(const ImportsLoading(
@@ -58,6 +60,27 @@ class ImportsCubit extends Cubit<ImportsState> {
       );
       if (isClosed) return result;
       emit(ImportsPricesSuccess(result));
+      return result;
+    } catch (e) {
+      if (isClosed) return null;
+      emit(ImportsFailure(e.toString()));
+      return null;
+    }
+  }
+
+  Future<UpdateImportResult?> updateCatalog({
+    bool overridePrice = false,
+    bool updateLabTest = true,
+  }) async {
+    emit(const ImportsLoading(
+        message: 'Actualizando y sincronizando catálogo clínico maestro...'));
+    try {
+      final result = await importsRepository.updateCatalog(
+        overridePrice: overridePrice,
+        updateLabTest: updateLabTest,
+      );
+      if (isClosed) return result;
+      emit(ImportsUpdateSuccess(result));
       return result;
     } catch (e) {
       if (isClosed) return null;

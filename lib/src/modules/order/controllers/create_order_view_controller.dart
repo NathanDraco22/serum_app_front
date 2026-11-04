@@ -267,12 +267,14 @@ class CreateOrderViewController extends ChangeNotifier {
       );
     }).toList();
 
-    // 2. Resolver parámetros individuales para resultados clínicos (expandiendo packs)
+    // 2. Resolver parámetros individuales para resultados clínicos (expandiendo packs recursivamente)
     final Map<String, OrderTestResult> resultsMap = {};
+    final Set<String> visitedPackIds = {};
 
-    for (final item in _selectedItems) {
-      if (item.isPack) {
-        for (final childId in item.childTestIds) {
+    void expandTest(LabTestInDb test, String rootItemName) {
+      if (test.isPack && test.childTestIds.isNotEmpty) {
+        if (!visitedPackIds.add(test.id)) return; // Prevenir posibles referencias circulares
+        for (final childId in test.childTestIds) {
           final childTest = allLabTests.firstWhere(
             (t) => t.id == childId,
             orElse: () => LabTestInDb(
@@ -281,37 +283,29 @@ class CreateOrderViewController extends ChangeNotifier {
               createdAt: 0,
             ),
           );
-          if (!resultsMap.containsKey(childTest.id)) {
-            resultsMap[childTest.id] = OrderTestResult(
-              labTestId: childTest.id,
-              parameterName: childTest.name,
-              medicalClassification: childTest.commercialCategory,
-              subclassification: childTest.subclassification,
-              dataType: childTest.dataType,
-              unitOfMeasure: childTest.unitOfMeasure,
-              referenceValues: childTest.referenceValues,
-              qualitativeOptions: childTest.qualitativeOptions,
-              expectedQualitativeValue: childTest.expectedQualitativeValue,
-              referenceText: childTest.referenceText,
-            );
-          }
+          expandTest(childTest, rootItemName);
         }
       } else {
-        if (!resultsMap.containsKey(item.id)) {
-          resultsMap[item.id] = OrderTestResult(
-            labTestId: item.id,
-            parameterName: item.name,
-            medicalClassification: item.commercialCategory,
-            subclassification: item.subclassification,
-            dataType: item.dataType,
-            unitOfMeasure: item.unitOfMeasure,
-            referenceValues: item.referenceValues,
-            qualitativeOptions: item.qualitativeOptions,
-            expectedQualitativeValue: item.expectedQualitativeValue,
-            referenceText: item.referenceText,
+        if (!resultsMap.containsKey(test.id)) {
+          resultsMap[test.id] = OrderTestResult(
+            labTestId: test.id,
+            parameterName: test.name,
+            medicalClassification: test.commercialCategory,
+            subclassification: test.subclassification,
+            dataType: test.dataType,
+            unitOfMeasure: test.unitOfMeasure,
+            referenceValues: test.referenceValues,
+            qualitativeOptions: test.qualitativeOptions,
+            expectedQualitativeValue: test.expectedQualitativeValue,
+            referenceText: test.referenceText,
+            parentExamName: rootItemName,
           );
         }
       }
+    }
+
+    for (final item in _selectedItems) {
+      expandTest(item, item.name);
     }
 
     // 3. Evaluar reglas de autorización por supervisor

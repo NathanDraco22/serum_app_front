@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 
+enum PackSelectorItemTypeFilter {
+  all,
+  packs,
+  individual,
+  parameters,
+}
+
 class PackTestSelector extends StatefulWidget {
   final List<LabTestInDb> availableTests;
   final List<String> selectedTestIds;
@@ -26,6 +33,7 @@ class PackTestSelector extends StatefulWidget {
 class _PackTestSelectorState extends State<PackTestSelector> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'Todas';
+  PackSelectorItemTypeFilter _selectedTypeFilter = PackSelectorItemTypeFilter.all;
   bool _showOnlySelected = false;
 
   @override
@@ -56,6 +64,22 @@ class _PackTestSelectorState extends State<PackTestSelector> {
       if (_showOnlySelected && !widget.selectedTestIds.contains(test.id)) {
         return false;
       }
+
+      // Filtro por tipo de análisis
+      switch (_selectedTypeFilter) {
+        case PackSelectorItemTypeFilter.all:
+          break;
+        case PackSelectorItemTypeFilter.packs:
+          if (!test.isPack) return false;
+          break;
+        case PackSelectorItemTypeFilter.individual:
+          if (test.isPack || test.isProfileParameter) return false;
+          break;
+        case PackSelectorItemTypeFilter.parameters:
+          if (test.isPack || !test.isProfileParameter) return false;
+          break;
+      }
+
       if (_selectedCategory != 'Todas' && test.commercialCategory.trim() != _selectedCategory) {
         return false;
       }
@@ -114,6 +138,10 @@ class _PackTestSelectorState extends State<PackTestSelector> {
   }
 
   String _formatReferenceSummary(LabTestInDb test) {
+    if (test.isPack) {
+      final count = test.childTestIds.length;
+      return count > 0 ? '$count análisis incluidos' : 'Pack comercial';
+    }
     if (test.dataType == 'numeric') {
       final unit = test.unitOfMeasure.isNotEmpty ? ' ${test.unitOfMeasure}' : '';
       if (test.referenceValues.isNotEmpty) {
@@ -395,7 +423,27 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                           ),
                                         ),
                                       ],
-                                      if (test.isProfileParameter) ...[
+                                      if (test.isPack) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 1,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: theme.colorScheme.tertiaryContainer,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            'Pack',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.onTertiaryContainer,
+                                            ),
+                                          ),
+                                        ),
+                                      ] else if (test.isProfileParameter) ...[
                                         const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(
@@ -586,6 +634,63 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                // Chips de Tipo de Estudio (Todos, Perfiles, Pruebas individuales, Parámetros)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Todos', style: TextStyle(fontSize: 12)),
+                        selected: _selectedTypeFilter == PackSelectorItemTypeFilter.all,
+                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.all),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        avatar: Icon(
+                          Icons.inventory_2,
+                          size: 14,
+                          color: _selectedTypeFilter == PackSelectorItemTypeFilter.packs
+                              ? theme.colorScheme.onTertiaryContainer
+                              : theme.colorScheme.primary,
+                        ),
+                        label: const Text('Perfiles', style: TextStyle(fontSize: 12)),
+                        selected: _selectedTypeFilter == PackSelectorItemTypeFilter.packs,
+                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.packs),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        avatar: Icon(
+                          Icons.science,
+                          size: 14,
+                          color: _selectedTypeFilter == PackSelectorItemTypeFilter.individual
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.primary,
+                        ),
+                        label: const Text('Pruebas individuales', style: TextStyle(fontSize: 12)),
+                        selected: _selectedTypeFilter == PackSelectorItemTypeFilter.individual,
+                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.individual),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        avatar: Icon(
+                          Icons.tune,
+                          size: 14,
+                          color: _selectedTypeFilter == PackSelectorItemTypeFilter.parameters
+                              ? theme.colorScheme.onSecondaryContainer
+                              : theme.colorScheme.primary,
+                        ),
+                        label: const Text('Parámetros', style: TextStyle(fontSize: 12)),
+                        selected: _selectedTypeFilter == PackSelectorItemTypeFilter.parameters,
+                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.parameters),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Chips de Categorías
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -763,7 +868,25 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                     ),
                                   ),
                                 ],
-                                if (test.isProfileParameter) ...[
+                                if (test.isPack) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.tertiaryContainer,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'Pack',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.colorScheme.onTertiaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ] else if (test.isProfileParameter) ...[
                                   const SizedBox(width: 6),
                                   Container(
                                     padding:

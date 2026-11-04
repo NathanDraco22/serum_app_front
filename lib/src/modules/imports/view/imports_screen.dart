@@ -7,12 +7,22 @@ import '../../../cubits/imports_cubit/imports_cubit.dart';
 import '../../../cubits/imports_cubit/imports_state.dart';
 import '../../../widgets/gates/permission_gate.dart';
 import '../widgets/branch_prices_import_card.dart';
+import '../widgets/catalog_update_card.dart';
 
 class ImportsScreen extends StatelessWidget {
-  const ImportsScreen({super.key});
+  final ImportsCubit? cubit;
+
+  const ImportsScreen({super.key, this.cubit});
 
   @override
   Widget build(BuildContext context) {
+    if (cubit != null) {
+      return BlocProvider.value(
+        value: cubit!,
+        child: const _ImportsScaffold(),
+      );
+    }
+
     final repo = RepositoryProvider.of<ImportsRepository>(context);
 
     return BlocProvider(
@@ -206,6 +216,14 @@ class _ImportsScaffold extends StatelessWidget {
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
+                    } else if (state is ImportsUpdateSuccess) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(state.result.message),
+                          backgroundColor: Colors.teal.shade800,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     } else if (state is ImportsFailure) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -237,32 +255,43 @@ class _ImportsScaffold extends StatelessWidget {
 
                               const SizedBox(height: 24),
 
-                              // 2. Tarjeta: Importación de Precios entre Sucursales
+                              // 2. Tarjeta: Sincronización y Actualización Incremental
+                              CatalogUpdateCard(
+                                isLoading: isLoading,
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // 3. Tarjeta: Importación de Precios entre Sucursales
                               BranchPricesImportCard(
                                 isLoading: isLoading,
                               ),
 
                               const SizedBox(height: 24),
 
-                              // 3. Estado de carga en progreso
+                              // 4. Estado de carga en progreso
                               if (isLoading)
                                 _buildLoadingIndicator(context, theme, state),
 
-                              // 4. Tarjetas de Resultados (KPIs)
+                              // 5. Tarjetas de Resultados (KPIs)
                               if (state is ImportsSuccess)
                                 _buildResultsCard(context, theme, state.result),
+
+                              if (state is ImportsUpdateSuccess)
+                                _buildUpdateResultsCard(
+                                    context, theme, state.result),
 
                               if (state is ImportsPricesSuccess)
                                 _buildPricesResultsCard(
                                     context, theme, state.result),
 
-                              // 5. Tarjeta de Error
+                              // 6. Tarjeta de Error
                               if (state is ImportsFailure)
                                 _buildErrorCard(context, theme, state.message),
 
                               const SizedBox(height: 32),
 
-                              // 6. Próximas importaciones (Roadmap extensible)
+                              // 7. Próximas importaciones (Roadmap extensible)
                               _buildUpcomingImportsSection(context, theme),
                             ],
                           ),
@@ -650,6 +679,120 @@ class _ImportsScaffold extends StatelessWidget {
                       value: result.alreadyExisting.toString(),
                       icon: Icons.verified_rounded,
                       color: Colors.teal,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateResultsCard(
+    BuildContext context,
+    ThemeData theme,
+    UpdateImportResult result,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Colors.teal.withAlpha(20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.teal.withAlpha(100)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.sync_rounded,
+                  color: Colors.teal,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Resultado de la Sincronización',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal.shade900,
+                        ),
+                      ),
+                      Text(
+                        result.message,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.teal.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 20),
+                  tooltip: 'Cerrar resumen',
+                  onPressed: () => context.read<ImportsCubit>().reset(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 20),
+
+            // Métricas KPIs en cuadrícula
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 600;
+                return Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildKpiCard(
+                      theme,
+                      title: 'Total Evaluadas',
+                      value: result.totalProcessed.toString(),
+                      icon: Icons.inventory_rounded,
+                      color: Colors.blue,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Pruebas Actualizadas',
+                      value: result.updatedTestsCount.toString(),
+                      icon: Icons.edit_note_rounded,
+                      color: Colors.teal,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Nuevas Creadas',
+                      value: result.createdTestsCount.toString(),
+                      icon: Icons.science_rounded,
+                      color: Colors.green,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Cuentas Actualizadas',
+                      value: result.updatedAccountsCount.toString(),
+                      icon: Icons.account_tree_rounded,
+                      color: Colors.purple,
+                      width: isCompact ? double.infinity : 170,
+                    ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Precios Preservados',
+                      value: result.skippedPricesCount.toString(),
+                      icon: Icons.shield_rounded,
+                      color: Colors.amber.shade800,
                       width: isCompact ? double.infinity : 170,
                     ),
                   ],

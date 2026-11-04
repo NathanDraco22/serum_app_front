@@ -6,6 +6,7 @@ import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/lab_test_cubit/read_lab_tests_cubit.dart';
 import '../../../cubits/lab_test_cubit/write_lab_tests_cubit.dart';
 import '../../../widgets/common/app_buttons.dart';
+import '../controllers/lab_test_cycle_guard.dart';
 import '../controllers/lab_test_form_mediator.dart';
 import '../controllers/lab_test_form_view_controller.dart';
 import '../widgets/quick_create_parameter_dialog.dart';
@@ -118,7 +119,10 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
     final theme = Theme.of(context);
     final readState = context.watch<ReadLabTestCubit>().state;
     final allAvailableTests = (readState is ReadLabTestSuccess)
-        ? readState.items.where((t) => !t.isPack && t.id != widget.labTest?.id).toList()
+        ? filterAvailableTestsForPack(
+            allTests: readState.items,
+            currentPackId: widget.labTest?.id,
+          )
         : <LabTestInDb>[];
 
     return LabTestFormMediator(

@@ -8,6 +8,7 @@ import 'package:serum_business/serum_business.dart';
 import '../../../../config/service_locator.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../tools/exports/pdf/templates/clinical_order_pdf_template.dart';
+import '../../../tools/exports/pdf/templates/clinical_order_study_group.dart';
 import '../../../tools/exports/pdf_export_tool.dart';
 import '../../../tools/formatters/thousands_separator_input_formatter.dart';
 import '../../common/app_cached_image.dart';
@@ -744,69 +745,12 @@ class ClinicalOrderViewerContent extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        // 4. Encabezado de Área Clínica y Cabecera de Tabla
+        // 4. Encabezado de Área Clínica y Resultados Agrupados por Estudio
         Builder(
           builder: (context) {
-            final titleUpper = order.examName.toUpperCase();
-            String clinicalArea = 'LABORATORIO CLÍNICO';
-            if (titleUpper.contains('HEMAT') ||
-                titleUpper.contains('HEMOGLOBINA') ||
-                titleUpper.contains('SANGRE') ||
-                titleUpper.contains('BIOMETR')) {
-              clinicalArea = 'HEMATOLOGÍA';
-            } else if (titleUpper.contains('QUIMIC') ||
-                titleUpper.contains('GLUCOSA') ||
-                titleUpper.contains('PERFIL') ||
-                titleUpper.contains('LIPID') ||
-                titleUpper.contains('COLESTEROL')) {
-              clinicalArea = 'QUÍMICA CLÍNICA';
-            } else if (titleUpper.contains('ORINA') ||
-                titleUpper.contains('URO') ||
-                titleUpper.contains('GENERAL DE ORINA')) {
-              clinicalArea = 'UROANÁLISIS';
-            } else if (titleUpper.contains('HECES') ||
-                titleUpper.contains('COPRO') ||
-                titleUpper.contains('PARASIT')) {
-              clinicalArea = 'COPROLOGÍA';
-            } else if (titleUpper.contains('INMUNO') ||
-                titleUpper.contains('SEROLOG') ||
-                titleUpper.contains('VIH') ||
-                titleUpper.contains('ANTIGEN')) {
-              clinicalArea = 'INMUNOLOGÍA / SEROLOGÍA';
-            } else {
-              final visibleResults = order.results.where((r) => r.showInPrint).toList();
-              final resultsToEvaluate = visibleResults.isNotEmpty ? visibleResults : order.results;
-              for (final r in resultsToEvaluate) {
-                final mc = r.medicalClassification.trim().toUpperCase();
-                if (mc.contains('HEMAT')) {
-                  clinicalArea = 'HEMATOLOGÍA';
-                  break;
-                }
-                if (mc.contains('QUIMIC')) {
-                  clinicalArea = 'QUÍMICA CLÍNICA';
-                  break;
-                }
-              }
-            }
-
-            final examTitle = order.examName.isNotEmpty
-                ? order.examName.toUpperCase()
-                : 'ESTUDIO CLÍNICO';
-
-            // Agrupar por subclasificación médica (subseries como SERIE ROJA, SERIE BLANCA, etc.) o clasificación general
-            final Map<String, List<OrderTestResult>> groups = {};
-            for (final r in order.results) {
-              if (!r.showInPrint) continue;
-              final sub = r.subclassification.trim();
-              final classification = r.medicalClassification.trim();
-              final groupKey = sub.isNotEmpty
-                  ? sub.toUpperCase()
-                  : (classification.isNotEmpty ? classification.toUpperCase() : '');
-              groups.putIfAbsent(groupKey, () => []).add(r);
-            }
-
-            final hasTabularTests =
-                order.results.any((r) => r.showInPrint && r.dataType != 'text');
+            final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
+            final overallArea =
+                ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
             TableRow buildTableRow(OrderTestResult r, bool hasGroupHeader) {
               final isNumeric = r.dataType == 'numeric';
@@ -1013,111 +957,150 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               );
             }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  clinicalArea,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Divider(color: Colors.black, thickness: 1.2, height: 1),
-                const SizedBox(height: 6),
-                if (hasTabularTests) ...[
-                  const Row(
-                    children: [
-                      Expanded(
-                        flex: 42,
-                        child: Text(
-                          'Nombre del Test',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 31,
-                        child: Text(
-                          'Resultado',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 27,
-                        child: Text(
-                          'Valores de Referencia',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Divider(color: Colors.black, thickness: 1.2, height: 1),
-                  const SizedBox(height: 10),
-                ] else ...[
-                  const SizedBox(height: 8),
-                ],
+            List<Widget> buildStudySectionWidgets(
+              ClinicalStudyGroup study,
+              bool isFirst,
+              bool isLast,
+            ) {
+              final List<Widget> studyWidgets = [];
+
+              // 1. Separador visual entre estudios
+              if (!isFirst) {
+                studyWidgets.add(const SizedBox(height: 18));
+                studyWidgets.add(
+                  Divider(color: Colors.grey.shade400, thickness: 1.0, height: 1),
+                );
+                studyWidgets.add(const SizedBox(height: 16));
+              }
+
+              // 2. Título destacado del estudio (ej. BIOMETRÍA HEMÁTICA COMPLETA)
+              studyWidgets.add(
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    examTitle,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          study.studyTitle,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (studyGroups.length > 1 && study.clinicalArea != overallArea)
+                        Text(
+                          study.clinicalArea,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey.shade700,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                ...groups.entries.map((entry) {
-                  final groupTitle = entry.key;
-                  final items = entry.value;
-                  final bool hasGroupHeader =
-                      groupTitle.isNotEmpty && groupTitle != clinicalArea;
+              );
 
-                  final List<Widget> groupWidgets = [];
-                  List<OrderTestResult> currentTabularChunk = [];
-
-                  void flushTabularChunk() {
-                    if (currentTabularChunk.isEmpty) return;
-                    final chunk = List<OrderTestResult>.from(currentTabularChunk);
-                    currentTabularChunk.clear();
-                    groupWidgets.add(
-                      Table(
-                        columnWidths: const {
-                          0: FlexColumnWidth(4.2),
-                          1: FlexColumnWidth(1.8),
-                          2: FlexColumnWidth(1.3),
-                          3: FlexColumnWidth(2.7),
-                        },
-                        children: chunk
-                            .map((r) => buildTableRow(r, hasGroupHeader))
-                            .toList(),
+              // 3. Encabezados de tabla si contiene pruebas tabulares
+              if (study.hasTabularTests) {
+                studyWidgets.add(
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.black, width: 1.0),
+                        bottom: BorderSide(color: Colors.black, width: 1.0),
                       ),
-                    );
-                  }
+                    ),
+                    child: const Row(
+                      children: [
+                        Expanded(
+                          flex: 42,
+                          child: Text(
+                            'Nombre del Test',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 31,
+                          child: Text(
+                            'Resultado',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          flex: 27,
+                          child: Text(
+                            'Valores de Referencia',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+                studyWidgets.add(const SizedBox(height: 6));
+              }
 
-                  for (final r in items) {
-                    if (r.dataType == 'text') {
-                      flushTabularChunk();
-                      groupWidgets.add(buildTextResultBlock(r, hasGroupHeader));
-                    } else {
-                      currentTabularChunk.add(r);
-                    }
-                  }
-                  flushTabularChunk();
+              // 4. Subclasificaciones y parámetros del estudio
+              for (final entry in study.subclassificationGroups.entries) {
+                final groupTitle = entry.key;
+                final items = entry.value;
+                final bool hasGroupHeader = groupTitle.isNotEmpty &&
+                    groupTitle != study.studyTitle &&
+                    groupTitle != overallArea;
 
-                  return Column(
+                final List<Widget> groupWidgets = [];
+                List<OrderTestResult> currentTabularChunk = [];
+
+                void flushTabularChunk() {
+                  if (currentTabularChunk.isEmpty) return;
+                  final chunk = List<OrderTestResult>.from(currentTabularChunk);
+                  currentTabularChunk.clear();
+                  groupWidgets.add(
+                    Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(4.2),
+                        1: FlexColumnWidth(1.8),
+                        2: FlexColumnWidth(1.3),
+                        3: FlexColumnWidth(2.7),
+                      },
+                      children: chunk
+                          .map((r) => buildTableRow(r, hasGroupHeader))
+                          .toList(),
+                    ),
+                  );
+                }
+
+                for (final r in items) {
+                  if (r.dataType == 'text') {
+                    flushTabularChunk();
+                    groupWidgets.add(buildTextResultBlock(r, hasGroupHeader));
+                  } else {
+                    currentTabularChunk.add(r);
+                  }
+                }
+                flushTabularChunk();
+
+                studyWidgets.add(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (hasGroupHeader) ...[
@@ -1141,10 +1124,39 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         ),
                       ],
                       ...groupWidgets,
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                     ],
-                  );
-                }),
+                  ),
+                );
+              }
+
+              return studyWidgets;
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Encabezado de área clínica general
+                Text(
+                  overallArea,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Divider(color: Colors.black, thickness: 1.2, height: 1),
+                const SizedBox(height: 10),
+
+                // 2. Renderizar cada estudio clínico con sus clasificaciones y separadores
+                for (int i = 0; i < studyGroups.length; i++) ...[
+                  ...buildStudySectionWidgets(
+                    studyGroups[i],
+                    i == 0,
+                    i == studyGroups.length - 1,
+                  ),
+                ],
               ],
             );
           },
