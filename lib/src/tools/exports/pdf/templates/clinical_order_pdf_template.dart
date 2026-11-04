@@ -465,6 +465,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       final hasAlert = alertFlag != null && alertFlag.isNotEmpty;
       final refText = _resolveReferenceText(r, patientAge, gender);
       final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
+      final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
+      final double leftIndent = isSubParam
+          ? (hasGroupHeader ? 22.0 : 14.0)
+          : (hasGroupHeader ? 10.0 : 2.0);
 
       return pw.TableRow(
         decoration: isTotalRow
@@ -478,7 +482,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           // Nombre del parámetro con indentación
           pw.Padding(
             padding: pw.EdgeInsets.only(
-              left: hasGroupHeader ? 10 : 2,
+              left: leftIndent,
               top: 3.0,
               bottom: 3.0,
               right: 4,
@@ -488,7 +492,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               style: pw.TextStyle(
                 fontSize: 9.5,
                 fontWeight: isTotalRow ? pw.FontWeight.bold : pw.FontWeight.normal,
-                color: PdfColors.black,
+                color: isSubParam ? PdfColors.grey900 : PdfColors.black,
               ),
             ),
           ),
@@ -562,10 +566,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           r.resultValue != null && r.resultValue!.trim().isNotEmpty;
       final displayValue = hasContent ? r.resultValue!.trim() : '-';
       final refText = _resolveReferenceText(r, patientAge, gender);
+      final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
+      final double leftIndent = isSubParam
+          ? (hasGroupHeader ? 22.0 : 14.0)
+          : (hasGroupHeader ? 10.0 : 2.0);
 
       return pw.Padding(
         padding: pw.EdgeInsets.only(
-          left: hasGroupHeader ? 10 : 2,
+          left: leftIndent,
           top: 4.0,
           bottom: 5.0,
           right: 2,
@@ -755,11 +763,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         }
 
         for (final r in items) {
-          if (r.dataType == 'text') {
+          if (ClinicalOrderGrouper.shouldRenderInTable(r)) {
+            currentTabularChunk.add(r);
+          } else {
             flushTabularChunk();
             groupWidgets.add(buildPdfTextResultBlock(r, hasGroupHeader));
-          } else {
-            currentTabularChunk.add(r);
           }
         }
         flushTabularChunk();

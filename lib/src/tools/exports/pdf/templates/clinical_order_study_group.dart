@@ -72,7 +72,7 @@ class ClinicalOrderGrouper {
         subGroups.putIfAbsent(groupKey, () => []).add(r);
       }
 
-      final hasTabular = studyItems.any((r) => r.dataType != 'text');
+      final hasTabular = studyItems.any(shouldRenderInTable);
 
       groups.add(
         ClinicalStudyGroup(
@@ -101,12 +101,41 @@ class ClinicalOrderGrouper {
           studyTitle: fallbackTitle,
           clinicalArea: area,
           subclassificationGroups: subGroups,
-          hasTabularTests: results.any((r) => r.dataType != 'text'),
+          hasTabularTests: results.any(shouldRenderInTable),
         ),
       );
     }
 
     return groups;
+  }
+
+  /// Determina si un resultado clínico es un sub-parámetro subordinado
+  /// (como "Título" o "Concentración" en PCR, ASLO o Factor Reumatoide)
+  /// que requiere sangría/indentación visual jerárquica bajo su análisis padre.
+  static bool isSubParameter(OrderTestResult r) {
+    final id = r.labTestId.toUpperCase();
+    if (id == 'PCR-TIT' ||
+        id == 'PCR-CONC' ||
+        id == 'ASLO-TIT' ||
+        id == 'ASLO-CONC' ||
+        id == 'FR-TIT' ||
+        id == 'FR-CONC') {
+      return true;
+    }
+    final name = r.parameterName.trim().toLowerCase();
+    return name == 'título' ||
+        name == 'titulo' ||
+        name == 'concentración' ||
+        name == 'concentracion';
+  }
+
+  /// Evalúa si el parámetro debe renderizarse dentro de la estructura tabular
+  /// del examen (incluyendo sub-parámetros analíticos libres como Título y Concentración)
+  /// en lugar de expulsarse a bloques de párrafo multilínea.
+  static bool shouldRenderInTable(OrderTestResult r) {
+    if (r.dataType != 'text') return true;
+    if (isSubParameter(r)) return true;
+    return false;
   }
 
   /// Determina el área clínica general para la cabecera superior del documento.

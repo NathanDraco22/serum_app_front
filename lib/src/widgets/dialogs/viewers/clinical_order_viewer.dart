@@ -798,6 +798,10 @@ class ClinicalOrderViewerContent extends StatelessWidget {
 
               final isTotalRow =
                   r.parameterName.trim().toUpperCase() == 'TOTAL';
+              final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
+              final double leftIndent = isSubParam
+                  ? (hasGroupHeader ? 28.0 : 20.0)
+                  : (hasGroupHeader ? 12.0 : 4.0);
 
               return TableRow(
                 decoration: isTotalRow
@@ -812,7 +816,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(
-                      left: hasGroupHeader ? 12 : 4,
+                      left: leftIndent,
                       top: 4,
                       bottom: 4,
                       right: 4,
@@ -824,7 +828,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         fontWeight: isTotalRow
                             ? FontWeight.bold
                             : FontWeight.normal,
-                        color: Colors.black87,
+                        color: isSubParam ? Colors.grey.shade900 : Colors.black87,
                       ),
                     ),
                   ),
@@ -901,10 +905,14 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                   r.resultValue != null && r.resultValue!.trim().isNotEmpty;
               final displayValue = hasContent ? r.resultValue!.trim() : '—';
               final refText = r.referenceText.trim();
+              final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
+              final double leftIndent = isSubParam
+                  ? (hasGroupHeader ? 28.0 : 20.0)
+                  : (hasGroupHeader ? 12.0 : 4.0);
 
               return Padding(
                 padding: EdgeInsets.only(
-                  left: hasGroupHeader ? 12 : 4,
+                  left: leftIndent,
                   top: 6,
                   bottom: 8,
                   right: 4,
@@ -1090,11 +1098,11 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 }
 
                 for (final r in items) {
-                  if (r.dataType == 'text') {
+                  if (ClinicalOrderGrouper.shouldRenderInTable(r)) {
+                    currentTabularChunk.add(r);
+                  } else {
                     flushTabularChunk();
                     groupWidgets.add(buildTextResultBlock(r, hasGroupHeader));
-                  } else {
-                    currentTabularChunk.add(r);
                   }
                 }
                 flushTabularChunk();

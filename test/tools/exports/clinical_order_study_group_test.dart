@@ -181,5 +181,61 @@ void main() {
       final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
       expect(overallArea, 'HEMATOLOGÍA');
     });
+
+    test('Detección canónica de isSubParameter y shouldRenderInTable para PCR, ASLO y FR', () {
+      final pcrTit = OrderTestResult(
+        labTestId: 'PCR-TIT',
+        parameterName: 'Título',
+        dataType: 'text',
+        resultValue: '1:40',
+      );
+      final pcrConc = OrderTestResult(
+        labTestId: 'PCR-CONC',
+        parameterName: 'Concentración',
+        dataType: 'text',
+        unitOfMeasure: 'mg/L',
+        referenceText: '< 6.0 mg/L',
+        resultValue: '24',
+      );
+      final asloTit = OrderTestResult(
+        labTestId: 'ASLO-TIT',
+        parameterName: 'Título',
+        dataType: 'text',
+        resultValue: '1:400',
+      );
+      final frConc = OrderTestResult(
+        labTestId: 'FR-CONC',
+        parameterName: 'Concentracion', // sin acento
+        dataType: 'text',
+        unitOfMeasure: 'UI/mL',
+        resultValue: '32',
+      );
+      final pcrCual = OrderTestResult(
+        labTestId: 'PCR-CUAL',
+        parameterName: 'Proteína C Reactiva',
+        dataType: 'qualitative',
+        resultValue: 'Positivo',
+      );
+      final biopsyText = OrderTestResult(
+        labTestId: 'BIO-OBS',
+        parameterName: 'Descripción Macroscópica',
+        dataType: 'text',
+        resultValue: 'Espécimen recibido en formol...',
+      );
+
+      // Verificación de sub-parámetros
+      expect(ClinicalOrderGrouper.isSubParameter(pcrTit), isTrue);
+      expect(ClinicalOrderGrouper.isSubParameter(pcrConc), isTrue);
+      expect(ClinicalOrderGrouper.isSubParameter(asloTit), isTrue);
+      expect(ClinicalOrderGrouper.isSubParameter(frConc), isTrue);
+      expect(ClinicalOrderGrouper.isSubParameter(pcrCual), isFalse);
+      expect(ClinicalOrderGrouper.isSubParameter(biopsyText), isFalse);
+
+      // Verificación de pertenencia a flujo tabular
+      expect(ClinicalOrderGrouper.shouldRenderInTable(pcrTit), isTrue);
+      expect(ClinicalOrderGrouper.shouldRenderInTable(pcrConc), isTrue);
+      expect(ClinicalOrderGrouper.shouldRenderInTable(pcrCual), isTrue);
+      expect(ClinicalOrderGrouper.shouldRenderInTable(biopsyText), isFalse);
+    });
   });
 }

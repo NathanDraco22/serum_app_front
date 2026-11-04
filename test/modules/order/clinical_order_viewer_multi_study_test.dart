@@ -118,4 +118,100 @@ void main() {
     expect(find.text('Leucocitos (Orina)'), findsOneWidget);
     expect(find.text('Color (Heces)'), findsOneWidget);
   });
+
+  testWidgets('ClinicalOrderViewerContent renderiza sub-parámetros libres (Título y Concentración) con sangría jerárquica en tabla', (tester) async {
+    final pcrOrder = OrderInDb(
+      id: 'ORD-PCR-VIEWER-01',
+      patientId: 'PAT-2',
+      branchId: 'branch-1',
+      totalPrice: 28000,
+      paidAmount: 28000,
+      status: 'completed',
+      createdAt: nowMs,
+      patientInfo: PatientInfo(
+        name: 'Roberto Gómez',
+        dateOfBirth: nowMs - (50 * 365 * 86400000),
+        gender: 'M',
+      ),
+      items: [
+        OrderItem(labTestId: 'PCR', name: 'Proteína C Reactiva (PCR)', salePriceApplied: 28000, isPack: true),
+      ],
+      results: [
+        OrderTestResult(
+          labTestId: 'PCR-CUAL',
+          parameterName: 'Proteína C Reactiva',
+          subclassification: 'Enfermedades Autoinmunes',
+          dataType: 'qualitative',
+          parentExamName: 'Proteína C Reactiva (PCR)',
+          resultValue: 'Positivo',
+          expectedQualitativeValue: 'Negativo',
+        ),
+        OrderTestResult(
+          labTestId: 'PCR-TIT',
+          parameterName: 'Título',
+          subclassification: 'Enfermedades Autoinmunes',
+          dataType: 'text',
+          parentExamName: 'Proteína C Reactiva (PCR)',
+          resultValue: '1:40',
+        ),
+        OrderTestResult(
+          labTestId: 'PCR-CONC',
+          parameterName: 'Concentración',
+          subclassification: 'Enfermedades Autoinmunes',
+          dataType: 'text',
+          parentExamName: 'Proteína C Reactiva (PCR)',
+          unitOfMeasure: 'mg/L',
+          resultValue: '24',
+          referenceText: '< 6.0 mg/L',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ClinicalOrderViewerContent(
+              order: pcrOrder,
+              branch: branch,
+              patientInfo: pcrOrder.patientInfo!,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verificación de textos renderizados
+    expect(find.text('PROTEÍNA C REACTIVA (PCR)'), findsOneWidget);
+    expect(find.text('Proteína C Reactiva'), findsOneWidget);
+    expect(find.text('Título'), findsOneWidget);
+    expect(find.text('Concentración'), findsOneWidget);
+    expect(find.text('1:40'), findsOneWidget);
+    expect(find.text('24'), findsOneWidget);
+    expect(find.text('mg/L'), findsOneWidget);
+
+    // Verificar que los sub-parámetros están dentro de la tabla (Table) y no en cajas de texto independientes
+    expect(find.byType(Table), findsWidgets);
+
+    // Encontrar el padding de 'Proteína C Reactiva' vs 'Título' y 'Concentración'
+    final titFinder = find.ancestor(
+      of: find.text('Título'),
+      matching: find.byType(Padding),
+    );
+    expect(titFinder, findsWidgets);
+
+    final Padding titPadding = tester.widget<Padding>(titFinder.first);
+    final titEdgeInsets = titPadding.padding as EdgeInsets;
+
+    final parentFinder = find.ancestor(
+      of: find.text('Proteína C Reactiva'),
+      matching: find.byType(Padding),
+    );
+    final Padding parentPadding = tester.widget<Padding>(parentFinder.first);
+    final parentEdgeInsets = parentPadding.padding as EdgeInsets;
+
+    // La sangría izquierda de 'Título' debe ser estrictamente mayor a la del análisis padre
+    expect(titEdgeInsets.left, greaterThan(parentEdgeInsets.left));
+  });
 }
