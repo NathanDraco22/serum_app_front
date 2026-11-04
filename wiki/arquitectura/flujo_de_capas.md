@@ -25,10 +25,16 @@ La aplicación implementa un patrón estricto y desacoplado de capas unidireccio
 
 ## 1. Responsabilidades por Capa
 
-### A. Vista (UI / Widgets / Dialogs)
-- **Ubicación**: `lib/src/modules/<modulo>/view/` y `lib/src/modules/<modulo>/widgets/`.
-- **Regla**: Componentes puros de presentación. No contienen lógica de negocio ni llamadas HTTP.
+### A. Vista (UI / Widgets / Dialogs / ViewControllers)
+- **Ubicación**: `lib/src/modules/<modulo>/view/`, `lib/src/modules/<modulo>/widgets/` y `lib/src/modules/<modulo>/controllers/`.
+- **Regla**: Componentes puros de presentación. No realizan llamadas HTTP ni persisten datos directamente.
 - **Acceso a Cubits**: Consumen cubits mediante `context.read<MiCubit>()` para disparar acciones o `BlocBuilder<MiCubit, MiEstado>` para pintar la interfaz.
+- **Pantallas Complejas (Patrón ViewController + Mediator - OKF v0.2)**:
+  - En pantallas con flujos densos, carritos o formularios extensos (`order`, `quotation`, `lab_test`), la presentación se estructura en un `ViewController` (`ChangeNotifier`) y un `Mediator` (`InheritedWidget` mudo con `updateShouldNotify: false`).
+  - El `ViewController` absorbe el estado efímero en memoria (selección, controladores de texto, autocalculado de subtotales/descuentos) y ensambla DTOs de dominio inmutables para el `WriteCubit`.
+  - Los widgets hijos consumen el controlador vía `Mediator` con `ListenableBuilder` granular, eliminando el prop-drilling en constructores.
+  - *Regla de Oro*: El `WriteCubit` **nunca recibe el `ViewController`**, únicamente recibe el DTO inmutable generado (`create(dto)`).
+  - Ver especificación completa en **[Patrón ViewController + Mediator](view_controller_mediator.md)**.
 
 ### B. Gestores de Estado (Cubits)
 - **Ubicación**: `lib/src/cubits/<modulo>_cubit/`.

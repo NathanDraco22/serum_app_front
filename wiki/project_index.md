@@ -21,7 +21,7 @@ El frontend se divide en dos proyectos principales:
 ### Flujo Unidireccional de Capas:
 ```
 [ Vista (UI / Widgets / Dialogs) ]
-               ↓ Invoca métodos / Escucha estados
+               ↕️ (En vistas complejas: Screen + Mediator + ViewController)
 [ Capa de Estado (BLoC / Cubit: Read, Write, Search, Session) ]
                ↓ Consulta o muta
 [ Capa de Repositorios (Repositories / ReactiveRepository en serum_business) ]
@@ -30,6 +30,14 @@ El frontend se divide en dos proyectos principales:
                ↓ Emite peticiones HTTP o persistencia
 [ Capa de Servicios e Infraestructura (HttpService / HiveTokenStorage) ]
 ```
+
+### Patrón de Presentación para Vistas Complejas: ViewController + Mediator (OKF v0.2)
+Para pantallas con alta densidad operativa, formularios extensos o carritos de venta en dos columnas (`order`, `quotation`, `lab_test`), la presentación se divide en:
+1. **`ViewController` (`ChangeNotifier`)**: Centraliza en memoria el estado efímero (entidades seleccionadas, ítems de carrito, controladores de texto, flags), cálculos de totales/descuentos derivados en getters puros, y el método generador de DTOs inmutables (`generateCreateOrder`, `generateCreateQuotation`, `generateCreateDto`).
+2. **`Mediator` (`InheritedWidget` mudo)**: Expone el controlador a los widgets hijos mediante `Mediator.of(context)` con `updateShouldNotify: false`, evitando prop-drilling en constructores y redibujados globales.
+3. **Subsecciones con `ListenableBuilder`**: Consumen el controlador de forma granular para redibujados quirúrgicos a 60 FPS.
+4. **Regla de Oro**: El `WriteCubit` jamás conoce al `ViewController`; únicamente recibe el DTO inmutable generado (`create(dto)`).
+*(Ver detalle completo en **[Patrón ViewController + Mediator](arquitectura/view_controller_mediator.md)**)*.
 
 ---
 
@@ -71,10 +79,10 @@ serum_app_front/
 │       │   ├── doctor/                 # Directorio de médicos referentes
 │       │   ├── home_menu/              # Shell interactivo con barra lateral (StatefulNavigationShell)
 │       │   ├── imports/                # Consola de Importaciones del Sistema (sub-módulo admin)
-│       │   ├── lab_test/               # Catálogo de pruebas clínicas y packs
-│       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados
+│       │   ├── lab_test/               # Catálogo de pruebas clínicas y packs (controllers/, view/, widgets/sections/)
+│       │   ├── order/                  # Registro de órdenes, cobros y captura de resultados (controllers/, view/, widgets/)
 │       │   ├── patient/                # Padrón de pacientes y expediente
-│       │   ├── quotation/              # Presupuestos de venta con PDF e impresión inmediata
+│       │   ├── quotation/              # Presupuestos de venta con PDF e impresión inmediata (controllers/, view/, widgets/)
 │       │   ├── report/                 # Reportes analíticos con gráficos interactivos (fl_chart)
 │       │   ├── splash/                 # Pantalla de carga e hidratación de sesión
 │       │   └── user/                   # Consola de Usuarios y Accesos (CRUD en pantalla completa)
@@ -184,8 +192,9 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 🧪 3.7 Módulo `lab_test` (Catálogo Unificado de Pruebas y Packs)
 * **Ubicación**: `lib/src/modules/lab_test/`
+* **Controladores**: `LabTestFormViewController`, `LabTestFormMediator`
 * **Vistas**: `view/lab_test_screen.dart`, `view/lab_test_form_screen.dart`
-* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/lab_test_quick_price_dialog.dart`, `widgets/pack_test_selector.dart`, `widgets/quick_create_parameter_dialog.dart`, `widgets/clinical_classification_registry.dart`
+* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/lab_test_quick_price_dialog.dart`, `widgets/pack_test_selector.dart`, `widgets/quick_create_parameter_dialog.dart`, `widgets/clinical_classification_registry.dart`, subsecciones en `widgets/sections/` (`lab_test_general_info_section.dart`, `lab_test_pricing_section.dart`, `lab_test_reference_values_section.dart`, `lab_test_pack_children_section.dart`)
 * **Cubits Asociados**: `ReadLabTestCubit`, `WriteLabTestCubit`, `SearchLabTestsCubit`
 * **Funciones Clave**:
   1. **Soporte Híbrido (Individuales vs Packs)**: Gestiona tanto pruebas analíticas individuales como paquetes comerciales (`isPack: true`) que agrupan múltiples análisis.
@@ -200,8 +209,9 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 📝 3.8 Módulo `quotation` (Cotizaciones, Preventa y Presupuestos PDF)
 * **Ubicación**: `lib/src/modules/quotation/`
+* **Controladores**: `CreateQuotationViewController`, `CreateQuotationMediator`
 * **Vistas**: `view/quotation_screen.dart`, `view/create_quotation_screen.dart` (Ruta `/quotations/new`)
-* **Widgets**: `widgets/quotation_cart_section.dart`, `widgets/quotation_client_card.dart`, `widgets/quotations_list.dart`, visor `lib/src/widgets/dialogs/viewers/quotation_viewer.dart`, plantilla `lib/src/tools/exports/pdf/templates/quotation_pdf_template.dart`
+* **Widgets**: `widgets/quotation_cart_section.dart` (consumidor reactivo del ViewController vía Mediator), `widgets/quotation_client_card.dart`, `widgets/quotations_list.dart`, visor `lib/src/widgets/dialogs/viewers/quotation_viewer.dart`, plantilla `lib/src/tools/exports/pdf/templates/quotation_pdf_template.dart`
 * **Cubits Asociados**: `ReadQuotationCubit`, `WriteQuotationCubit`, `ReadLabTestCubit`
 * **Funciones Clave**:
   1. **Creación en Dos Columnas (`CreateQuotationScreen`)**: Flujo análogo a creación de órdenes en ruta `/quotations/new`, con catálogo clínico a la izquierda y carrito de presupuesto a la derecha.
@@ -215,8 +225,9 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ### 📦 3.9 Módulo `order` (Órdenes Clínicas, Pagos y Resultados)
 * **Ubicación**: `lib/src/modules/order/`
+* **Controladores**: `CreateOrderViewController`, `CreateOrderMediator`
 * **Vistas**: `view/order_screen.dart`, `view/create_order_screen.dart`
-* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart`, `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/add_service_dialog.dart`, `widgets/order_results_dialog.dart`, `widgets/edit_item_price_dialog.dart`, `widgets/supervisor_auth_dialog.dart`, subwidgets en `widgets/order_results_dialogs/` (`parameter_card.dart`, `parameter_badge_pill.dart`, `order_results_header.dart`, `order_results_summary_bar.dart`, `order_results_footer.dart`), motor de fórmulas en `lib/src/tools/calculators/` (`clinical_formula.dart`, `clinical_formulas_registry.dart`), visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_invoice_viewer.dart` y plantillas `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`, `lib/src/tools/exports/pdf/templates/order_invoice_pdf_template.dart`
+* **Widgets**: `widgets/order_catalog_section.dart`, `widgets/order_cart_section.dart` (consumidor reactivo del ViewController vía Mediator), `widgets/order_patient_card.dart`, `widgets/order_doctor_card.dart`, `widgets/orders_list.dart`, `widgets/order_pay_dialog.dart`, `widgets/add_service_dialog.dart`, `widgets/order_results_dialog.dart`, `widgets/edit_item_price_dialog.dart`, `widgets/supervisor_auth_dialog.dart`, subwidgets en `widgets/order_results_dialogs/` (`parameter_card.dart`, `parameter_badge_pill.dart`, `order_results_header.dart`, `order_results_summary_bar.dart`, `order_results_footer.dart`), motor de fórmulas en `lib/src/tools/calculators/` (`clinical_formula.dart`, `clinical_formulas_registry.dart`), visores `lib/src/widgets/dialogs/viewers/clinical_order_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_envelope_viewer.dart`, `lib/src/widgets/dialogs/viewers/order_invoice_viewer.dart` y plantillas `lib/src/tools/exports/pdf/templates/clinical_order_envelope_pdf_template.dart`, `lib/src/tools/exports/pdf/templates/order_invoice_pdf_template.dart`
 * **Cubits Asociados**: `ReadOrderCubit`, `WriteOrderCubit`, `ReadLabTestCubit`, `SearchOrdersCubit`, `CashRegisterCubit`
 * **Funciones Clave**:
   1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
