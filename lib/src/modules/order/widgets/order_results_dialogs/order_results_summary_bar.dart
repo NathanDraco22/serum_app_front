@@ -1,25 +1,67 @@
 import 'package:flutter/material.dart';
 import '../../../../tools/calculators/clinical_formulas_registry.dart';
+import '../../controllers/order_results_mediator.dart';
+import '../../controllers/order_results_view_controller.dart';
 
 /// Barra de resumen métrico del diálogo de resultados (conteo de capturados, diferencial leucocitario y alertas).
+///
+/// Siguiendo la arquitectura OKF v0.2:
+/// - Se suscribe reactivamente al [OrderResultsViewController] mediante [ListenableBuilder].
+/// - Permite parámetros opcionales para preservar retrocompatibilidad con tests aislados.
 class OrderResultsSummaryBar extends StatelessWidget {
-  final int filledCount;
-  final int totalCount;
+  final int? filledCount;
+  final int? totalCount;
   final int? visibleCount;
-  final int alertCount;
+  final int? alertCount;
   final double? differentialSum;
+  final OrderResultsViewController? viewController;
 
   const OrderResultsSummaryBar({
     super.key,
-    required this.filledCount,
-    required this.totalCount,
+    this.filledCount,
+    this.totalCount,
     this.visibleCount,
-    required this.alertCount,
+    this.alertCount,
     this.differentialSum,
+    this.viewController,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = viewController ?? OrderResultsMediator.maybeControllerOf(context);
+
+    if (controller != null) {
+      return ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => _buildContent(
+          context: context,
+          resolvedFilledCount: filledCount ?? controller.completedParametersCount,
+          resolvedTotalCount: totalCount ?? controller.totalParametersCount,
+          resolvedVisibleCount: visibleCount ?? controller.visibleParametersCount,
+          resolvedAlertCount: alertCount ?? controller.alertCount,
+          resolvedDifferentialSum: differentialSum ?? controller.differentialSum,
+        ),
+      );
+    }
+
+    return _buildContent(
+      context: context,
+      resolvedFilledCount: filledCount ?? 0,
+      resolvedTotalCount: totalCount ?? 0,
+      resolvedVisibleCount: visibleCount,
+      resolvedAlertCount: alertCount ?? 0,
+      resolvedDifferentialSum: differentialSum,
+    );
+  }
+
+  Widget _buildContent({
+    required BuildContext context,
+    required int resolvedFilledCount,
+    required int resolvedTotalCount,
+    required int? resolvedVisibleCount,
+    required int resolvedAlertCount,
+    required double? resolvedDifferentialSum,
+  }) {
     final theme = Theme.of(context);
 
     return Container(
@@ -34,13 +76,13 @@ class OrderResultsSummaryBar extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            '$filledCount de $totalCount análisis capturados',
+            '$resolvedFilledCount de $resolvedTotalCount análisis capturados',
             style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
             ),
           ),
-          if (visibleCount != null && visibleCount! < totalCount) ...[
+          if (resolvedVisibleCount != null && resolvedVisibleCount < resolvedTotalCount) ...[
             const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -58,7 +100,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '$visibleCount a imprimir',
+                    '$resolvedVisibleCount a imprimir',
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.bold,
@@ -70,16 +112,16 @@ class OrderResultsSummaryBar extends StatelessWidget {
             ),
           ],
           const Spacer(),
-          if (differentialSum != null) ...[
+          if (resolvedDifferentialSum != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                color: ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                     ? Colors.green.shade50
                     : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                  color: ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                       ? Colors.green.shade300
                       : Colors.red.shade300,
                 ),
@@ -88,23 +130,23 @@ class OrderResultsSummaryBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                    ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                         ? Icons.check_circle_outline
                         : Icons.warning_amber_rounded,
                     size: 13,
-                    color: ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                    color: ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                         ? Colors.green.shade800
                         : Colors.red.shade800,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                    ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                         ? 'Diferencial: 100% ✓'
-                        : 'Diferencial: ${ClinicalFormulasRegistry.formatClinicalValue(differentialSum!, 1)}% (Debe sumar 100%)',
+                        : 'Diferencial: ${ClinicalFormulasRegistry.formatClinicalValue(resolvedDifferentialSum, 1)}% (Debe sumar 100%)',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: ClinicalFormulasRegistry.isDifferentialValid(differentialSum)
+                      color: ClinicalFormulasRegistry.isDifferentialValid(resolvedDifferentialSum)
                           ? Colors.green.shade800
                           : Colors.red.shade800,
                     ),
@@ -114,7 +156,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          if (alertCount > 0)
+          if (resolvedAlertCount > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
@@ -128,7 +170,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
                   Icon(Icons.warning_amber_rounded, size: 12, color: Colors.red.shade800),
                   const SizedBox(width: 4),
                   Text(
-                    '$alertCount fuera de rango',
+                    '$resolvedAlertCount fuera de rango',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -138,7 +180,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
                 ],
               ),
             )
-          else if (filledCount > 0)
+          else if (resolvedFilledCount > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(

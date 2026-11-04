@@ -15,6 +15,8 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
 - **Controladores y Mediadores (`lib/src/modules/order/controllers/`)**:
   - `CreateOrderViewController`: Controlador `ChangeNotifier` (estándar OKF) que concentra el estado en memoria de la pantalla de creación (paciente, médico, ítems, servicios, descuentos, niveles de precios, notas), getters derivados de cálculos financieros y la generación del DTO inmutable `CreateOrder`.
   - `CreateOrderMediator`: `InheritedWidget` mudo (`updateShouldNotify: false`) que expone el controlador hacia los árboles de widgets sin redibujados globales involuntarios.
+  - `OrderResultsViewController`: Controlador `ChangeNotifier` (estándar OKF v0.2) que administra el ciclo de vida de los controladores de texto, integración reactiva del motor de fórmulas de Wintrobe, diferencial leucocitario al 100%, alertas demográficas H/L y generación del DTO inmutable `UpdateOrder`.
+  - `OrderResultsMediator`: `InheritedWidget` mudo (`updateShouldNotify: false`) para la captura de resultados clínicos sin prop-drilling en subwidgets.
 - **Pantallas**:
   - `OrderScreen` (`view/order_screen.dart`): Tablero principal de seguimiento y listado de órdenes clínicas.
   - `CreateOrderScreen` (`view/create_order_screen.dart`): Pantalla completa (`/orders/new`) para crear órdenes con layout de dos columnas, orquestada mediante `CreateOrderMediator`.
@@ -66,7 +68,7 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
 
 ### C. Captura Reactiva de Resultados y Motor de Fórmulas Clínicas (`OrderResultsDialog`)
 
-La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src/tools/calculators/`), permitiendo el autocalculado reactivo e instantáneo en el frontend sin latencia ni roundtrips al servidor:
+Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo desacopla la lógica clínica en `OrderResultsViewController` y `OrderResultsMediator`. La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src/tools/calculators/`), permitiendo el autocalculado reactivo e instantáneo en el frontend sin latencia ni roundtrips al servidor:
 
 #### 1. Fórmulas Médicas Integradas (Estándares Internacionales)
 - **Serie Roja / Hematología (Regla de los 3 e Índices de Wintrobe, 1929)**:
@@ -109,6 +111,9 @@ La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src
 - **Informe Clínico PDF (`ClinicalOrderViewer` y `ClinicalOrderPdfTemplate`)**:
   - Emisión del documento A4 oficial con membrete institucional de sucursal, datos completos del paciente y fecha/hora de proceso.
   - **Agrupación Dinámica por Subclasificación**: Las pruebas y parámetros analíticos se estructuran y renderizan agrupados por su subserie clínica (`subclassification`: ej. `SERIE ROJA`, `SERIE BLANCA`, `EXAMEN FÍSICO-QUÍMICO`, etc.), precedidos por un encabezado formal sin barras de acento cromáticas que saturen el espacio.
+  - **Jerarquía Tipográfica Unificada (Texto Libre y Tabulares)**:
+    - Los títulos del examen (`examTitle`) y las cabeceras de subgrupo (`groupTitle`) conservan tipografía destacada en negrita (`FontWeight.bold`).
+    - Las etiquetas de parámetros de texto libre (`dataType: 'text'`) se renderizan con tipografía estándar (`FontWeight.normal`), alineadas visualmente con los parámetros tabulares normales para no confundirse con subtítulos o secciones mayores. El texto multilínea se encuadra en una caja clara con borde atenuado y criterio de referencia inferior en itálica discreta.
   - Alertas clínicas discretas `H` / `L` en rojo al rebasar límites biológicos de referencia.
   - **Firma y Sello de Validación Clínica**:
     - Disposición vertical secuencial: el sello del bioanalista representante se posiciona en el espacio superior a la línea de firma con una rotación realista de -5° (`-0.087 rad`), tolerando imágenes con fondo blanco o transparencia PNG sin tapar textos ni líneas.

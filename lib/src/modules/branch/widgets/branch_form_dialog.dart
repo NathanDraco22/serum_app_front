@@ -1,17 +1,19 @@
-import 'dart:typed_data';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/branch_cubit/write_branches_cubit.dart';
-import '../../../tools/cache/app_image_cache.dart';
-import '../../../tools/uploaders/image_uploader.dart';
-import '../../../widgets/common/app_cached_image.dart';
-import 'aux_bioanalyst_dialog.dart';
+import '../controllers/branch_form_mediator.dart';
+import '../controllers/branch_form_view_controller.dart';
+import 'sections/branch_aux_bioanalysts_section.dart';
+import 'sections/branch_bioanalyst_section.dart';
+import 'sections/branch_branding_section.dart';
+import 'sections/branch_general_info_section.dart';
 
+/// Diálogo modal para la creación y edición integral de sucursales/sedes.
+/// Sigue el patrón ViewController + Mediator (OKF v0.2), delegando la gestión de estado
+/// y generación de DTOs en [BranchFormViewController].
 class BranchFormDialog extends StatefulWidget {
   const BranchFormDialog({super.key, this.branch});
 
@@ -23,195 +25,18 @@ class BranchFormDialog extends StatefulWidget {
 
 class _BranchFormDialogState extends State<BranchFormDialog> {
   final _formKey = GlobalKey<FormState>();
-
-  late final TextEditingController _nameController;
-  late final TextEditingController _addressController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _emailController;
-  late final TextEditingController _facebookController;
-
-  // Bioanalista Representante
-  late final TextEditingController _bioanalystNameController;
-  late final TextEditingController _bioanalystTitleController;
-  late final TextEditingController _bioanalystCodeController;
-
-  // Bioanalistas Auxiliares
-  List<AuxBioanalyst> _auxBioList = [];
-
-  // Logotipo (símbolo o icono compacto)
-  String? _logoUrl;
-  Uint8List? _selectedLogoBytes;
-  String? _selectedLogoName;
-  bool _isUploadingLogo = false;
-
-  // IsoLogo (símbolo + nombre comercial integrado)
-  String? _isoLogoUrl;
-  Uint8List? _selectedIsoLogoBytes;
-  String? _selectedIsoLogoName;
-  bool _isUploadingIsoLogo = false;
-
-  // Sello de Tinta del Bioanalista Representante
-  String? _sealUrl;
-  Uint8List? _selectedSealBytes;
-  String? _selectedSealName;
-  bool _isUploadingSeal = false;
-
-  bool _isSaving = false;
-
-  bool get _isEditing => widget.branch != null;
+  late final BranchFormViewController _controller;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.branch?.name ?? '');
-    _addressController =
-        TextEditingController(text: widget.branch?.address ?? '');
-    _phoneController = TextEditingController(text: widget.branch?.phone ?? '');
-    _emailController = TextEditingController(text: widget.branch?.email ?? '');
-    _facebookController =
-        TextEditingController(text: widget.branch?.facebook ?? '');
-
-    _bioanalystNameController = TextEditingController(
-      text: widget.branch?.bioanalyst?.name ?? '',
-    );
-    _bioanalystTitleController = TextEditingController(
-      text: widget.branch?.bioanalyst?.title ?? '',
-    );
-    _bioanalystCodeController = TextEditingController(
-      text: widget.branch?.bioanalyst?.code ?? '',
-    );
-
-    _logoUrl = widget.branch?.effectiveLogo;
-    _isoLogoUrl = widget.branch?.isoLogoUrl;
-    _sealUrl = widget.branch?.bioanalyst?.sealUrl;
-
-    if (widget.branch?.auxBio != null) {
-      _auxBioList = List<AuxBioanalyst>.from(widget.branch!.auxBio!);
-    }
+    _controller = BranchFormViewController(initialBranch: widget.branch);
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _addressController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _facebookController.dispose();
-    _bioanalystNameController.dispose();
-    _bioanalystTitleController.dispose();
-    _bioanalystCodeController.dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickLogo() async {
-    try {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png'],
-      );
-
-      if (file == null) return;
-
-      final bytes = await file.readAsBytes();
-
-      setState(() {
-        _selectedLogoBytes = bytes;
-        _selectedLogoName = file.name;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al seleccionar el logotipo: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  void _removeLogo() {
-    if (_logoUrl != null) {
-      AppImageCache.evict(_logoUrl!);
-    }
-    setState(() {
-      _logoUrl = null;
-      _selectedLogoBytes = null;
-      _selectedLogoName = null;
-    });
-  }
-
-  Future<void> _pickIsoLogo() async {
-    try {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png'],
-      );
-
-      if (file == null) return;
-
-      final bytes = await file.readAsBytes();
-
-      setState(() {
-        _selectedIsoLogoBytes = bytes;
-        _selectedIsoLogoName = file.name;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al seleccionar el IsoLogo: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  void _removeIsoLogo() {
-    if (_isoLogoUrl != null) {
-      AppImageCache.evict(_isoLogoUrl!);
-    }
-    setState(() {
-      _isoLogoUrl = null;
-      _selectedIsoLogoBytes = null;
-      _selectedIsoLogoName = null;
-    });
-  }
-
-  Future<void> _pickSeal() async {
-    try {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
-      );
-
-      if (file == null) return;
-
-      final bytes = await file.readAsBytes();
-
-      setState(() {
-        _selectedSealBytes = bytes;
-        _selectedSealName = file.name;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al seleccionar el sello: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  void _removeSeal() {
-    if (_sealUrl != null) {
-      AppImageCache.evict(_sealUrl!);
-    }
-    setState(() {
-      _sealUrl = null;
-      _selectedSealBytes = null;
-      _selectedSealName = null;
-    });
   }
 
   Future<void> _submit() async {
@@ -221,117 +46,31 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
     if (widget.branch == null && !isRoot) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Solo el usuario root puede crear nuevas sucursales'),
+          content:
+              const Text('Solo el usuario root puede crear nuevas sucursales'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
     }
 
-    setState(() => _isSaving = true);
+    _controller.setSaving(true);
     final writeCubit = context.read<WriteBranchCubit>();
 
     try {
-      String? finalLogoUrl = _logoUrl;
-      String? finalIsoLogoUrl = _isoLogoUrl;
-      String? finalSealUrl = _sealUrl;
-
-      // Subida de nuevo Logotipo si fue seleccionado
-      if (_selectedLogoBytes != null) {
-        setState(() => _isUploadingLogo = true);
-        final fileName = _selectedLogoName ??
-            'branch_logo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        finalLogoUrl = await ImageUploader.uploadImage(
-          bytes: _selectedLogoBytes!,
-          fileName: fileName,
-        );
-      }
-
-      // Subida de nuevo IsoLogo si fue seleccionado
-      if (_selectedIsoLogoBytes != null) {
-        setState(() => _isUploadingIsoLogo = true);
-        final fileName = _selectedIsoLogoName ??
-            'branch_isologo_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        finalIsoLogoUrl = await ImageUploader.uploadImage(
-          bytes: _selectedIsoLogoBytes!,
-          fileName: fileName,
-        );
-      }
-
-      // Subida de nuevo Sello si fue seleccionado
-      if (_selectedSealBytes != null) {
-        setState(() => _isUploadingSeal = true);
-        final fileName = _selectedSealName ??
-            'branch_seal_${DateTime.now().millisecondsSinceEpoch}.png';
-        finalSealUrl = await ImageUploader.uploadImage(
-          bytes: _selectedSealBytes!,
-          fileName: fileName,
-        );
-      }
-
-      final emailText = _emailController.text.trim();
-      final facebookText = _facebookController.text.trim();
-
-      final bioName = _bioanalystNameController.text.trim();
-      final bioTitle = _bioanalystTitleController.text.trim();
-      final bioCode = _bioanalystCodeController.text.trim();
-
-      BranchBioanalyst? branchBioanalyst;
-      if (bioName.isNotEmpty ||
-          bioTitle.isNotEmpty ||
-          bioCode.isNotEmpty ||
-          (finalSealUrl != null && finalSealUrl.isNotEmpty)) {
-        branchBioanalyst = BranchBioanalyst(
-          name: bioName,
-          title: bioTitle,
-          code: bioCode,
-          sealUrl: finalSealUrl,
-        );
-      }
-
-      if (_isEditing) {
-        await writeCubit.update(
-          widget.branch!.id,
-          UpdateBranch(
-            name: _nameController.text.trim(),
-            address: _addressController.text.trim(),
-            phone: _phoneController.text.trim(),
-            email: emailText.isNotEmpty ? emailText : null,
-            facebook: facebookText.isNotEmpty ? facebookText : null,
-            logoUrl: finalLogoUrl,
-            imageUrl: finalLogoUrl,
-            isoLogoUrl: finalIsoLogoUrl,
-            bioanalyst: branchBioanalyst,
-            auxBio: _auxBioList,
-          ),
-        );
+      if (_controller.isEditing) {
+        final updateDto = await _controller.generateUpdateDto();
+        await writeCubit.update(widget.branch!.id, updateDto);
       } else {
-        await writeCubit.create(
-          CreateBranch(
-            name: _nameController.text.trim(),
-            address: _addressController.text.trim(),
-            phone: _phoneController.text.trim(),
-            email: emailText.isNotEmpty ? emailText : null,
-            facebook: facebookText.isNotEmpty ? facebookText : null,
-            logoUrl: finalLogoUrl,
-            imageUrl: finalLogoUrl,
-            isoLogoUrl: finalIsoLogoUrl,
-            bioanalyst: branchBioanalyst,
-            auxBio: _auxBioList,
-          ),
-        );
+        final createDto = await _controller.generateCreateDto();
+        await writeCubit.create(createDto);
       }
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _isSaving = false;
-        _isUploadingLogo = false;
-        _isUploadingIsoLogo = false;
-        _isUploadingSeal = false;
-      });
+      _controller.setSaving(false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al guardar la sucursal: $e'),
@@ -344,963 +83,142 @@ class _BranchFormDialogState extends State<BranchFormDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasLogo = _selectedLogoBytes != null ||
-        (_logoUrl != null && _logoUrl!.isNotEmpty);
-    final hasIsoLogo = _selectedIsoLogoBytes != null ||
-        (_isoLogoUrl != null && _isoLogoUrl!.isNotEmpty);
+    final isEditing = _controller.isEditing;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            theme.colorScheme.primaryContainer.withAlpha(90),
-                        foregroundColor: theme.colorScheme.primary,
-                        child: Icon(
-                          _isEditing
-                              ? Icons.edit_location_alt_rounded
-                              : Icons.add_business_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _isEditing
-                                  ? 'Editar Sucursal'
-                                  : 'Nueva Sucursal / Sede',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              _isEditing
-                                  ? 'Actualiza los datos, contactos e imágenes de marca de la sede'
-                                  : 'Ingresa la información, contactos y marcas de la sede',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 20),
-
-                  // Sección de Imágenes de Marca (Logotipo e IsoLogo)
-                  Text(
-                    'Identidad Visual de la Sucursal',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      // 1. Selector de Logotipo (Símbolo / Icono)
-                      SizedBox(
-                        width: 260,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Logotipo (Símbolo / Isotipo)',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Icono compacto para avatares y marca de agua',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _isSaving ? null : _pickLogo,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 110,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest
-                                      .withAlpha(90),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outlineVariant,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      if (_selectedLogoBytes != null)
-                                        Image.memory(
-                                          _selectedLogoBytes!,
-                                          width: 110,
-                                          height: 110,
-                                          fit: BoxFit.contain,
-                                        )
-                                      else if (_logoUrl != null &&
-                                          _logoUrl!.isNotEmpty)
-                                        AppCachedImage(
-                                          imageUrl: _logoUrl!,
-                                          width: 110,
-                                          height: 110,
-                                          fit: BoxFit.contain,
-                                          fallbackWidget: Icon(
-                                            Icons.broken_image_outlined,
-                                            size: 32,
-                                            color: theme.colorScheme.error,
-                                          ),
-                                        )
-                                      else
-                                        Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.add_photo_alternate_outlined,
-                                              size: 30,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Subir Logo',
-                                              style: theme.textTheme.labelSmall
-                                                  ?.copyWith(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (_isUploadingLogo)
-                                        Container(
-                                          color: Colors.black45,
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            if (hasLogo)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: _isSaving ? null : _pickLogo,
-                                    icon: const Icon(Icons.sync, size: 14),
-                                    label: const Text('Cambiar',
-                                        style: TextStyle(fontSize: 12)),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: _isSaving ? null : _removeLogo,
-                                    icon: const Icon(Icons.delete_outline,
-                                        size: 14),
-                                    label: const Text('Quitar',
-                                        style: TextStyle(fontSize: 12)),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: theme.colorScheme.error,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
-
-                      // 2. Selector de IsoLogo (Símbolo + Nombre)
-                      SizedBox(
-                        width: 280,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              'IsoLogo (Nombre y Logo)',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Para encabezados de informes, sobre y bienvenida',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _isSaving ? null : _pickIsoLogo,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 200,
-                                height: 110,
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surfaceContainerHighest
-                                      .withAlpha(90),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: theme.colorScheme.outlineVariant,
-                                    width: 1.5,
-                                  ),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      if (_selectedIsoLogoBytes != null)
-                                        Image.memory(
-                                          _selectedIsoLogoBytes!,
-                                          width: 200,
-                                          height: 110,
-                                          fit: BoxFit.contain,
-                                        )
-                                      else if (_isoLogoUrl != null &&
-                                          _isoLogoUrl!.isNotEmpty)
-                                        AppCachedImage(
-                                          imageUrl: _isoLogoUrl!,
-                                          width: 200,
-                                          height: 110,
-                                          fit: BoxFit.contain,
-                                          fallbackWidget: Icon(
-                                            Icons.broken_image_outlined,
-                                            size: 32,
-                                            color: theme.colorScheme.error,
-                                          ),
-                                        )
-                                      else
-                                        Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.branding_watermark_outlined,
-                                              size: 32,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Subir IsoLogo',
-                                              style: theme.textTheme.labelSmall
-                                                  ?.copyWith(
-                                                color:
-                                                    theme.colorScheme.primary,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (_isUploadingIsoLogo)
-                                        Container(
-                                          color: Colors.black45,
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            if (hasIsoLogo)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: _isSaving ? null : _pickIsoLogo,
-                                    icon: const Icon(Icons.sync, size: 14),
-                                    label: const Text('Cambiar',
-                                        style: TextStyle(fontSize: 12)),
-                                  ),
-                                  TextButton.icon(
-                                    onPressed: _isSaving ? null : _removeIsoLogo,
-                                    icon: const Icon(Icons.delete_outline,
-                                        size: 14),
-                                    label: const Text('Quitar',
-                                        style: TextStyle(fontSize: 12)),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: theme.colorScheme.error,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  const Divider(height: 1),
-                  const SizedBox(height: 20),
-
-                  // Sección Datos Generales
-                  Text(
-                    'Información General',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Nombre
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre de la Sucursal *',
-                      hintText: 'Ej. Sucursal Matriz, Centro, Norte...',
-                      prefixIcon: Icon(Icons.storefront_rounded),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Por favor ingresa el nombre de la sucursal';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Dirección
-                  TextFormField(
-                    controller: _addressController,
-                    decoration: const InputDecoration(
-                      labelText: 'Dirección Completa *',
-                      hintText: 'Calle, número, colonia, ciudad...',
-                      prefixIcon: Icon(Icons.location_on_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Por favor ingresa la dirección de la sede';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Teléfono
-                  TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Teléfono de Contacto *',
-                      hintText: 'Ej. 555-123-4567',
-                      prefixIcon: Icon(Icons.phone_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Por favor ingresa un teléfono de contacto';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Email
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo Electrónico (Email)',
-                      hintText: 'Ej. contacto@laboratorio.com',
-                      prefixIcon: Icon(Icons.email_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Facebook
-                  TextFormField(
-                    controller: _facebookController,
-                    decoration: const InputDecoration(
-                      labelText: 'Página de Facebook',
-                      hintText: 'Ej. facebook.com/laboratorioclinico o @laboratorio',
-                      prefixIcon: Icon(Icons.facebook_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Divider(height: 1),
-                  const SizedBox(height: 20),
-
-                  // Sección Bioanalista Representante
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.badge_outlined,
-                        size: 20,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Bioanalista Representante de la Sede',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Profesional responsable que figurará en el pie de firma y validación de los resultados clínicos de esta sucursal.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Nombre del Bioanalista
-                  TextFormField(
-                    controller: _bioanalystNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre Completo del Bioanalista',
-                      hintText: 'Ingresa el nombre completo',
-                      prefixIcon: Icon(Icons.person_outline),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Título Profesional
-                  TextFormField(
-                    controller: _bioanalystTitleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Título Profesional / Cargo',
-                      hintText: 'Ingresa el título profesional o especialidad',
-                      prefixIcon: Icon(Icons.school_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Código Profesional / Registro
-                  TextFormField(
-                    controller: _bioanalystCodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Código Profesional / Registro',
-                      hintText: 'Ingresa el código profesional o número de registro',
-                      prefixIcon: Icon(Icons.card_membership_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Sello de Tinta del Representante
-                  Builder(
-                    builder: (context) {
-                      final hasSeal = _selectedSealBytes != null ||
-                          (_sealUrl != null && _sealUrl!.isNotEmpty);
-
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest
-                              .withValues(alpha: 0.35),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: theme.colorScheme.outlineVariant
-                                .withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.approval_rounded,
-                                  size: 18,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Sello Físico de Tinta del Representante',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Sube la imagen del sello del profesional (preferiblemente PNG sin fondo). Aparecerá inclinado sobre la línea de firma en los reportes clínicos.',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Center(
-                              child: Column(
-                                children: [
-                                  InkWell(
-                                    onTap: _isSaving ? null : _pickSeal,
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Container(
-                                      width: 140,
-                                      height: 110,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: hasSeal
-                                              ? theme.colorScheme.primary
-                                                  .withValues(alpha: 0.5)
-                                              : theme.colorScheme.outlineVariant,
-                                          width: 1.5,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.04),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(10),
-                                        child: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            if (_selectedSealBytes != null)
-                                              Transform.rotate(
-                                                angle: -0.087,
-                                                child: Opacity(
-                                                  opacity: 0.9,
-                                                  child: Image.memory(
-                                                    _selectedSealBytes!,
-                                                    width: 110,
-                                                    height: 90,
-                                                    fit: BoxFit.contain,
-                                                  ),
-                                                ),
-                                              )
-                                            else if (_sealUrl != null &&
-                                                _sealUrl!.isNotEmpty)
-                                              Transform.rotate(
-                                                angle: -0.087,
-                                                child: Opacity(
-                                                  opacity: 0.9,
-                                                  child: AppCachedImage(
-                                                    imageUrl: _sealUrl!,
-                                                    width: 110,
-                                                    height: 90,
-                                                    fit: BoxFit.contain,
-                                                    fallbackWidget: Icon(
-                                                      Icons
-                                                          .broken_image_outlined,
-                                                      size: 32,
-                                                      color: theme
-                                                          .colorScheme.error,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                            else
-                                              Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  Icon(
-                                                    Icons
-                                                        .add_photo_alternate_outlined,
-                                                    size: 30,
-                                                    color: theme
-                                                        .colorScheme.primary,
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Subir Sello',
-                                                    style: theme
-                                                        .textTheme.labelSmall
-                                                        ?.copyWith(
-                                                      color: theme
-                                                          .colorScheme.primary,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            if (_isUploadingSeal)
-                                              Container(
-                                                color: Colors.black45,
-                                                child: const Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                    strokeWidth: 2,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  if (hasSeal)
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        TextButton.icon(
-                                          onPressed:
-                                              _isSaving ? null : _pickSeal,
-                                          icon: const Icon(
-                                              Icons.refresh_rounded,
-                                              size: 16),
-                                          label: const Text('Cambiar'),
-                                          style: TextButton.styleFrom(
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        TextButton.icon(
-                                          onPressed:
-                                              _isSaving ? null : _removeSeal,
-                                          icon: const Icon(Icons.delete_outline,
-                                              size: 16),
-                                          label: const Text('Eliminar'),
-                                          style: TextButton.styleFrom(
-                                            foregroundColor:
-                                                theme.colorScheme.error,
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Sección: Bioanalistas Auxiliares Autorizados para Firma
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+    return BranchFormMediator(
+      viewController: _controller,
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Cabecera
+                    Row(
                       children: [
-                        Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.badge_outlined,
-                                  size: 20,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Bioanalistas Auxiliares',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: _isSaving
-                                  ? null
-                                  : () async {
-                                      final newAux =
-                                          await AuxBioanalystDialog.show(context);
-                                      if (newAux != null) {
-                                        setState(() {
-                                          _auxBioList.add(newAux);
-                                        });
-                                      }
-                                    },
-                              icon: const Icon(Icons.add, size: 16),
-                              label: const Text('Agregar Auxiliar'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Permite registrar otros bioanalistas facultados para firmar reportes de laboratorio en esta sucursal. En la pantalla de impresión podrás seleccionar quién firma el examen.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                        CircleAvatar(
+                          backgroundColor:
+                              theme.colorScheme.primaryContainer.withAlpha(90),
+                          foregroundColor: theme.colorScheme.primary,
+                          child: Icon(
+                            isEditing
+                                ? Icons.edit_location_alt_rounded
+                                : Icons.add_business_rounded,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        if (_auxBioList.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.5),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEditing
+                                    ? 'Editar Sucursal'
+                                    : 'Nueva Sucursal / Sede',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.info_outline,
-                                    size: 18,
-                                    color: theme.colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'No hay bioanalistas auxiliares configurados. Por defecto, solo el representante principal firmará los resultados.',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
+                              Text(
+                                isEditing
+                                    ? 'Actualiza los datos, contactos e imágenes de marca de la sede'
+                                    : 'Ingresa la información, contactos y marcas de la sede',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                              ],
-                            ),
-                          )
-                        else
-                          ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _auxBioList.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final aux = _auxBioList[index];
-                              final hasSeal = aux.bioanalyst.sealUrl != null &&
-                                  aux.bioanalyst.sealUrl!.isNotEmpty;
-
-                              return Card(
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(
-                                    color: theme.colorScheme.outlineVariant,
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 4),
-                                  leading: CircleAvatar(
-                                    backgroundColor: theme
-                                        .colorScheme.primaryContainer
-                                        .withValues(alpha: 0.7),
-                                    child: hasSeal
-                                        ? ClipOval(
-                                            child: AppCachedImage(
-                                              imageUrl:
-                                                  aux.bioanalyst.sealUrl!,
-                                              width: 36,
-                                              height: 36,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          )
-                                        : Icon(
-                                            Icons.person_outline,
-                                            size: 20,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                  ),
-                                  title: Text(
-                                    aux.bioanalyst.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${aux.bioanalyst.title} • ${aux.bioanalyst.code}\nUsuario: ${aux.user.name}',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color:
-                                          theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (hasSeal)
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(right: 6),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.teal.shade50,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
-                                            border: Border.all(
-                                                color: Colors.teal.shade300),
-                                          ),
-                                          child: Text(
-                                            'SELLO',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.teal.shade900,
-                                            ),
-                                          ),
-                                        ),
-                                      IconButton(
-                                        tooltip: 'Editar',
-                                        icon: const Icon(Icons.edit_outlined,
-                                            size: 18),
-                                        onPressed: _isSaving
-                                            ? null
-                                            : () async {
-                                                final updated =
-                                                    await AuxBioanalystDialog
-                                                        .show(
-                                                  context,
-                                                  initialAux: aux,
-                                                );
-                                                if (updated != null) {
-                                                  setState(() {
-                                                    _auxBioList[index] =
-                                                        updated;
-                                                  });
-                                                }
-                                              },
-                                      ),
-                                      IconButton(
-                                        tooltip: 'Eliminar',
-                                        icon: Icon(Icons.delete_outline,
-                                            size: 18,
-                                            color: theme.colorScheme.error),
-                                        onPressed: _isSaving
-                                            ? null
-                                            : () {
-                                                setState(() {
-                                                  _auxBioList.removeAt(index);
-                                                });
-                                              },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
+                              ),
+                            ],
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 20),
 
-                  // Botones de acción
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: _isSaving
-                            ? null
-                            : () => Navigator.of(context).pop(),
-                        child: const Text('Cancelar'),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _submit,
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.save_rounded, size: 18),
-                        label: Text(_isSaving
-                            ? (_isUploadingLogo || _isUploadingIsoLogo || _isUploadingSeal
-                                ? 'Subiendo imágenes y sello...'
-                                : 'Guardando...')
-                            : (_isEditing
-                                ? 'Guardar Cambios'
-                                : 'Crear Sucursal')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    // Subsección 1: Identidad Visual
+                    const BranchBrandingSection(),
+                    const SizedBox(height: 20),
+                    const Divider(height: 1),
+                    const SizedBox(height: 20),
+
+                    // Subsección 2: Información General
+                    const BranchGeneralInfoSection(),
+                    const SizedBox(height: 20),
+                    const Divider(height: 1),
+                    const SizedBox(height: 20),
+
+                    // Subsección 3: Bioanalista Representante
+                    const BranchBioanalystSection(),
+                    const SizedBox(height: 24),
+
+                    // Subsección 4: Bioanalistas Auxiliares
+                    const BranchAuxBioanalystsSection(),
+                    const SizedBox(height: 28),
+
+                    // Botones de Acción
+                    ListenableBuilder(
+                      listenable: _controller,
+                      builder: (context, _) {
+                        final isSaving = _controller.isSaving;
+                        final isUploadingAny = _controller.isUploadingAny;
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: isSaving
+                                  ? null
+                                  : () => Navigator.of(context).pop(),
+                              child: const Text('Cancelar'),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: isSaving ? null : _submit,
+                              icon: isSaving
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.save_rounded, size: 18),
+                              label: Text(
+                                isSaving
+                                    ? (isUploadingAny
+                                        ? 'Subiendo imágenes y sello...'
+                                        : 'Guardando...')
+                                    : (isEditing
+                                        ? 'Guardar Cambios'
+                                        : 'Crear Sucursal'),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

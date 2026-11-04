@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import '../../../../tools/formatters/thousands_separator_input_formatter.dart';
+import '../../controllers/order_results_mediator.dart';
+import '../../controllers/order_results_view_controller.dart';
 import 'parameter_badge_pill.dart';
 
 /// Tarjeta individual para captura, validación y visualización referencial de un análisis clínico.
+///
+/// Siguiendo la arquitectura **ViewController + Mediator (OKF v0.2)**:
+/// - Extrae controladores, mutaciones, alertas clínicas y badges directamente desde [OrderResultsMediator].
+/// - Permite parámetros opcionales para preservar retrocompatibilidad con suites de pruebas aisladas del widget.
+/// - Se suscribe a redibujados quirúrgicos mediante [ListenableBuilder].
 class ParameterCard extends StatelessWidget {
   /// Presets estándar de atajos rápidos para resultados de texto libre en laboratorio clínico
   static const List<String> defaultTextPresets = [
@@ -15,37 +22,39 @@ class ParameterCard extends StatelessWidget {
 
   final OrderTestResult result;
   final String? alert;
-  final bool isAlert;
+  final bool? isAlert;
   final bool isReadOnly;
   final FocusNode? focusNode;
   final bool isLast;
   final VoidCallback? onFieldSubmitted;
   final TextEditingController? controller;
-  final bool isAutoCalculated;
+  final bool? isAutoCalculated;
   final String? formulaDisplay;
   final String? qualitativeValue;
-  final ValueChanged<String> onQualitativeChanged;
-  final ValueChanged<String> onNumericChanged;
-  final bool showInPrint;
+  final ValueChanged<String>? onQualitativeChanged;
+  final ValueChanged<String>? onNumericChanged;
+  final bool? showInPrint;
   final ValueChanged<bool>? onToggleVisibility;
+  final OrderResultsViewController? viewController;
 
   const ParameterCard({
     super.key,
     required this.result,
-    required this.alert,
-    required this.isAlert,
-    required this.isReadOnly,
+    this.alert,
+    this.isAlert,
+    this.isReadOnly = false,
     this.focusNode,
     this.isLast = false,
     this.onFieldSubmitted,
-    required this.controller,
-    this.isAutoCalculated = false,
+    this.controller,
+    this.isAutoCalculated,
     this.formulaDisplay,
-    required this.qualitativeValue,
-    required this.onQualitativeChanged,
-    required this.onNumericChanged,
-    this.showInPrint = true,
+    this.qualitativeValue,
+    this.onQualitativeChanged,
+    this.onNumericChanged,
+    this.showInPrint,
     this.onToggleVisibility,
+    this.viewController,
   });
 
   List<String> get _textPresets {
@@ -61,39 +70,88 @@ class ParameterCard extends StatelessWidget {
     return presets;
   }
 
-  void _applyPresetText(String preset) {
+  void _handlePresetText({
+    required String preset,
+    required TextEditingController? resolvedController,
+    required ValueChanged<String>? resolvedOnNumericChanged,
+    required OrderResultsViewController? activeController,
+  }) {
     if (isReadOnly) return;
-    if (controller != null) {
-      controller!.text = preset;
-      controller!.selection = TextSelection.fromPosition(
+    if (activeController != null) {
+      activeController.applyPresetText(result.labTestId, preset);
+      return;
+    }
+    if (resolvedController != null) {
+      resolvedController.text = preset;
+      resolvedController.selection = TextSelection.fromPosition(
         TextPosition(offset: preset.length),
       );
     }
-    onNumericChanged(preset);
+    resolvedOnNumericChanged?.call(preset);
   }
 
-  bool get _hasValue {
+  bool _computeHasValue({
+    required TextEditingController? resolvedController,
+    required String? resolvedQualitativeValue,
+  }) {
     if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
-      return qualitativeValue != null && qualitativeValue!.isNotEmpty;
+      return resolvedQualitativeValue != null && resolvedQualitativeValue.isNotEmpty;
     }
-    return controller != null && controller!.text.trim().isNotEmpty;
+    return resolvedController != null && resolvedController.text.trim().isNotEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeController = viewController ?? OrderResultsMediator.maybeControllerOf(context);
+
+    if (activeController != null) {
+      return ListenableBuilder(
+        listenable: activeController,
+        builder: (context, _) => _buildCard(
+          context: context,
+          activeController: activeController,
+        ),
+      );
+    }
+
+    return _buildCard(
+      context: context,
+      activeController: null,
+    );
+  }
+
+  Widget _buildCard({
+    required BuildContext context,
+    required OrderResultsViewController? activeController,
+  }) {
     final theme = Theme.of(context);
 
-    final isNormal = _hasValue && !isAlert;
+    // Resolución de dependencias: se priorizan los valores explícitos o se consultan del controller
+    final resolvedController = controller ?? activeController?.getController(result.labTestId);
+    final resolvedQualitativeValue = qualitativeValue ?? activeController?.getQualitativeValue(result.labTestId);
+    final resolvedShowInPrint = showInPrint ?? activeController?.isVisible(result.labTestId) ?? true;
+    final resolvedIsAutoCalculated = isAutoCalculated ?? activeController?.isAutoCalculated(result.labTestId) ?? false;
+    final resolvedFormulaDisplay = formulaDisplay ?? activeController?.getFormulaDisplay(result.labTestId);
+    final resolvedAlert = alert ?? activeController?.getAlertFlag(result);
+    final resolvedIsAlert = isAlert ?? (activeController != null ? activeController.isAlert(result) : (resolvedAlert == 'H' || resolvedAlert == 'HIGH' || resolvedAlert == 'L' || resolvedAlert == 'LOW' || resolvedAlert == 'ABNORMAL'));
+
+    final hasVal = _computeHasValue(
+      resolvedController: resolvedController,
+      resolvedQualitativeValue: resolvedQualitativeValue,
+    );
+
+    final isNormal = hasVal && !resolvedIsAlert;
+
     // Decoración de borde reactivo
-    final borderColor = !showInPrint
+    final borderColor = !resolvedShowInPrint
         ? theme.colorScheme.outlineVariant.withValues(alpha: 0.5)
-        : (isAlert
+        : (resolvedIsAlert
             ? Colors.red.shade300
             : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant));
 
-    final cardBg = !showInPrint
+    final cardBg = !resolvedShowInPrint
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
-        : (isAlert
+        : (resolvedIsAlert
             ? Colors.red.shade50.withValues(alpha: 0.3)
             : theme.colorScheme.surfaceContainerLowest);
 
@@ -102,7 +160,7 @@ class ParameterCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor, width: isAlert && showInPrint ? 1.4 : 1.0),
+        border: Border.all(color: borderColor, width: resolvedIsAlert && resolvedShowInPrint ? 1.4 : 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,9 +176,9 @@ class ParameterCard extends StatelessWidget {
                         result.parameterName,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: !showInPrint
+                          color: !resolvedShowInPrint
                               ? theme.colorScheme.onSurfaceVariant
-                              : (isAlert ? Colors.red.shade900 : theme.colorScheme.onSurface),
+                              : (resolvedIsAlert ? Colors.red.shade900 : theme.colorScheme.onSurface),
                         ),
                       ),
                     ),
@@ -141,11 +199,11 @@ class ParameterCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (isAutoCalculated) ...[
+                    if (resolvedIsAutoCalculated) ...[
                       const SizedBox(width: 8),
                       Tooltip(
-                        message: formulaDisplay != null
-                            ? 'Calculado automáticamente: $formulaDisplay'
+                        message: resolvedFormulaDisplay != null
+                            ? 'Calculado automáticamente: $resolvedFormulaDisplay'
                             : 'Calculado automáticamente',
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
@@ -178,7 +236,7 @@ class ParameterCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              if (!showInPrint) ...[
+              if (!resolvedShowInPrint) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
@@ -198,21 +256,27 @@ class ParameterCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              _buildStatusBadge(theme),
+              _buildStatusBadge(theme, resolvedAlert, hasVal),
               const SizedBox(width: 4),
               IconButton(
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 icon: Icon(
-                  showInPrint ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  resolvedShowInPrint ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   size: 19,
-                  color: showInPrint ? theme.colorScheme.primary : theme.colorScheme.outline,
+                  color: resolvedShowInPrint ? theme.colorScheme.primary : theme.colorScheme.outline,
                 ),
-                tooltip: showInPrint
+                tooltip: resolvedShowInPrint
                     ? 'Visible en informe (clic para ocultar)'
                     : 'Oculto de informe (clic para mostrar)',
-                onPressed: onToggleVisibility != null ? () => onToggleVisibility!(!showInPrint) : null,
+                onPressed: () {
+                  if (onToggleVisibility != null) {
+                    onToggleVisibility!(!resolvedShowInPrint);
+                  } else if (activeController != null) {
+                    activeController.toggleVisibility(result.labTestId, !resolvedShowInPrint);
+                  }
+                },
               ),
             ],
           ),
@@ -225,7 +289,7 @@ class ParameterCard extends StatelessWidget {
               // Caja de Referencia (solo si no es texto libre o si tiene referenceText definido)
               if (result.dataType != 'text' || result.referenceText.trim().isNotEmpty) ...[
                 Tooltip(
-                  message: _getReferenceText(),
+                  message: _getReferenceText(activeController),
                   child: Container(
                     constraints: const BoxConstraints(minWidth: 160, maxWidth: 260),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -251,7 +315,7 @@ class ParameterCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _getReferenceText(),
+                          _getReferenceText(activeController),
                           maxLines: result.referenceText.isNotEmpty ? 4 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -269,13 +333,20 @@ class ParameterCard extends StatelessWidget {
 
               // Control de Entrada
               Expanded(
-                child: _buildInput(theme),
+                child: _buildInput(
+                  theme: theme,
+                  resolvedController: resolvedController,
+                  resolvedQualitativeValue: resolvedQualitativeValue,
+                  resolvedShowInPrint: resolvedShowInPrint,
+                  resolvedIsAlert: resolvedIsAlert,
+                  activeController: activeController,
+                ),
               ),
             ],
           ),
 
           // Alerta contextual explicativa
-          if (isAlert && showInPrint) ...[
+          if (resolvedIsAlert && resolvedShowInPrint) ...[
             const SizedBox(height: 6),
             Row(
               children: [
@@ -283,7 +354,7 @@ class ParameterCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    _getAlertExplanation(),
+                    _getAlertExplanation(resolvedAlert, activeController),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
@@ -299,29 +370,29 @@ class ParameterCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(ThemeData theme) {
-    if (alert == 'HIGH' || alert == 'H') {
+  Widget _buildStatusBadge(ThemeData theme, String? resolvedAlert, bool hasVal) {
+    if (resolvedAlert == 'HIGH' || resolvedAlert == 'H') {
       return ParameterBadgePill(
         label: 'ALTO ▲ (H)',
         bgColor: Colors.red.shade50,
         textColor: Colors.red.shade900,
         borderColor: Colors.red.shade200,
       );
-    } else if (alert == 'LOW' || alert == 'L') {
+    } else if (resolvedAlert == 'LOW' || resolvedAlert == 'L') {
       return ParameterBadgePill(
         label: 'BAJO ▼ (L)',
         bgColor: Colors.blue.shade50,
         textColor: Colors.blue.shade900,
         borderColor: Colors.blue.shade200,
       );
-    } else if (alert == 'ABNORMAL') {
+    } else if (resolvedAlert == 'ABNORMAL') {
       return ParameterBadgePill(
         label: 'ANORMAL',
         bgColor: Colors.orange.shade50,
         textColor: Colors.orange.shade900,
         borderColor: Colors.orange.shade200,
       );
-    } else if (alert == 'NORMAL' || _hasValue) {
+    } else if (resolvedAlert == 'NORMAL' || hasVal) {
       return ParameterBadgePill(
         label: 'NORMAL',
         bgColor: Colors.green.shade50,
@@ -337,13 +408,14 @@ class ParameterCard extends StatelessWidget {
     );
   }
 
-  String _getReferenceText() {
+  String _getReferenceText(OrderResultsViewController? activeController) {
     if (result.referenceText.isNotEmpty) {
       return result.referenceText;
     }
     if (result.dataType == 'numeric') {
-      if (result.referenceValues.isNotEmpty) {
-        final ref = result.referenceValues.first;
+      final ref = activeController?.findReferenceValueForPatient(result) ??
+          (result.referenceValues.isNotEmpty ? result.referenceValues.first : null);
+      if (ref != null) {
         final unit = result.unitOfMeasure.isNotEmpty ? ' ${result.unitOfMeasure}' : '';
         return '${ref.minValue} - ${ref.maxValue}$unit';
       }
@@ -354,33 +426,41 @@ class ParameterCard extends StatelessWidget {
     return 'Texto descriptivo';
   }
 
-  String _getAlertExplanation() {
-    if (alert == 'HIGH' || alert == 'H') {
-      if (result.referenceValues.isNotEmpty) {
-        final ref = result.referenceValues.first;
+  String _getAlertExplanation(String? resolvedAlert, OrderResultsViewController? activeController) {
+    final ref = activeController?.findReferenceValueForPatient(result) ??
+        (result.referenceValues.isNotEmpty ? result.referenceValues.first : null);
+
+    if (resolvedAlert == 'HIGH' || resolvedAlert == 'H') {
+      if (ref != null) {
         return 'Valor superior al límite máximo (${ref.maxValue} ${result.unitOfMeasure}).';
       }
       return 'Valor clínicamente alto.';
-    } else if (alert == 'LOW' || alert == 'L') {
-      if (result.referenceValues.isNotEmpty) {
-        final ref = result.referenceValues.first;
+    } else if (resolvedAlert == 'LOW' || resolvedAlert == 'L') {
+      if (ref != null) {
         return 'Valor inferior al límite mínimo (${ref.minValue} ${result.unitOfMeasure}).';
       }
       return 'Valor clínicamente bajo.';
-    } else if (alert == 'ABNORMAL') {
+    } else if (resolvedAlert == 'ABNORMAL') {
       return 'Resultado difiere del valor esperado (${result.expectedQualitativeValue}).';
     }
     return '';
   }
 
-  Widget _buildInput(ThemeData theme) {
+  Widget _buildInput({
+    required ThemeData theme,
+    required TextEditingController? resolvedController,
+    required String? resolvedQualitativeValue,
+    required bool resolvedShowInPrint,
+    required bool resolvedIsAlert,
+    required OrderResultsViewController? activeController,
+  }) {
     if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
       final options = result.qualitativeOptions.isNotEmpty
           ? result.qualitativeOptions
           : ['Negativo', 'Positivo'];
 
       return DropdownButtonFormField<String>(
-        initialValue: qualitativeValue,
+        initialValue: resolvedQualitativeValue,
         decoration: InputDecoration(
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -423,13 +503,21 @@ class ParameterCard extends StatelessWidget {
             ),
           );
         }).toList(),
-        onChanged: isReadOnly ? null : (val) {
-          if (val != null) onQualitativeChanged(val);
-        },
+        onChanged: isReadOnly
+            ? null
+            : (val) {
+                if (val != null) {
+                  if (onQualitativeChanged != null) {
+                    onQualitativeChanged!(val);
+                  } else if (activeController != null) {
+                    activeController.setQualitativeValue(result.labTestId, val);
+                  }
+                }
+              },
       );
     } else if (result.dataType == 'text') {
       final presets = _textPresets;
-      final currentText = controller?.text.trim().toLowerCase() ?? '';
+      final currentText = resolvedController?.text.trim().toLowerCase() ?? '';
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,14 +525,20 @@ class ParameterCard extends StatelessWidget {
         children: [
           TextFormField(
             focusNode: focusNode,
-            controller: controller,
+            controller: resolvedController,
             readOnly: isReadOnly,
             keyboardType: TextInputType.multiline,
             minLines: 3,
             maxLines: null,
             textInputAction: TextInputAction.newline,
             onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-            onChanged: onNumericChanged,
+            onChanged: (val) {
+              if (onNumericChanged != null) {
+                onNumericChanged!(val);
+              } else if (activeController != null) {
+                activeController.onNumericChanged(result, val);
+              }
+            },
             style: const TextStyle(fontWeight: FontWeight.bold),
             decoration: InputDecoration(
               hintText: 'Ingrese observaciones o resultado descriptivo...',
@@ -512,7 +606,14 @@ class ParameterCard extends StatelessWidget {
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                     visualDensity: VisualDensity.compact,
-                    onPressed: isReadOnly ? null : () => _applyPresetText(preset),
+                    onPressed: isReadOnly
+                        ? null
+                        : () => _handlePresetText(
+                              preset: preset,
+                              resolvedController: resolvedController,
+                              resolvedOnNumericChanged: onNumericChanged,
+                              activeController: activeController,
+                            ),
                   );
                 }),
               ],
@@ -523,7 +624,7 @@ class ParameterCard extends StatelessWidget {
     } else {
       return TextFormField(
         focusNode: focusNode,
-        controller: controller,
+        controller: resolvedController,
         readOnly: isReadOnly,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
@@ -531,11 +632,17 @@ class ParameterCard extends StatelessWidget {
         ],
         textInputAction: isLast ? TextInputAction.done : TextInputAction.next,
         onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-        onChanged: onNumericChanged,
+        onChanged: (val) {
+          if (onNumericChanged != null) {
+            onNumericChanged!(val);
+          } else if (activeController != null) {
+            activeController.onNumericChanged(result, val);
+          }
+        },
         style: TextStyle(
           fontSize: 15.5,
           fontWeight: FontWeight.bold,
-          color: isAlert && showInPrint ? Colors.red.shade900 : theme.colorScheme.onSurface,
+          color: resolvedIsAlert && resolvedShowInPrint ? Colors.red.shade900 : theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: '0.00',
@@ -561,7 +668,7 @@ class ParameterCard extends StatelessWidget {
           ),
         ),
         validator: (val) {
-          if (!showInPrint) return null;
+          if (!resolvedShowInPrint) return null;
           return val == null || val.trim().isEmpty ? 'Requerido' : null;
         },
       );

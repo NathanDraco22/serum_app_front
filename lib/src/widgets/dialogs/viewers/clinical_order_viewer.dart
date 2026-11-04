@@ -972,7 +972,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       r.parameterName,
                       style: const TextStyle(
                         fontSize: 12.5,
-                        fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),

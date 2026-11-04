@@ -1,26 +1,65 @@
 import 'package:flutter/material.dart';
+import '../../controllers/order_results_mediator.dart';
+import '../../controllers/order_results_view_controller.dart';
 
 /// Cabecera visual del diálogo de resultados clínicos (Icono, Nombre de Examen, Folio, Paciente y Botón Cerrar).
+///
+/// Siguiendo la arquitectura OKF v0.2:
+/// - Extrae el contexto de la orden directamente desde [OrderResultsMediator].
+/// - Permite parámetros opcionales para preservar retrocompatibilidad con tests aislados.
 class OrderResultsHeader extends StatelessWidget {
-  final String examName;
-  final String shortId;
-  final String patientName;
-  final bool isSubmitting;
+  final String? examName;
+  final String? shortId;
+  final String? patientName;
+  final bool? isSubmitting;
   final VoidCallback onClose;
   final VoidCallback? onShowPatientInfo;
+  final OrderResultsViewController? viewController;
 
   const OrderResultsHeader({
     super.key,
-    required this.examName,
-    required this.shortId,
-    required this.patientName,
-    required this.isSubmitting,
+    this.examName,
+    this.shortId,
+    this.patientName,
+    this.isSubmitting,
     required this.onClose,
     this.onShowPatientInfo,
+    this.viewController,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = viewController ?? OrderResultsMediator.maybeControllerOf(context);
+
+    if (controller != null) {
+      return ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => _buildContent(
+          context: context,
+          resolvedExamName: examName ?? controller.examName,
+          resolvedShortId: shortId ?? controller.shortId,
+          resolvedPatientName: patientName ?? controller.patientDisplayName,
+          resolvedIsSubmitting: isSubmitting ?? controller.isSubmitting,
+        ),
+      );
+    }
+
+    return _buildContent(
+      context: context,
+      resolvedExamName: examName ?? '',
+      resolvedShortId: shortId ?? '',
+      resolvedPatientName: patientName ?? '',
+      resolvedIsSubmitting: isSubmitting ?? false,
+    );
+  }
+
+  Widget _buildContent({
+    required BuildContext context,
+    required String resolvedExamName,
+    required String resolvedShortId,
+    required String resolvedPatientName,
+    required bool resolvedIsSubmitting,
+  }) {
     final theme = Theme.of(context);
 
     return Container(
@@ -48,7 +87,7 @@ class OrderResultsHeader extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        examName,
+                        resolvedExamName,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -63,7 +102,7 @@ class OrderResultsHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '#$shortId',
+                        '#$resolvedShortId',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -84,7 +123,7 @@ class OrderResultsHeader extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            'Paciente: $patientName',
+                            'Paciente: $resolvedPatientName',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -112,7 +151,7 @@ class OrderResultsHeader extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.close, size: 20),
             tooltip: 'Cerrar',
-            onPressed: isSubmitting ? null : onClose,
+            onPressed: resolvedIsSubmitting ? null : onClose,
           ),
         ],
       ),

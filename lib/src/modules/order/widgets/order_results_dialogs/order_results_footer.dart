@@ -1,28 +1,61 @@
 import 'package:flutter/material.dart';
+import '../../controllers/order_results_mediator.dart';
+import '../../controllers/order_results_view_controller.dart';
 
 /// Pie de acciones del diálogo de resultados (Ver Informe PDF, Cancelar/Cerrar y Guardar).
+///
+/// Siguiendo la arquitectura OKF v0.2:
+/// - Se suscribe al estado de envío ([isSubmitting]) mediante [OrderResultsMediator].
+/// - Permite parámetros opcionales para preservar retrocompatibilidad con tests aislados.
 class OrderResultsFooter extends StatelessWidget {
   final bool isReadOnly;
-  final bool hasResults;
-  final bool isSubmitting;
+  final bool? hasResults;
+  final bool? isSubmitting;
   final bool canComplete;
   final VoidCallback onViewReport;
   final VoidCallback onCancel;
   final VoidCallback onSubmit;
+  final OrderResultsViewController? viewController;
 
   const OrderResultsFooter({
     super.key,
     this.isReadOnly = false,
-    required this.hasResults,
-    required this.isSubmitting,
+    this.hasResults,
+    this.isSubmitting,
     this.canComplete = false,
     required this.onViewReport,
     required this.onCancel,
     required this.onSubmit,
+    this.viewController,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = viewController ?? OrderResultsMediator.maybeControllerOf(context);
+
+    if (controller != null) {
+      return ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => _buildContent(
+          context: context,
+          resolvedHasResults: hasResults ?? controller.hasResults,
+          resolvedIsSubmitting: isSubmitting ?? controller.isSubmitting,
+        ),
+      );
+    }
+
+    return _buildContent(
+      context: context,
+      resolvedHasResults: hasResults ?? false,
+      resolvedIsSubmitting: isSubmitting ?? false,
+    );
+  }
+
+  Widget _buildContent({
+    required BuildContext context,
+    required bool resolvedHasResults,
+    required bool resolvedIsSubmitting,
+  }) {
     final theme = Theme.of(context);
 
     return Container(
@@ -36,7 +69,7 @@ class OrderResultsFooter extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          if (isReadOnly || hasResults)
+          if (isReadOnly || resolvedHasResults)
             Flexible(
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.picture_as_pdf, size: 16),
@@ -44,7 +77,7 @@ class OrderResultsFooter extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                 ),
-                onPressed: isSubmitting ? null : onViewReport,
+                onPressed: resolvedIsSubmitting ? null : onViewReport,
               ),
             )
           else
@@ -54,14 +87,14 @@ class OrderResultsFooter extends StatelessWidget {
             children: [
               TextButton(
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                onPressed: isSubmitting ? null : onCancel,
+                onPressed: resolvedIsSubmitting ? null : onCancel,
                 child: Text(isReadOnly ? 'Cerrar' : 'Cancelar'),
               ),
               if (!isReadOnly) ...[
                 const SizedBox(width: 8),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
-                  icon: isSubmitting
+                  icon: resolvedIsSubmitting
                       ? const SizedBox(
                           width: 14,
                           height: 14,
@@ -69,7 +102,7 @@ class OrderResultsFooter extends StatelessWidget {
                         )
                       : const Icon(Icons.check, size: 16),
                   label: const Text('Guardar Resultados'),
-                  onPressed: isSubmitting ? null : onSubmit,
+                  onPressed: resolvedIsSubmitting ? null : onSubmit,
                 ),
               ],
             ],

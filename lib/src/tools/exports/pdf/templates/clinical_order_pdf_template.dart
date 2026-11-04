@@ -639,9 +639,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           children: [
             pw.Text(
               r.parameterName,
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 fontSize: 9.5,
-                fontWeight: pw.FontWeight.bold,
                 color: PdfColors.black,
               ),
             ),

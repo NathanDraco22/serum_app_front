@@ -118,6 +118,15 @@ Es un `InheritedWidget` mudo con `updateShouldNotify: false`:
   - Autocalculado del precio de packs basado en la sumatoria de pruebas hijas (`useChildTestsPriceSum`).
   - Métodos exportadores: `generateCreateDto({required String branchId})` y `generateUpdateDto({required String branchId})`.
 
+### Caso 4: Administración Integral de Sucursales (`BranchFormViewController` & `BranchFormMediator`)
+- **Ubicación**: `lib/src/modules/branch/controllers/`
+- **Responsabilidad**:
+  - Desacopla el formulario más grande del frontend (~1,311 líneas originales) a un orquestador declarativo (< 250 líneas) y 4 subsecciones modulares en `widgets/sections/`.
+  - Centraliza 8 controladores de texto con `dispose()` riguroso (`name`, `address`, `phone`, `email`, `facebook`, `bioanalystName`, `bioanalystTitle`, `bioanalystCode`).
+  - Administra el estado y subida de 3 activos binarios (Logo, IsoLogo y Sello de tinta) con banderas reactivas e invalidación de caché (`AppImageCache.evict`).
+  - Mantiene la colección en memoria de bioanalistas auxiliares (`List<AuxBioanalyst>`) con mutaciones reactivas.
+  - Métodos exportadores: `generateCreateDto({ImageUploadFunction? uploader})` y `generateUpdateDto({ImageUploadFunction? uploader})`, permitiendo inyección de funciones mock para pruebas unitarias sin red.
+
 ---
 
 ## ⚡ 5. Plantilla Canónica de Implementación

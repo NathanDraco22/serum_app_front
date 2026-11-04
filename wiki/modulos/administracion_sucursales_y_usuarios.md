@@ -62,7 +62,9 @@ El módulo combina dos patrones de navegación mediante `go_router`:
 
 * **Ubicación**: `lib/src/modules/branch/`
 * **Vistas**: `view/branch_screen.dart`
-* **Widgets**: `widgets/branches_list.dart`, `widgets/branch_form_dialog.dart`
+* **Controladores y Mediador (OKF v0.2)**: `controllers/branch_form_view_controller.dart`, `controllers/branch_form_mediator.dart`
+* **Subsecciones Modulares**: `widgets/sections/branch_branding_section.dart`, `widgets/sections/branch_general_info_section.dart`, `widgets/sections/branch_bioanalyst_section.dart`, `widgets/sections/branch_aux_bioanalysts_section.dart`
+* **Widgets**: `widgets/branches_list.dart`, `widgets/branch_form_dialog.dart`, `widgets/aux_bioanalyst_dialog.dart`
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`
 * **Funciones Clave**:
   1. **Supervisión de Sedes**: Tarjetas estilizadas en `BranchesList` con nombre, dirección completa, teléfono y distinción especial mediante badge temático para la sede matriz (`ORIGIN_BRANCH`).
@@ -71,7 +73,11 @@ El módulo combina dos patrones de navegación mediante `go_router`:
      - **Sello Físico de Tinta Digital (`sealUrl`)**: Permite subir la imagen del sello del profesional (PNG transparente o JPG/WEBP). Dispone de tarjeta interactiva con previsualización inclinada a -5° que simula el estampado físico sobre el papel.
      - En `BranchesList` se despliega el badge distintivo `SELLO` cuando la sede cuenta con sello de tinta configurado.
   3. **Búsqueda en Tiempo Real**: Filtrado dinámico y sin peticiones innecesarias de red por nombre de sede, calle o teléfono.
-  4. **Registro y Edición (`BranchFormDialog`)**: Formulario modal con validación estricta de campos obligatorios (nombre, dirección y teléfono de contacto), carga de logotipos institucionales e isologos mediante `ImageUploader`.
+  4. **Arquitectura ViewController + Mediator (OKF v0.2) en `BranchFormDialog`**:
+     - El diálogo maestro fue descompuesto desde un archivo monolítico de ~1,311 líneas a un orquestador declarativo (< 250 líneas) y 4 subsecciones modulares desacopladas.
+     - **`BranchFormViewController` (`ChangeNotifier`)**: Administra 8 `TextEditingController`s con ciclo de vida `dispose()` riguroso, el estado reactivo de 3 activos binarios (Logo, IsoLogo y Sello), la lista en memoria `List<AuxBioanalyst>`, y genera DTOs inmutables (`CreateBranch` y `UpdateBranch`) con inyección de funciones de carga para pruebas unitarias sin red.
+     - **`BranchFormMediator` (`InheritedWidget` mudo)**: Propaga el controlador sin prop-drilling y con `updateShouldNotify: false` para evitar redibujados globales involuntarios.
+     - **Subsecciones en `widgets/sections/`**: `BranchBrandingSection` (Logotipo e IsoLogo), `BranchGeneralInfoSection` (Nombre, Dirección, Contactos), `BranchBioanalystSection` (Bioanalista regente y sello) y `BranchAuxBioanalystsSection` (Auxiliares y modal).
   5. **Eliminación Segura**: Diálogo modal de confirmación con alerta visual roja antes de invocar `WriteBranchCubit.delete()`, con protección para impedir la eliminación accidental de la sede matriz inicial.
 
 ---
