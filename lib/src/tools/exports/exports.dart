@@ -7,3 +7,7 @@ export 'pdf/templates/quotation_pdf_template.dart';
 export 'pdf/templates/receipt_pdf_template.dart';
 export 'pdf/templates/reports/reports_templates.dart';
 export 'pdf_export_tool.dart';
+
+export 'excel/excel_template.dart';
+export 'excel/templates/chrono_report_excel_template.dart';
+export 'excel_export_tool.dart';

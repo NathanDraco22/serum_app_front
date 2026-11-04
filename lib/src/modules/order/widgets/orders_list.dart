@@ -227,7 +227,7 @@ class OrdersList extends StatelessWidget {
                                 ],
                                 Flexible(
                                   child: Text(
-                                    'Paciente: $patientName',
+                                    patientName,
                                     style: theme.textTheme.titleMedium?.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: theme.colorScheme.onSurface,
@@ -240,9 +240,21 @@ class OrdersList extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Examen: ${order.examName}',
-                        style: theme.textTheme.bodyMedium,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.science_outlined,
+                            size: 15,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              order.examName,
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       _buildDoctorTag(
@@ -761,7 +773,7 @@ class OrdersList extends StatelessWidget {
             const SizedBox(width: 5),
             Flexible(
               child: Text(
-                'Médico: $doctorName',
+                doctorName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(

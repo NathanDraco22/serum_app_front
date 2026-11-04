@@ -44,6 +44,8 @@ dependencies:
     path: ../serum_business
   share_plus: ^13.3.1
   file_picker: ^13.1.0
+  pluto_grid: ^8.1.0
+  excel_plus: ^2.29.2
   http: ^1.6.0
   cached_network_image: ^4.0.4
   flutter_cache_manager: ^3.4.5

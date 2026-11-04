@@ -74,6 +74,11 @@ Las pestañas del módulo se dividen por su nivel de sensibilidad:
 - **Tabla de Ranking Clínico**: Puesto (#), Médico, Especialidad, Órdenes emitidas e Importe facturado total.
 
 ### 3.3 Demanda de Exámenes y Packs (`LabTestsVolumeView`)
+- **Reporte Cronológico Mensual (`showChronoReportLabTestDialog`)**: Botón dedicado ubicado en la fila superior al segmented de fuentes, alineado a la izquierda. Despliega una matriz completa de 31 días construida con **`pluto_grid`**:
+  - **Eje X (Días del Mes)**: Días del 1 al 28/31 con doble encabezado (número y día de la semana en español: `1\nLun`, `2\nMar`...) y columna final fija (`PlutoColumnFrozen.end`) de `TOTAL` mensual resaltada en amarillo.
+  - **Eje Y (Categorías y Exámenes)**: Fila superior de `INFORMACIÓN DE PACIENTES / PACIENTES TOTAL`, franjas transversales de categorías clínicas (`BIOMETRÍA HEMÁTICA`, `UROANÁLISIS`, `COPROLOGÍA`, etc.) con color azul primario y columna fija izquierda (`PlutoColumnFrozen.start`) para los nombres de exámenes.
+  - **Filtros y Navegación**: Selectores mensuales `<` y `>`, buscador en tiempo real, filtro "Solo con demanda" y botón de exportación a Excel (.xlsx) integrado con `excel_plus: ^2.29.2` y `ExcelExportTool` (con soporte para guardado nativo en disco mediante `FilePicker.saveFile`).
+  - **Exportación a Excel (`ChronoReportExcelTemplate`)**: Genera libro de trabajo en formato `.xlsx` con la pestaña nombrada por el mes (ej. `11 NOVIEMBRE 2026`), encabezados en azul marino (`#0B1E36`), fila de pacientes totales, franjas transversales de categorías combinadas (`sheet.merge(...)`), conteos diarios de exámenes y columna total resaltada en amarillo pastel (`#FFF2CC`), con inmovilización de paneles superiores e izquierdos (`freezePanes(rows: 2, columns: 1)`).
 - **Conmutador de Fuente**: `SegmentedButton` interactivo para alternar entre **Órdenes Clínicas** y **Cotizaciones** preventivas.
 - **`BarChart` Diferenciado**: Grafica las frecuencias de solicitud diferenciando visualmente mediante colores de la paleta (`ColorPalette.tertiary` vs `ColorPalette.primary`) si se trata de un Pack o un Análisis individual.
 - **Tabla Detallada**: Nombre, Badge de Tipo (PACK / INDIVIDUAL), Categoría, Frecuencia e Ingresos generados.

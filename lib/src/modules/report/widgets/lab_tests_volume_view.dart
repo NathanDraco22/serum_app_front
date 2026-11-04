@@ -7,6 +7,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../cubits/report_cubit/report_cubit.dart';
+import '../dialogs/chrono_report_lab_test_dialog.dart';
 
 class LabTestsVolumeView extends StatelessWidget {
   final LabTestsVolumeReportResponse report;
@@ -26,6 +27,32 @@ class LabTestsVolumeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Botón Reporte Cronológico (Fila arriba del segmented de Órdenes y Cotizaciones, alineado a la izquierda)
+          Row(
+            children: [
+              FilledButton.tonalIcon(
+                key: const Key('chrono_report_button'),
+                icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                label: const Text('Reporte cronológico'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  showChronoReportLabTestDialog(
+                    context,
+                    initialDate: reportCubit.state.startDate,
+                    branchId: reportCubit.state.branchId,
+                    source: report.source,
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
           // Selector de Fuente: Órdenes vs Cotizaciones
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

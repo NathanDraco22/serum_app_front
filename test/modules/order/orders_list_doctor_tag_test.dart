@@ -230,7 +230,13 @@ void main() {
       await tester.pumpWidget(buildTestWidget([orderWithDoctor]));
       await tester.pumpAndSettle();
 
-      expect(find.text('Médico: Dra. María Elena Ramos'), findsOneWidget);
+      expect(find.text('Dra. María Elena Ramos'), findsOneWidget);
+      expect(find.textContaining('Médico:'), findsNothing);
+      expect(find.text('Ana López'), findsOneWidget);
+      expect(find.textContaining('Paciente:'), findsNothing);
+      expect(find.text('Glucosa en Ayunas'), findsOneWidget);
+      expect(find.textContaining('Examen:'), findsNothing);
+      expect(find.byIcon(Icons.science_outlined), findsOneWidget);
       expect(find.byIcon(Icons.medical_services_outlined), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
@@ -308,7 +314,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Muestra el nombre del médico
-      expect(find.text('Médico: Dra. María Elena Ramos'), findsOneWidget);
+      expect(find.text('Dra. María Elena Ramos'), findsOneWidget);
+      expect(find.textContaining('Médico:'), findsNothing);
       // No debe existir el botón de desvincular 'x'
       expect(find.byIcon(Icons.close), findsNothing);
       // No debe existir el icono de edición rápida

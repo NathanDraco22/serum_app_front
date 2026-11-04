@@ -16,7 +16,9 @@ El módulo `lab_test` (`lib/src/modules/lab_test/`) gestiona el catálogo unific
 - **Widgets Clave**:
   - `LabTestsList` (`widgets/lab_tests_list.dart`): Muestra las pruebas o paquetes con badges indicativos (`PACK`, `INDIVIDUAL`, `PARÁMETRO`), categoría clínica, subclasificación, código y precio en moneda legible.
   - `LabTestDetailDialog` (`widgets/lab_test_detail_dialog.dart`): Visor modal amplio para inspeccionar parámetros de referencia, metodología, subclasificación y lista de análisis incluidos si es un paquete.
-  - `LabTestFormScreen` (`view/lab_test_form_screen.dart`): Formulario estructurado para crear o editar pruebas y paquetes con doble selector desplegable en cascada (Clasificación y Subclasificación).
+  - `LabTestFormScreen` (`view/lab_test_form_screen.dart`): Formulario declarativo y modular estructurado según el patrón **ViewController + Mediator** (OKF v0.2), desacoplado en subsecciones limpias (`widgets/sections/`).
+  - `LabTestFormViewController` (`controllers/lab_test_form_view_controller.dart`): `ChangeNotifier` que encapsula el 100% del estado efímero del formulario, los controladores `TextEditingController` con su ciclo de vida y `dispose()`, cálculos financieros automáticos de packs y generación validada de DTOs (`CreateLabTest`, `UpdateLabTest`).
+  - `LabTestFormMediator` (`controllers/lab_test_form_mediator.dart`): `InheritedWidget` mudo (`updateShouldNotify: false`) para exponer el controlador a lo largo del árbol sin prop-drilling ni redibujados globales.
   - `QuickCreateParameterDialog` (`widgets/quick_create_parameter_dialog.dart`): Diálogo modal ligero para registrar parámetros técnicos directamente dentro de un perfil en edición sin salir al catálogo comercial.
   - `PackTestSelector` (`widgets/pack_test_selector.dart`): Selector clínico ordenado alfabéticamente (A-Z) para configurar los análisis de un pack con comparador de precios y visor de subseries.
   - `ClinicalClassificationRegistry` (`widgets/clinical_classification_registry.dart`): Catálogo unificado de especialidades médicas (*Hematología*, *Química Sanguínea*, *Uroanálisis*, *Coprología*, etc.) y subseries mapeadas en cascada con soporte de personalización (+ Otra...).
@@ -86,3 +88,29 @@ Para resolver la dificultad al editar perfiles complejos con múltiples parámet
 Permite crear o editar parámetros técnicos de forma ágil dentro de un perfil:
 1. **Notas de Referencia Universales (`referenceText`)**: Disponibles para todos los tipos de resultado (Numérico, Cualitativo y Texto Libre), permitiendo ingresar escalas clínicas explicativas multilínea que se reflejan de inmediato en órdenes y reportes PDF.
 2. **Selector Desplegable (Dropdown) de Valor Esperado**: En tipo Cualitativo, el valor normal/esperado se selecciona mediante un dropdown reactivo (`DropdownButtonFormField`) alimentado por las opciones capturadas o las plantillas rápidas (evitando errores tipográficos), con alerta automática si se reciben resultados distintos.
+
+---
+
+## 3. Arquitectura del Formulario: ViewController + Mediator (OKF v0.2)
+
+El formulario `LabTestFormScreen` fue refactorizado siguiendo el estándar OKF v0.2 para eliminar la sobrecarga del estado monolítico previo de ~1,400 líneas:
+
+1. **Controlador Centralizado (`LabTestFormViewController`)**:
+   - Implementado como `ChangeNotifier` puro, totalmente independiente de `BuildContext` y de widgets visuales.
+   - Centraliza 17+ variables de estado efímero y 10 `TextEditingController` con manejo seguro de su ciclo de vida y liberación en `dispose()`.
+   - Cálculos matemáticos y reactivos en memoria: `calculateChildrenSum` y `updateCalculatedPrice` para packs comerciales.
+   - Generación desacoplada y validada de DTOs de dominio: `generateCreateDto({required String branchId})` y `generateUpdateDto({required String branchId})`.
+
+2. **Mediador Inmutable (`LabTestFormMediator`)**:
+   - `InheritedWidget` mudo con `updateShouldNotify(old) => false`.
+   - Expone `LabTestFormMediator.of(context)` y `LabTestFormMediator.controllerOf(context)` eliminando el prop-drilling hacia subcomponentes.
+
+3. **Modularización en 4 Subsecciones Especializadas (`widgets/sections/`)**:
+   - `LabTestGeneralInfoSection`: Modalidad (Individual vs Pack), Nombre, Código, Clasificación General y Subclasificación con opción de personalización.
+   - `LabTestPricingSection`: Precios comerciales (Nivel 1 Público y Nivel 2 Convenios/Aseguradoras), switch para alternar sumatoria automática de pruebas hijas vs tarifa fija manual.
+   - `LabTestReferenceValuesSection`: Configuración técnica para análisis individuales (Numérico con unidades y tabla de rangos por edad/género, Cualitativo con plantillas y dropdown de valor esperado, Texto Libre y escalas explicativas multilínea).
+   - `LabTestPackChildrenSection`: Selección de análisis incluidos en packs con integración de `PackTestSelector` y callbacks para creación/edición rápida en caliente.
+
+4. **Pantalla Delgada (`LabTestFormScreen`)**:
+   - Reducida de ~1,400 líneas a ~190 líneas de código conciso y declarativo.
+   - Gestiona únicamente la instanciación/desecho del controlador (`initState`/`dispose`), escucha eventos de persistencia (`BlocListener<WriteLabTestCubit, WriteLabTestState>`), y orquesta los modales de creación rápida.

@@ -2,57 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import '../../../widgets/common/app_buttons.dart';
 import '../../order/widgets/order_doctor_card.dart';
+import '../controllers/create_quotation_mediator.dart';
+import '../controllers/create_quotation_view_controller.dart';
 import 'quotation_client_card.dart';
 
+/// Sección de resumen y carrito para la pantalla de Creación de Cotizaciones.
+///
+/// Siguiendo la arquitectura pura de OKF:
+/// - Extrae el 100% del estado en memoria, tarifas y mutaciones directamente
+///   del [CreateQuotationViewController] provisto por [CreateQuotationMediator].
+/// - Su constructor se reduce exclusivamente a los callbacks de interacción
+///   que abren modales de la interfaz (selectores de paciente y médico, vaciar o generar).
 class QuotationCartSection extends StatelessWidget {
-  final PatientInDb? selectedPatient;
-  final TextEditingController clientNameController;
-  final DoctorInDb? selectedDoctor;
-  final List<LabTestInDb> selectedItems;
-  final Map<String, int> itemPriceLevels;
-  final int defaultPriceLevel;
-  final bool isSubmitting;
-  final VoidCallback onSelectPatient;
-  final VoidCallback onRemovePatient;
-  final VoidCallback onSelectDoctor;
-  final VoidCallback onRemoveDoctor;
-  final void Function(LabTestInDb) onRemoveItem;
-  final void Function(LabTestInDb, int) onPriceLevelChanged;
-  final void Function(int) onDefaultPriceLevelChanged;
-  final VoidCallback onClearItems;
-  final VoidCallback onSubmitQuotation;
+  final CreateQuotationViewController? viewController;
+
+  // Callbacks para acciones que requieren abrir diálogos modales en la UI
+  final VoidCallback? onSelectPatient;
+  final VoidCallback? onSelectDoctor;
+  final VoidCallback? onClearItems;
+  final VoidCallback? onSubmitQuotation;
 
   const QuotationCartSection({
     super.key,
-    required this.selectedPatient,
-    required this.clientNameController,
-    required this.selectedDoctor,
-    required this.selectedItems,
-    this.itemPriceLevels = const {},
-    this.defaultPriceLevel = 1,
-    required this.isSubmitting,
-    required this.onSelectPatient,
-    required this.onRemovePatient,
-    required this.onSelectDoctor,
-    required this.onRemoveDoctor,
-    required this.onRemoveItem,
-    required this.onPriceLevelChanged,
-    required this.onDefaultPriceLevelChanged,
-    required this.onClearItems,
-    required this.onSubmitQuotation,
+    this.viewController,
+    this.onSelectPatient,
+    this.onSelectDoctor,
+    this.onClearItems,
+    this.onSubmitQuotation,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = viewController ?? CreateQuotationMediator.of(context).viewController;
+
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => _buildCartContent(
+        context: context,
+        controller: controller,
+      ),
+    );
+  }
+
+  Widget _buildCartContent({
+    required BuildContext context,
+    required CreateQuotationViewController controller,
+  }) {
     final theme = Theme.of(context);
-    final totalCents = selectedItems.fold<int>(0, (sum, item) {
-      final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
-      final price = (level == 2 && item.salePrice2 > 0) ? item.salePrice2 : item.salePrice;
-      return sum + price;
-    });
+
+    // Datos y estados leídos directamente del controlador
+    final patient = controller.selectedPatient;
+    final doctor = controller.selectedDoctor;
+    final items = controller.selectedItems;
+    final defaultPriceLevel = controller.defaultPriceLevel;
+    final isSubmitting = controller.isSubmitting;
+    final totalCents = controller.totalAmount;
     final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
-    final canSubmit = selectedItems.isNotEmpty && !isSubmitting;
+    final canSubmit = items.isNotEmpty && !isSubmitting;
 
     return Card(
       elevation: 0,
@@ -69,16 +76,16 @@ class QuotationCartSection extends StatelessWidget {
           children: [
             // Selectores para Cliente y Médico (Ambos opcionales)
             QuotationClientCard(
-              patient: selectedPatient,
-              clientNameController: clientNameController,
-              onSelectPatient: onSelectPatient,
-              onRemovePatient: onRemovePatient,
+              patient: patient,
+              clientNameController: controller.casualClientNameController,
+              onSelectPatient: onSelectPatient ?? () {},
+              onRemovePatient: controller.removePatient,
             ),
             const SizedBox(height: 8),
             OrderDoctorCard(
-              doctor: selectedDoctor,
-              onSelect: onSelectDoctor,
-              onRemove: onRemoveDoctor,
+              doctor: doctor,
+              onSelect: onSelectDoctor ?? () {},
+              onRemove: controller.removeDoctor,
             ),
             const SizedBox(height: 12),
             const Divider(height: 1),
@@ -88,19 +95,24 @@ class QuotationCartSection extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.request_quote_outlined, size: 20, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Análisis Cotizados (${selectedItems.length})',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.request_quote_outlined, size: 20, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Análisis Cotizados (${items.length})',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                if (selectedItems.isNotEmpty)
+                if (items.isNotEmpty)
                   TextButton.icon(
                     onPressed: isSubmitting ? null : onClearItems,
                     icon: const Icon(Icons.delete_sweep_outlined, size: 16),
@@ -115,7 +127,7 @@ class QuotationCartSection extends StatelessWidget {
             const SizedBox(height: 4),
 
             // Selector global de tarifa P1 / P2
-            if (selectedItems.isNotEmpty)
+            if (items.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Wrap(
@@ -137,7 +149,7 @@ class QuotationCartSection extends StatelessWidget {
                       onSelected: isSubmitting
                           ? null
                           : (sel) {
-                              if (sel) onDefaultPriceLevelChanged(1);
+                              if (sel) controller.changeDefaultPriceLevel(1);
                             },
                       visualDensity: VisualDensity.compact,
                     ),
@@ -147,7 +159,7 @@ class QuotationCartSection extends StatelessWidget {
                       onSelected: isSubmitting
                           ? null
                           : (sel) {
-                              if (sel) onDefaultPriceLevelChanged(2);
+                              if (sel) controller.changeDefaultPriceLevel(2);
                             },
                       visualDensity: VisualDensity.compact,
                     ),
@@ -157,7 +169,7 @@ class QuotationCartSection extends StatelessWidget {
 
             // Lista con scroll de los análisis agregados
             Expanded(
-              child: selectedItems.isEmpty
+              child: items.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -183,14 +195,12 @@ class QuotationCartSection extends StatelessWidget {
                       ),
                     )
                   : ListView.separated(
-                      itemCount: selectedItems.length,
+                      itemCount: items.length,
                       separatorBuilder: (context, index) => const Divider(height: 1),
                       itemBuilder: (context, index) {
-                        final item = selectedItems[index];
-                        final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
-                        final price = (level == 2 && item.salePrice2 > 0)
-                            ? item.salePrice2
-                            : item.salePrice;
+                        final item = items[index];
+                        final level = controller.getItemPriceLevel(item.id);
+                        final price = controller.getItemEffectivePrice(item);
                         final priceFormatted = NumberFormatter.convertToMoneyLike(price);
 
                         return ListTile(
@@ -232,7 +242,7 @@ class QuotationCartSection extends StatelessWidget {
                                     ? null
                                     : () {
                                         final next = level == 1 ? 2 : 1;
-                                        onPriceLevelChanged(item, next);
+                                        controller.changeItemPriceLevel(item.id, next);
                                       },
                                 borderRadius: BorderRadius.circular(4),
                                 child: Container(
@@ -279,7 +289,7 @@ class QuotationCartSection extends StatelessWidget {
                                 icon: const Icon(Icons.remove_circle_outline, size: 18),
                                 color: theme.colorScheme.error,
                                 tooltip: 'Quitar',
-                                onPressed: isSubmitting ? null : () => onRemoveItem(item),
+                                onPressed: isSubmitting ? null : () => controller.removeItem(item),
                               ),
                             ],
                           ),
@@ -311,7 +321,7 @@ class QuotationCartSection extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${selectedItems.length} ítem${selectedItems.length == 1 ? '' : 's'}',
+                        '${items.length} ítem${items.length == 1 ? '' : 's'}',
                         style: theme.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

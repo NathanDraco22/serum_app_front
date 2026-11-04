@@ -14,17 +14,26 @@ El módulo `quotation` (`lib/src/modules/quotation/`) está diseñado para el mo
 
 ## 1. Arquitectura de Pantallas y Componentes
 
-### A. Vistas Principales
+### A. Controladores y Mediadores (`controllers/`)
+* **`CreateQuotationViewController` (`controllers/create_quotation_view_controller.dart`)**:
+  - `ChangeNotifier` (estándar OKF) que concentra el estado en memoria de la cotización: paciente formal, médico, cliente casual (`casualClientNameController`), análisis agregados y niveles de tarifas.
+  - Expone getters derivados para cálculos (`totalAmount`, `clientName` resuelto, `isEmpty`).
+  - Mapea al dominio generando el DTO inmutable `CreateQuotation` congelando tarifas en `QuotedExam` y snapshots de `PatientInfo` y `DoctorInfo`.
+* **`CreateQuotationMediator` (`controllers/create_quotation_mediator.dart`)**:
+  - `InheritedWidget` mudo (`updateShouldNotify: false`) que expone el controlador a los árboles de widgets sin redibujados globales involuntarios.
+
+### B. Vistas Principales
 * **`QuotationScreen` (`view/quotation_screen.dart`)**:
   - Vista general del historial de cotizaciones.
   - Barra de búsqueda reactiva por cliente, número de folio o nombre de análisis.
   - Botón de acción principal `"Nueva Cotización"` que navega con `context.push` hacia `/quotations/new`.
 * **`CreateQuotationScreen` (`view/create_quotation_screen.dart`)**:
   - Pantalla completa dedicada en ruta `/quotations/new` montada sobre el `_rootNavigatorKey`.
+  - Orquestada con `CreateQuotationMediator`.
   - Diseño responsivo en dos columnas (58% catálogo / 42% carrito en escritorio, apilado en pantallas reducidas).
   - Al completar la cotización, abre de forma inmediata y automática el visor interactivo de PDF listo para imprimir o guardar.
 
-### B. Widgets y Componentes Modulares
+### C. Widgets y Componentes Modulares
 * **`QuotationClientCard` (`widgets/quotation_client_card.dart`)**:
   - Permite capturar clientes de dos formas:
     1. **Cliente Casual en Texto Libre**: Escribir un nombre directamente en un campo de texto (o dejar por defecto `"Cliente General"`).
@@ -32,7 +41,7 @@ El módulo `quotation` (`lib/src/modules/quotation/`) está diseñado para el mo
 * **`OrderDoctorCard` (`../order/widgets/order_doctor_card.dart`)**:
   - Selector de médico referente reutilizable y 100% opcional (permite asignar médico del catálogo, dar de alta al vuelo o dejar vacío para venta directa).
 * **`QuotationCartSection` (`widgets/quotation_cart_section.dart`)**:
-  - Panel del presupuesto que integra:
+  - Panel del presupuesto que consume directamente el `CreateQuotationViewController` mediante `ListenableBuilder`:
     - Tarjeta de cliente/paciente y tarjeta de médico.
     - Encabezado con contador de ítems y botón para vaciar.
     - Selector global y por ítem de tarifas clínicas (**P1 Regular** / **P2 Especial**).

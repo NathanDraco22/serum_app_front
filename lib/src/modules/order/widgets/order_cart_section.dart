@@ -1,104 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import '../../../widgets/common/app_buttons.dart';
+import '../controllers/create_order_mediator.dart';
+import '../controllers/create_order_view_controller.dart';
 import 'order_patient_card.dart';
 import 'order_doctor_card.dart';
 
+/// Sección de resumen y carrito para la pantalla de Creación de Órdenes.
+///
+/// Siguiendo la arquitectura pura de OKF:
+/// - Extrae el 100% de los datos, cálculos financieros y mutaciones directamente
+///   del [CreateOrderViewController] provisto por [CreateOrderMediator].
+/// - Su constructor se reduce exclusivamente a los callbacks que abren diálogos
+///   modales en la interfaz gráfica (selectores de paciente/médico, modales de servicio/descuento).
 class OrderCartSection extends StatelessWidget {
-  final PatientInDb? selectedPatient;
-  final DoctorInDb? selectedDoctor;
-  final List<LabTestInDb> selectedItems;
-  final List<OrderService> services;
-  final List<OrderDiscount> discounts;
-  final Map<String, int> itemPriceLevels;
-  final Map<String, int> itemCustomPrices;
-  final int defaultPriceLevel;
-  final bool isSubmitting;
-  final TextEditingController? notesController;
-  final VoidCallback onSelectPatient;
-  final VoidCallback onRemovePatient;
-  final VoidCallback onSelectDoctor;
-  final VoidCallback onRemoveDoctor;
-  final void Function(LabTestInDb) onRemoveItem;
-  final void Function(LabTestInDb, int) onPriceLevelChanged;
-  final void Function(int) onDefaultPriceLevelChanged;
-  final void Function(LabTestInDb) onEditItemPrice;
-  final VoidCallback onClearItems;
-  final VoidCallback onAddService;
-  final void Function(OrderService) onRemoveService;
-  final void Function(OrderService) onEditService;
-  final VoidCallback onAddDiscount;
-  final void Function(OrderDiscount) onRemoveDiscount;
-  final void Function(OrderDiscount) onEditDiscount;
-  final VoidCallback onSubmitOrder;
+  final CreateOrderViewController? viewController;
+
+  // Callbacks para acciones que requieren abrir diálogos modales en la UI
+  final VoidCallback? onSelectPatient;
+  final VoidCallback? onSelectDoctor;
+  final void Function(LabTestInDb)? onEditItemPrice;
+  final VoidCallback? onClearItems;
+  final VoidCallback? onAddService;
+  final void Function(OrderService)? onEditService;
+  final VoidCallback? onAddDiscount;
+  final void Function(OrderDiscount)? onEditDiscount;
+  final VoidCallback? onSubmitOrder;
 
   const OrderCartSection({
     super.key,
-    required this.selectedPatient,
-    required this.selectedDoctor,
-    required this.selectedItems,
-    this.services = const [],
-    this.discounts = const [],
-    this.itemPriceLevels = const {},
-    this.itemCustomPrices = const {},
-    this.defaultPriceLevel = 1,
-    this.notesController,
-    required this.isSubmitting,
-    required this.onSelectPatient,
-    required this.onRemovePatient,
-    required this.onSelectDoctor,
-    required this.onRemoveDoctor,
-    required this.onRemoveItem,
-    required this.onPriceLevelChanged,
-    required this.onDefaultPriceLevelChanged,
-    required this.onEditItemPrice,
-    required this.onClearItems,
-    required this.onAddService,
-    required this.onRemoveService,
-    required this.onEditService,
-    required this.onAddDiscount,
-    required this.onRemoveDiscount,
-    required this.onEditDiscount,
-    required this.onSubmitOrder,
+    this.viewController,
+    this.onSelectPatient,
+    this.onSelectDoctor,
+    this.onEditItemPrice,
+    this.onClearItems,
+    this.onAddService,
+    this.onEditService,
+    this.onAddDiscount,
+    this.onEditDiscount,
+    this.onSubmitOrder,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = viewController ?? CreateOrderMediator.of(context).viewController;
+
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => _buildCartContent(
+        context: context,
+        controller: controller,
+      ),
+    );
+  }
+
+  Widget _buildCartContent({
+    required BuildContext context,
+    required CreateOrderViewController controller,
+  }) {
     final theme = Theme.of(context);
 
-    final testsCents = selectedItems.fold<int>(0, (sum, item) {
-      if (itemCustomPrices.containsKey(item.id)) {
-        return sum + itemCustomPrices[item.id]!;
-      }
-      final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
-      final price = (level == 2 && item.salePrice2 > 0) ? item.salePrice2 : item.salePrice;
-      return sum + price;
-    });
+    // Datos reactivos leídos directamente del controlador
+    final patient = controller.selectedPatient;
+    final doctor = controller.selectedDoctor;
+    final items = controller.selectedItems;
+    final services = controller.services;
+    final discounts = controller.discounts;
+    final isSubmitting = controller.isSubmitting;
+    final notesController = controller.notesController;
 
-    final servicesCents = services.fold<int>(0, (sum, s) => sum + s.price);
-    final grossSubtotalCents = testsCents + servicesCents;
-    final discountsCents = discounts.fold<int>(0, (sum, d) => sum + d.appliedAmount);
-    final totalCents = (grossSubtotalCents - discountsCents).clamp(0, grossSubtotalCents);
+    // Totales financieros derivados calculados en el controlador
+    final testsCents = controller.testsTotalInCents;
+    final servicesCents = controller.servicesTotalInCents;
+    final discountsCents = controller.discountsTotalInCents;
+    final totalCents = controller.totalInCents;
     final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
-    final hasModifiedPrices = selectedItems.any((item) {
-      final custom = itemCustomPrices[item.id];
-      return custom != null && custom != item.salePrice;
-    });
-    final hasDiscounts = discounts.isNotEmpty;
-    final requiresSupervisorApproval = hasModifiedPrices || hasDiscounts;
+    final hasModifiedPrices = controller.hasModifiedPrice;
+    final hasDiscounts = controller.hasDiscounts;
+    final requiresSupervisorApproval = controller.requiresSupervisorApproval;
 
-    // Calculate total individual clinical tests that will result from packs + items
+    // Conteo de parámetros clínicos totales
     int totalParameters = 0;
-    for (final item in selectedItems) {
-      if (item.isPack) {
-        totalParameters += item.childTestIds.length;
-      } else {
-        totalParameters += 1;
-      }
+    for (final item in items) {
+      totalParameters += item.isPack ? item.childTestIds.length : 1;
     }
 
-    final canSubmit = selectedPatient != null && (selectedItems.isNotEmpty || services.isNotEmpty) && !isSubmitting;
+    final canSubmit = patient != null &&
+        (items.isNotEmpty || services.isNotEmpty) &&
+        !isSubmitting;
 
     return Card(
       elevation: 0,
@@ -113,23 +103,23 @@ class OrderCartSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Selectors for Patient & Doctor
+            // Selectores para Paciente y Médico
             OrderPatientCard(
-              patient: selectedPatient,
-              onSelect: onSelectPatient,
-              onRemove: onRemovePatient,
+              patient: patient,
+              onSelect: onSelectPatient ?? () {},
+              onRemove: controller.removePatient,
             ),
             const SizedBox(height: 8),
             OrderDoctorCard(
-              doctor: selectedDoctor,
-              onSelect: onSelectDoctor,
-              onRemove: onRemoveDoctor,
+              doctor: doctor,
+              onSelect: onSelectDoctor ?? () {},
+              onRemove: controller.removeDoctor,
             ),
             const SizedBox(height: 12),
             const Divider(height: 1),
             const SizedBox(height: 8),
 
-            // Scrollable Content for Tests & Services
+            // Contenido con scroll para Análisis, Servicios y Descuentos
             Expanded(
               child: ListView(
                 padding: EdgeInsets.zero,
@@ -138,19 +128,24 @@ class OrderCartSection extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.list_alt, size: 18, color: theme.colorScheme.primary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Análisis en la Orden (${selectedItems.length})',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.list_alt, size: 18, color: theme.colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Análisis en la Orden (${items.length})',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      if (selectedItems.isNotEmpty)
+                      if (items.isNotEmpty)
                         TextButton.icon(
                           onPressed: isSubmitting ? null : onClearItems,
                           icon: const Icon(Icons.delete_sweep_outlined, size: 16),
@@ -164,7 +159,7 @@ class OrderCartSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
 
-                  if (selectedItems.isEmpty)
+                  if (items.isEmpty)
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                       alignment: Alignment.center,
@@ -188,14 +183,11 @@ class OrderCartSection extends StatelessWidget {
                       ),
                     )
                   else
-                    ...selectedItems.map((item) {
-                      final level = itemPriceLevels[item.id] ?? defaultPriceLevel;
-                      final customPrice = itemCustomPrices[item.id];
+                    ...items.map((item) {
+                      final level = controller.getItemPriceLevel(item.id);
+                      final customPrice = controller.getItemCustomPrice(item.id);
                       final isPriceModified = customPrice != null && customPrice != item.salePrice;
-                      final appliedPrice = customPrice ??
-                          ((level == 2 && item.salePrice2 > 0)
-                              ? item.salePrice2
-                              : item.salePrice);
+                      final appliedPrice = controller.getItemEffectivePrice(item);
                       final priceStr = NumberFormatter.convertToMoneyLike(appliedPrice);
 
                       return Padding(
@@ -211,129 +203,142 @@ class OrderCartSection extends StatelessWidget {
                             ),
                           ),
                           child: ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          onLongPress: isSubmitting ? null : () => onEditItemPrice(item),
-                          leading: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: item.isPack
-                                  ? theme.colorScheme.tertiaryContainer
-                                  : theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Icon(
-                              item.isPack ? Icons.inventory_2 : Icons.science,
-                              size: 16,
-                              color: item.isPack
-                                  ? theme.colorScheme.onTertiaryContainer
-                                  : theme.colorScheme.onPrimaryContainer,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  item.name,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                ),
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            onLongPress: isSubmitting
+                                ? null
+                                : (onEditItemPrice != null ? () => onEditItemPrice!(item) : null),
+                            leading: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: item.isPack
+                                    ? theme.colorScheme.tertiaryContainer
+                                    : theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(6),
                               ),
-                              if (isPriceModified)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.shade100,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: Colors.amber.shade300),
-                                  ),
+                              child: Icon(
+                                item.isPack ? Icons.inventory_2 : Icons.science,
+                                size: 16,
+                                color: item.isPack
+                                    ? theme.colorScheme.onTertiaryContainer
+                                    : theme.colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Expanded(
                                   child: Text(
-                                    'Modificado',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.amber.shade900,
+                                    item.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                  ),
+                                ),
+                                if (isPriceModified)
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.amber.shade300),
+                                    ),
+                                    child: Text(
+                                      'Modificado',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.amber.shade900,
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          subtitle: Text(
-                            item.isPack
-                                ? 'Perfil comercial (${item.childTestIds.length} análisis incluidos)'
-                                : item.commercialCategory,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurfaceVariant,
+                              ],
                             ),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'Modificar precio de análisis',
-                                child: InkWell(
-                                  onTap: isSubmitting ? null : () => onEditItemPrice(item),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          priceStr,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
+                            subtitle: Text(
+                              item.isPack
+                                  ? 'Perfil comercial (${item.childTestIds.length} análisis incluidos)'
+                                  : item.commercialCategory,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'Modificar precio de análisis',
+                                  child: InkWell(
+                                    onTap: isSubmitting
+                                        ? null
+                                        : (onEditItemPrice != null ? () => onEditItemPrice!(item) : null),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            priceStr,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isPriceModified
+                                                  ? Colors.amber.shade900
+                                                  : (level == 2
+                                                      ? theme.colorScheme.tertiary
+                                                      : theme.colorScheme.primary),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.edit_outlined,
+                                            size: 14,
                                             color: isPriceModified
                                                 ? Colors.amber.shade900
-                                                : (level == 2 ? theme.colorScheme.tertiary : theme.colorScheme.primary),
+                                                : theme.colorScheme.outline,
                                           ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Icon(
-                                          Icons.edit_outlined,
-                                          size: 14,
-                                          color: isPriceModified ? Colors.amber.shade900 : theme.colorScheme.outline,
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18),
-                                color: theme.colorScheme.error,
-                                tooltip: 'Quitar análisis',
-                                onPressed: isSubmitting ? null : () => onRemoveItem(item),
-                              ),
-                            ],
+                                const SizedBox(width: 2),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  color: theme.colorScheme.error,
+                                  tooltip: 'Quitar análisis',
+                                  onPressed: isSubmitting ? null : () => controller.removeItem(item),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
 
                   const SizedBox(height: 12),
                   const Divider(height: 1),
                   const SizedBox(height: 8),
 
-                  // --- Sección 2: Servicios Adicionales (ej. A Domicilio) ---
+                  // --- Sección 2: Servicios Adicionales ---
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.medical_services_outlined, size: 18, color: theme.colorScheme.secondary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Servicios Adicionales (${services.length})',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.medical_services_outlined, size: 18, color: theme.colorScheme.secondary),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Servicios Adicionales (${services.length})',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       TextButton.icon(
                         onPressed: isSubmitting ? null : onAddService,
@@ -375,73 +380,75 @@ class OrderCartSection extends StatelessWidget {
                             ),
                           ),
                           child: ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          leading: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(6),
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            leading: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                Icons.home_repair_service_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSecondaryContainer,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.home_repair_service_outlined,
-                              size: 16,
-                              color: theme.colorScheme.onSecondaryContainer,
+                            title: Text(
+                              service.name,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
-                          ),
-                          title: Text(
-                            service.name,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                          subtitle: const Text(
-                            'Servicio libre adicional',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'Modificar precio de servicio',
-                                child: InkWell(
-                                  onTap: isSubmitting ? null : () => onEditService(service),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          NumberFormatter.convertToMoneyLike(service.price),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: theme.colorScheme.secondary,
+                            subtitle: const Text(
+                              'Servicio libre adicional',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'Modificar precio de servicio',
+                                  child: InkWell(
+                                    onTap: isSubmitting
+                                        ? null
+                                        : (onEditService != null ? () => onEditService!(service) : null),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            NumberFormatter.convertToMoneyLike(service.price),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: theme.colorScheme.secondary,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Icon(
-                                          Icons.edit_outlined,
-                                          size: 14,
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.edit_outlined,
+                                            size: 14,
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18),
-                                color: theme.colorScheme.error,
-                                tooltip: 'Quitar servicio',
-                                onPressed: isSubmitting ? null : () => onRemoveService(service),
-                              ),
-                            ],
+                                const SizedBox(width: 2),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  color: theme.colorScheme.error,
+                                  tooltip: 'Quitar servicio',
+                                  onPressed: isSubmitting ? null : () => controller.removeService(service),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
 
                   const SizedBox(height: 12),
                   const Divider(height: 1),
@@ -451,17 +458,22 @@ class OrderCartSection extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Icon(Icons.discount_outlined, size: 18, color: theme.colorScheme.tertiary),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Descuentos en la Orden (${discounts.length})',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.discount_outlined, size: 18, color: theme.colorScheme.tertiary),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Descuentos en la Orden (${discounts.length})',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       TextButton.icon(
                         onPressed: isSubmitting ? null : onAddDiscount,
@@ -506,75 +518,77 @@ class OrderCartSection extends StatelessWidget {
                             ),
                           ),
                           child: ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          leading: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiaryContainer,
-                              borderRadius: BorderRadius.circular(6),
+                            dense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            leading: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Icon(
+                                discount.isPercentage ? Icons.percent : Icons.attach_money,
+                                size: 16,
+                                color: theme.colorScheme.onTertiaryContainer,
+                              ),
                             ),
-                            child: Icon(
-                              discount.isPercentage ? Icons.percent : Icons.attach_money,
-                              size: 16,
-                              color: theme.colorScheme.onTertiaryContainer,
+                            title: Text(
+                              discount.description,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
-                          ),
-                          title: Text(
-                            discount.description,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                          subtitle: Text(
-                            discount.isPercentage
-                                ? 'Deducción del $discountStr sobre el subtotal'
-                                : 'Descuento por monto fijo',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Tooltip(
-                                message: 'Modificar descuento',
-                                child: InkWell(
-                                  onTap: isSubmitting ? null : () => onEditDiscount(discount),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          '- ${NumberFormatter.convertToMoneyLike(discount.appliedAmount)}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                            color: Colors.red.shade700,
+                            subtitle: Text(
+                              discount.isPercentage
+                                  ? 'Deducción del $discountStr sobre el subtotal'
+                                  : 'Descuento por monto fijo',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Tooltip(
+                                  message: 'Modificar descuento',
+                                  child: InkWell(
+                                    onTap: isSubmitting
+                                        ? null
+                                        : (onEditDiscount != null ? () => onEditDiscount!(discount) : null),
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '- ${NumberFormatter.convertToMoneyLike(discount.appliedAmount)}',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: Colors.red.shade700,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Icon(
-                                          Icons.edit_outlined,
-                                          size: 14,
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ],
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.edit_outlined,
+                                            size: 14,
+                                            color: theme.colorScheme.outline,
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 2),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 18),
-                                color: theme.colorScheme.error,
-                                tooltip: 'Quitar descuento',
-                                onPressed: isSubmitting ? null : () => onRemoveDiscount(discount),
-                              ),
-                            ],
+                                const SizedBox(width: 2),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  color: theme.colorScheme.error,
+                                  tooltip: 'Quitar descuento',
+                                  onPressed: isSubmitting ? null : () => controller.removeDiscount(discount),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
+                      );
+                    }),
                 ],
               ),
             ),
@@ -606,7 +620,7 @@ class OrderCartSection extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // Summary Info
+            // Resumen de Totales y Parámetros
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -618,12 +632,15 @@ class OrderCartSection extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Total de Análisis Clínicos a Evaluar:',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                      Expanded(
+                        child: Text(
+                          'Total de Análisis Clínicos a Evaluar:',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '$totalParameters parámetro${totalParameters == 1 ? '' : 's'}',
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -750,7 +767,7 @@ class OrderCartSection extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Submit Button
+            // Botón de Envío
             PrimaryButton(
               onPressed: canSubmit ? onSubmitOrder : null,
               icon: Icons.check_circle_outline,

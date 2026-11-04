@@ -57,14 +57,17 @@ class OrderDoctorCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      'MÉDICO REMITENTE',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.8,
-                        color: hasDoctor
-                            ? theme.colorScheme.secondary
-                            : theme.colorScheme.onSurfaceVariant,
+                    Flexible(
+                      child: Text(
+                        'MÉDICO REMITENTE',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                          color: hasDoctor
+                              ? theme.colorScheme.secondary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 4),

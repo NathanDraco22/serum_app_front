@@ -12,15 +12,18 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
 ---
 
 ## 1. Estructura de Pantalla y Diálogos
+- **Controladores y Mediadores (`lib/src/modules/order/controllers/`)**:
+  - `CreateOrderViewController`: Controlador `ChangeNotifier` (estándar OKF) que concentra el estado en memoria de la pantalla de creación (paciente, médico, ítems, servicios, descuentos, niveles de precios, notas), getters derivados de cálculos financieros y la generación del DTO inmutable `CreateOrder`.
+  - `CreateOrderMediator`: `InheritedWidget` mudo (`updateShouldNotify: false`) que expone el controlador hacia los árboles de widgets sin redibujados globales involuntarios.
 - **Pantallas**:
   - `OrderScreen` (`view/order_screen.dart`): Tablero principal de seguimiento y listado de órdenes clínicas.
-  - `CreateOrderScreen` (`view/create_order_screen.dart`): Pantalla completa (`/orders/new`) para crear órdenes con layout de dos columnas (catálogo interactivo de pruebas/perfiles a la izquierda y carrito/resumen de orden a la derecha).
+  - `CreateOrderScreen` (`view/create_order_screen.dart`): Pantalla completa (`/orders/new`) para crear órdenes con layout de dos columnas, orquestada mediante `CreateOrderMediator`.
 - **Widgets Clave**:
-  - `OrderCatalogSection` (`widgets/order_catalog_section.dart`): Columna izquierda con buscador debounced, filtros por categoría/tipo, filtro predeterminado `_hideProfileParameters = true` ("Ocultar parámetros de perfil") con chip interactivo y badge visual `PARÁMETRO`, y grid interactivo de selección de estudios comerciales.
-  - `OrderCartSection` (`widgets/order_cart_section.dart`): Columna derecha con resumen, totales y listado de análisis seleccionados.
+  - `OrderCatalogSection` (`widgets/order_catalog_section.dart`): Columna izquierda con buscador debounced, filtros por categoría/tipo, filtro predeterminado `_hideProfileParameters = true` ("Ocultar parámetros de perfil") con chip interactivo y badge visual `PARÁMETRO`, y grid interactivo de selección de estudios comerciales conectado al controlador vía `ListenableBuilder`.
+  - `OrderCartSection` (`widgets/order_cart_section.dart`): Columna derecha con resumen, totales y listado de análisis seleccionados; consume reactivamente el `CreateOrderViewController` eliminando prop-drilling.
   - `OrderPatientCard` y `OrderDoctorCard` (`widgets/`): Tarjetas interactivas para asignar paciente y médico.
   - `PatientSelectionDialog` y `DoctorSelectionDialog` (`lib/src/widgets/dialogs/selectors/`): Modales dedicados (Pickers) con búsqueda reactiva debounced para miles de registros.
-  - `OrdersList` (`widgets/orders_list.dart`): Listado de órdenes activas con badges de estado clínico y financiero.
+  - `OrdersList` (`widgets/orders_list.dart`): Listado de órdenes activas con badges de estado clínico y financiero, con diseño limpio y despojado de prefijos redundantes (nombre del paciente como título directo junto a su ID, fila visual con icono clínico `Icons.science_outlined` para el estudio, y pastilla con estetoscopio para el médico remitente).
   - `OrderPayDialog` (`widgets/order_pay_dialog.dart`): Modal de procesamiento de pago directo a caja activa.
   - `AddServiceDialog` (`widgets/add_service_dialog.dart`): Modal con atajos rápidos para agregar y editar servicios adicionales libres (ej. servicio a domicilio, toma especial de muestra).
   - `OrderResultsDialog` (`widgets/order_results_dialog.dart`): Orquestador principal de captura, autocalculado reactivo y guardado de resultados médicos.

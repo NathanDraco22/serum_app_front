@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:serum_app_front/src/modules/order/controllers/create_order_mediator.dart';
+import 'package:serum_app_front/src/modules/order/controllers/create_order_view_controller.dart';
 import 'package:serum_app_front/src/modules/order/widgets/add_discount_dialog.dart';
 import 'package:serum_app_front/src/modules/order/widgets/order_cart_section.dart';
 import 'package:serum_business/serum_business.dart';
@@ -139,7 +141,6 @@ void main() {
     testWidgets('Renderiza descuentos y muestra advertencia de supervisor requerida', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1000));
       addTearDown(() => tester.binding.setSurfaceSize(null));
-      bool discountRemoved = false;
 
       final testItem = LabTestInDb(
         id: 'test_1',
@@ -156,42 +157,29 @@ void main() {
         appliedAmount: 1500, // C$ 15.00
       );
 
+      final controller = CreateOrderViewController(
+        initialPatient: PatientInDb(
+          id: 'p_1',
+          name: 'Juan Perez',
+          originBranch: 'b_1',
+          dateOfBirth: 946684800000,
+          gender: 'M',
+          phone: '12345678',
+          createdAt: 0,
+        ),
+        initialItems: [testItem],
+        initialDiscounts: [discount],
+      );
+
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 700,
               height: 1000,
-              child: OrderCartSection(
-                selectedPatient: PatientInDb(
-                  id: 'p_1',
-                  name: 'Juan Perez',
-                  originBranch: 'b_1',
-                  dateOfBirth: 946684800000,
-                  gender: 'M',
-                  phone: '12345678',
-                  createdAt: 0,
-                ),
-                selectedDoctor: null,
-                selectedItems: [testItem],
-                discounts: [discount],
-                isSubmitting: false,
-                onSelectPatient: () {},
-                onRemovePatient: () {},
-                onSelectDoctor: () {},
-                onRemoveDoctor: () {},
-                onRemoveItem: (_) {},
-                onPriceLevelChanged: (_, _) {},
-                onDefaultPriceLevelChanged: (_) {},
-                onEditItemPrice: (_) {},
-                onClearItems: () {},
-                onAddService: () {},
-                onRemoveService: (_) {},
-                onEditService: (_) {},
-                onAddDiscount: () {},
-                onRemoveDiscount: (d) => discountRemoved = true,
-                onEditDiscount: (_) {},
-                onSubmitOrder: () {},
+              child: CreateOrderMediator(
+                viewController: controller,
+                child: const OrderCartSection(),
               ),
             ),
           ),
@@ -212,7 +200,8 @@ void main() {
       await tester.tap(find.byTooltip('Quitar descuento'));
       await tester.pumpAndSettle();
 
-      expect(discountRemoved, isTrue);
+      expect(controller.discounts, isEmpty);
+      expect(find.text('Sin descuentos aplicados a esta orden.'), findsOneWidget);
     });
   });
 }
