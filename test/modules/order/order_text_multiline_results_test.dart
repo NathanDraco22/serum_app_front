@@ -100,6 +100,184 @@ void main() {
       expect(textField.maxLines, isNull);
       expect(textField.keyboardType, TextInputType.multiline);
     });
+
+    testWidgets('renderiza chips de atajos estándar ("Ninguno", "No se observa", "Normal", "Negativo") para campo libre',
+        (tester) async {
+      final textResult = OrderTestResult(
+        labTestId: 'test-obs',
+        parameterName: 'Observaciones de Sedimento Urinario',
+        dataType: 'text',
+        unitOfMeasure: '',
+        referenceText: '',
+      );
+
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParameterCard(
+              result: textResult,
+              alert: null,
+              isAlert: false,
+              isReadOnly: false,
+              controller: controller,
+              qualitativeValue: null,
+              onQualitativeChanged: (_) {},
+              onNumericChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Atajos:'), findsOneWidget);
+      expect(find.text('Ninguno'), findsOneWidget);
+      expect(find.text('No se observa'), findsOneWidget);
+      expect(find.text('Normal'), findsOneWidget);
+      expect(find.text('Negativo'), findsOneWidget);
+    });
+
+    testWidgets('al tocar un chip de atajo, escribe su valor en el controlador y notifica onNumericChanged',
+        (tester) async {
+      final textResult = OrderTestResult(
+        labTestId: 'test-obs',
+        parameterName: 'Observaciones de Sedimento Urinario',
+        dataType: 'text',
+        unitOfMeasure: '',
+        referenceText: '',
+      );
+
+      final controller = TextEditingController();
+      String? changedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return ParameterCard(
+                  result: textResult,
+                  alert: null,
+                  isAlert: false,
+                  isReadOnly: false,
+                  controller: controller,
+                  qualitativeValue: null,
+                  onQualitativeChanged: (_) {},
+                  onNumericChanged: (val) {
+                    changedValue = val;
+                    setState(() {});
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Verificamos estado inicial
+      expect(controller.text, '');
+      expect(changedValue, isNull);
+
+      // Tocamos el chip "Ninguno"
+      await tester.tap(find.text('Ninguno'));
+      await tester.pumpAndSettle();
+
+      // Debe haber escrito "Ninguno" en el controller y notificado el callback
+      expect(controller.text, 'Ninguno');
+      expect(changedValue, 'Ninguno');
+
+      // El chip debe mostrar el icono de verificación check
+      expect(find.byIcon(Icons.check), findsOneWidget);
+
+      // Ahora tocamos "No se observa"
+      await tester.tap(find.text('No se observa'));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, 'No se observa');
+      expect(changedValue, 'No se observa');
+      expect(find.byIcon(Icons.check), findsOneWidget);
+    });
+
+    testWidgets('respeta opciones personalizadas si qualitativeOptions está configurado',
+        (tester) async {
+      final textResult = OrderTestResult(
+        labTestId: 'test-heces',
+        parameterName: 'Levaduras',
+        dataType: 'text',
+        unitOfMeasure: '',
+        qualitativeOptions: ['No se observan', 'Escasas', 'Moderadas', 'Abundantes'],
+      );
+
+      final controller = TextEditingController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParameterCard(
+              result: textResult,
+              alert: null,
+              isAlert: false,
+              isReadOnly: false,
+              controller: controller,
+              qualitativeValue: null,
+              onQualitativeChanged: (_) {},
+              onNumericChanged: (_) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Atajos:'), findsOneWidget);
+      expect(find.text('No se observan'), findsOneWidget);
+      expect(find.text('Escasas'), findsOneWidget);
+      expect(find.text('Moderadas'), findsOneWidget);
+      expect(find.text('Abundantes'), findsOneWidget);
+      // No debe contener "Ninguno" ya que se suministraron opciones específicas
+      expect(find.text('Ninguno'), findsNothing);
+    });
+
+    testWidgets('los chips se deshabilitan cuando isReadOnly == true',
+        (tester) async {
+      final textResult = OrderTestResult(
+        labTestId: 'test-obs',
+        parameterName: 'Observaciones',
+        dataType: 'text',
+        unitOfMeasure: '',
+      );
+
+      final controller = TextEditingController();
+      bool wasChanged = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ParameterCard(
+              result: textResult,
+              alert: null,
+              isAlert: false,
+              isReadOnly: true,
+              controller: controller,
+              qualitativeValue: null,
+              onQualitativeChanged: (_) {},
+              onNumericChanged: (_) {
+                wasChanged = true;
+              },
+            ),
+          ),
+        ),
+      );
+
+      // Verificamos que los chips existen
+      expect(find.text('Ninguno'), findsOneWidget);
+
+      // Intentamos tocar el chip
+      await tester.tap(find.text('Ninguno'));
+      await tester.pumpAndSettle();
+
+      // No debe cambiar el texto ni invocar el callback
+      expect(controller.text, '');
+      expect(wasChanged, isFalse);
+    });
   });
 
   group('ClinicalOrderViewer Texto Libre (dataType: text) Tests', () {

@@ -5,6 +5,14 @@ import 'parameter_badge_pill.dart';
 
 /// Tarjeta individual para captura, validación y visualización referencial de un análisis clínico.
 class ParameterCard extends StatelessWidget {
+  /// Presets estándar de atajos rápidos para resultados de texto libre en laboratorio clínico
+  static const List<String> defaultTextPresets = [
+    'Ninguno',
+    'No se observa',
+    'Normal',
+    'Negativo',
+  ];
+
   final OrderTestResult result;
   final String? alert;
   final bool isAlert;
@@ -39,6 +47,30 @@ class ParameterCard extends StatelessWidget {
     this.showInPrint = true,
     this.onToggleVisibility,
   });
+
+  List<String> get _textPresets {
+    if (result.qualitativeOptions.isNotEmpty) {
+      return result.qualitativeOptions;
+    }
+    final presets = <String>[...defaultTextPresets];
+    if (result.expectedQualitativeValue != null &&
+        result.expectedQualitativeValue!.trim().isNotEmpty &&
+        !presets.any((p) => p.toLowerCase() == result.expectedQualitativeValue!.trim().toLowerCase())) {
+      presets.add(result.expectedQualitativeValue!.trim());
+    }
+    return presets;
+  }
+
+  void _applyPresetText(String preset) {
+    if (isReadOnly) return;
+    if (controller != null) {
+      controller!.text = preset;
+      controller!.selection = TextSelection.fromPosition(
+        TextPosition(offset: preset.length),
+      );
+    }
+    onNumericChanged(preset);
+  }
 
   bool get _hasValue {
     if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
@@ -396,30 +428,97 @@ class ParameterCard extends StatelessWidget {
         },
       );
     } else if (result.dataType == 'text') {
-      return TextFormField(
-        focusNode: focusNode,
-        controller: controller,
-        readOnly: isReadOnly,
-        keyboardType: TextInputType.multiline,
-        minLines: 3,
-        maxLines: null,
-        textInputAction: TextInputAction.newline,
-        onFieldSubmitted: (_) => onFieldSubmitted?.call(),
-        onChanged: onNumericChanged,
-        style: const TextStyle(fontWeight: FontWeight.bold),
-        decoration: InputDecoration(
-          hintText: 'Ingrese observaciones o resultado descriptivo...',
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+      final presets = _textPresets;
+      final currentText = controller?.text.trim().toLowerCase() ?? '';
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            focusNode: focusNode,
+            controller: controller,
+            readOnly: isReadOnly,
+            keyboardType: TextInputType.multiline,
+            minLines: 3,
+            maxLines: null,
+            textInputAction: TextInputAction.newline,
+            onFieldSubmitted: (_) => onFieldSubmitted?.call(),
+            onChanged: onNumericChanged,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              hintText: 'Ingrese observaciones o resultado descriptivo...',
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-        ),
+          if (presets.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.touch_app_outlined,
+                      size: 13,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Atajos:',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                ...presets.map((preset) {
+                  final isSelected = currentText.isNotEmpty && currentText == preset.toLowerCase();
+                  return ActionChip(
+                    avatar: isSelected
+                        ? Icon(Icons.check, size: 13, color: theme.colorScheme.primary)
+                        : null,
+                    label: Text(
+                      preset,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    backgroundColor: isSelected
+                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                        : theme.colorScheme.surfaceContainerHigh,
+                    side: BorderSide(
+                      color: isSelected
+                          ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: isReadOnly ? null : () => _applyPresetText(preset),
+                  );
+                }),
+              ],
+            ),
+          ],
+        ],
       );
     } else {
       return TextFormField(

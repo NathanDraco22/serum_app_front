@@ -27,7 +27,7 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
   - `OrderInvoiceViewer` (`lib/src/widgets/dialogs/viewers/order_invoice_viewer.dart`): Visor interactivo para el Comprobante de Factura de la orden con soporte para impresión directa, exportación y envío de PDF.
   - `OrderInvoicePdfTemplate` (`lib/src/tools/exports/pdf/templates/order_invoice_pdf_template.dart`): Plantilla PDF oficial A4 para comprobantes de factura con desglose de pruebas, servicios y recibos.
   - Subwidgets especializados en `widgets/order_results_dialogs/`:
-    - `ParameterCard`: Tarjeta analítica con valores de referencia, selector cualitativo, input numérico reactivo y badge `Auto ⚡`.
+    - `ParameterCard`: Tarjeta analítica con valores de referencia, selector cualitativo, input numérico reactivo, chips de atajos rápidos para texto libre y badge `Auto ⚡`.
     - `ParameterBadgePill`: Pill visual de alertas médicas (`ALTO ▲`, `BAJO ▼`, `NORMAL`, `ANORMAL`, `PENDIENTE`).
     - `OrderResultsHeader`: Cabecera visual con icono de laboratorio, nombre del examen, `#ID` de orden, paciente y botón de cierre.
     - `OrderResultsSummaryBar`: Barra métrica de progreso, chip de balance diferencial leucocitario al 100% y conteo de alertas.
@@ -94,6 +94,13 @@ La captura de resultados incorpora el **Motor de Fórmulas Clínicas** (`lib/src
   - $\text{Resultado} < \text{minValue} \to$ Flag **`L`** (`BAJO ▼ (L)`).
   - Dentro de rango normal $\to$ Sin flag (`null` / badge verde `NORMAL`).
   - Pruebas cualitativas que difieren del esperado $\to$ Flag **`ABNORMAL`** (`ANORMAL`).
+
+#### 4. Captura de Parámetros de Texto Libre y Atajos Rápidos
+- **Campo Multilínea Amplio**: Para análisis descriptivos (`dataType: 'text'`), `ParameterCard` despliega un `TextFormField` multilínea (`minLines: 3`, `maxLines: null`, `textInputAction: TextInputAction.newline`) que ocupa el ancho completo disponible si no hay escala referencial.
+- **Chips de Atajos Rápidos (`ActionChip`)**: Debajo del área de texto libre, se disponen chips compactos con las respuestas más habituales de laboratorio:
+  - **"Ninguno"**, **"No se observa"**, **"Normal"**, **"Negativo"**.
+  - Si el análisis posee opciones personalizadas en `qualitativeOptions` (o un `expectedQualitativeValue`), la tarjeta prioriza dinámicamente dichos valores como atajos.
+- **Sincronización Inmediata y Estado Activo**: Al tocar un chip, se transcribe instantáneamente al campo de texto y se sincroniza reactivamente con el estado de la orden (`onNumericChanged`), marcando el parámetro como completado. El chip seleccionado se resalta con un icono de verificación (`Icons.check`). En modo solo lectura (`isReadOnly`), los chips permanecen deshabilitados.
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
 - **Informe Clínico PDF (`ClinicalOrderViewer` y `ClinicalOrderPdfTemplate`)**:

@@ -109,6 +109,27 @@ class CashShiftPdfTemplate implements PdfTemplate {
     final totalIncomesCents = incomeMovements.fold<int>(0, (sum, m) => sum + m.amount);
     final totalExpensesCents = expenseMovements.fold<int>(0, (sum, m) => sum + m.amount);
 
+    final transferExpenses = expenseMovements
+        .where((m) => m.paymentMethod.toLowerCase() == 'transfer' || m.paymentMethod.toLowerCase() == 'transferencia')
+        .fold<int>(0, (sum, m) => sum + m.amount);
+    final cardExpenses = expenseMovements
+        .where((m) => m.paymentMethod.toLowerCase() == 'card' || m.paymentMethod.toLowerCase() == 'tarjeta')
+        .fold<int>(0, (sum, m) => sum + m.amount);
+    final cashExpenses = totalExpensesCents - transferExpenses - cardExpenses;
+
+    final transferIncomes = incomeMovements
+        .where((m) => m.paymentMethod.toLowerCase() == 'transfer' || m.paymentMethod.toLowerCase() == 'transferencia')
+        .fold<int>(0, (sum, m) => sum + m.amount);
+    final cardIncomes = incomeMovements
+        .where((m) => m.paymentMethod.toLowerCase() == 'card' || m.paymentMethod.toLowerCase() == 'tarjeta')
+        .fold<int>(0, (sum, m) => sum + m.amount);
+    final cashIncomes = totalIncomesCents - transferIncomes - cardIncomes;
+
+    final grossCashSales = shift.cashBalance + cashExpenses - cashIncomes;
+    final totalCashInDrawer = shift.initialBalance + grossCashSales + cashIncomes;
+    final grossTransfers = shift.transferBalance + transferExpenses - transferIncomes;
+    final totalCashPlusTransfers = totalCashInDrawer + grossTransfers;
+
     doc.addPage(
       pw.MultiPage(
         pageFormat: pageFormat,
@@ -348,75 +369,50 @@ class CashShiftPdfTemplate implements PdfTemplate {
                     _tableHeaderCell('Monto', align: pw.TextAlign.right),
                   ],
                 ),
+                // 1. Desglose de Efectivo
                 _tableRowCell('Fondo Inicial de Caja (Apertura)', 'Efectivo', _formatMoney(shift.initialBalance)),
-                _tableRowCell('Cobros en Efectivo (Ventas / Abonos)', 'Efectivo', _formatMoney(shift.cashBalance)),
-                _tableRowCell('Cobros con Tarjeta Bancaria', 'Terminal / Tarjeta', _formatMoney(shift.cardBalance)),
-                _tableRowCell('Cobros por Transferencia Electrónica', 'Banco / Transferencia', _formatMoney(shift.transferBalance)),
+                _tableRowCell('Cobros en Efectivo (Ventas / Abonos)', 'Efectivo', _formatMoney(grossCashSales)),
+                if (cashIncomes > 0)
+                  _tableRowCell('Entradas Libres Extraordinarias', 'Caja Chica', '+${_formatMoney(cashIncomes)}'),
+                _summaryRowCell(
+                  title: 'Total Efectivo Esperado en Gaveta',
+                  subtitle: 'Fondo Inicial + Efectivo Cobrado',
+                  amount: _formatMoney(totalCashInDrawer),
+                ),
+
+                // 2. Desglose de Transferencias y Tarjetas
+                _tableRowCell('Cobros por Transferencia Electrónica', 'Banco / Transferencia', _formatMoney(grossTransfers)),
                 if (shift.bankTransfers.isNotEmpty)
                   _tableRowCell(
-                    '   └─ Desglose por Banco',
+                    '   - Desglose por Banco',
                     shift.bankTransfers.entries
                         .map((e) => '${e.key}: ${_formatMoney(e.value)}')
                         .join(' | '),
                     '',
                   ),
-                if (totalIncomesCents > 0)
-                  _tableRowCell('Entradas Libres Extraordinarias', 'Caja Chica', '+${_formatMoney(totalIncomesCents)}'),
-                if (totalExpensesCents > 0)
-                  _tableRowCell('Egresos / Gastos Menores Autorizados', 'Caja Chica', '-${_formatMoney(totalExpensesCents)}'),
-                // Total Efectivo en Gaveta
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(top: pw.BorderSide(color: PdfColors.grey600, width: 0.6)),
-                  ),
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text(
-                        'Total Efectivo Esperado en Gaveta',
-                        style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text('Fondo Inicial + Efectivo Cobrado', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text(
-                        _formatMoney(shift.initialBalance + shift.cashBalance),
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontSize: 11.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
-                      ),
-                    ),
-                  ],
+                if (shift.cardBalance > 0)
+                  _tableRowCell('Cobros con Tarjeta Bancaria', 'Terminal / Tarjeta', _formatMoney(shift.cardBalance)),
+
+                // 3. Total de Transferencias más Efectivo (Subtotal justo antes de restar egresos)
+                _summaryRowCell(
+                  title: 'Total Transferencias + Efectivo',
+                  subtitle: 'Efectivo en Gaveta + Transferencias',
+                  amount: _formatMoney(totalCashPlusTransfers),
                 ),
-                // Total General del Turno
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(top: pw.BorderSide(color: PdfColors.grey800, width: 0.8)),
-                  ),
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text(
-                        'Total General del Turno (Todos los Métodos)',
-                        style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text('Efectivo + Tarjeta + Transferencia', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
-                      child: pw.Text(
-                        _formatMoney(shift.totalBalance),
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontSize: 11.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
-                      ),
-                    ),
-                  ],
+
+                // 4. Resta de los Autorizados (Egresos)
+                _tableRowCell(
+                  '(-) Egresos / Gastos Menores Autorizados',
+                  'Caja Chica',
+                  totalExpensesCents > 0 ? '-${_formatMoney(totalExpensesCents)}' : _formatMoney(0),
+                ),
+
+                // 5. Total General Neto del Turno
+                _summaryRowCell(
+                  title: 'Total General Neto del Turno',
+                  subtitle: 'Balance Final (Ingresos - Egresos Autorizados)',
+                  amount: _formatMoney(shift.totalBalance),
+                  isDoubleBorder: true,
                 ),
               ],
             ),
@@ -657,6 +653,57 @@ class CashShiftPdfTemplate implements PdfTemplate {
         _tableDataCell(concept, fontSize: 9.5),
         _tableDataCell(method, fontSize: 9.5),
         _tableDataCell(amount, align: pw.TextAlign.right, isBold: true, fontSize: 10),
+      ],
+    );
+  }
+
+  pw.TableRow _summaryRowCell({
+    required String title,
+    required String subtitle,
+    required String amount,
+    bool isDoubleBorder = false,
+    PdfColor? textColor,
+  }) {
+    return pw.TableRow(
+      decoration: pw.BoxDecoration(
+        border: pw.Border(
+          top: pw.BorderSide(
+            color: isDoubleBorder ? PdfColors.grey800 : PdfColors.grey600,
+            width: isDoubleBorder ? 0.8 : 0.6,
+          ),
+        ),
+      ),
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontSize: isDoubleBorder ? 10.5 : 10,
+              fontWeight: pw.FontWeight.bold,
+              color: textColor ?? PdfColors.black,
+            ),
+          ),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: pw.Text(
+            subtitle,
+            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+          ),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          child: pw.Text(
+            amount,
+            textAlign: pw.TextAlign.right,
+            style: pw.TextStyle(
+              fontSize: isDoubleBorder ? 11.5 : 10.5,
+              fontWeight: pw.FontWeight.bold,
+              color: textColor ?? PdfColors.black,
+            ),
+          ),
+        ),
       ],
     );
   }

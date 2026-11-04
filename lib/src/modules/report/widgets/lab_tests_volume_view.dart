@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
@@ -122,7 +124,7 @@ class LabTestsVolumeView extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tabla de volumen
-            _buildTestsTable(theme, topTests),
+            _buildTestsTable(context, theme, topTests),
           ],
         ],
       ),
@@ -301,7 +303,11 @@ class LabTestsVolumeView extends StatelessWidget {
     );
   }
 
-  Widget _buildTestsTable(ThemeData theme, List<LabTestVolumeItem> tests) {
+  Widget _buildTestsTable(
+    BuildContext context,
+    ThemeData theme,
+    List<LabTestVolumeItem> tests,
+  ) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -323,6 +329,16 @@ class LabTestsVolumeView extends StatelessWidget {
                 'Desglose Detallado de Demanda',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Tooltip(
+                message: 'Copiar desglose al portapapeles',
+                child: IconButton.outlined(
+                  key: const Key('copy_lab_tests_volume_breakdown_button'),
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _copyBreakdownToClipboard(context, tests),
                 ),
               ),
             ],
@@ -387,6 +403,68 @@ class LabTestsVolumeView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _copyBreakdownToClipboard(
+    BuildContext context,
+    List<LabTestVolumeItem> tests,
+  ) {
+    if (tests.isEmpty) return;
+
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    String dateRangeStr;
+
+    if (report.startDate > 0 && report.endDate > 0) {
+      final start = DateTime.fromMillisecondsSinceEpoch(report.startDate);
+      final end = DateTime.fromMillisecondsSinceEpoch(report.endDate);
+      final sStr = dateFormat.format(start);
+      final eStr = dateFormat.format(end);
+      dateRangeStr = (sStr == eStr) ? sStr : '$sStr al $eStr';
+    } else {
+      try {
+        final cubitState = context.read<ReportCubit>().state;
+        final sStr = dateFormat.format(cubitState.startDate);
+        final eStr = dateFormat.format(cubitState.endDate);
+        dateRangeStr = (sStr == eStr) ? sStr : '$sStr al $eStr';
+      } catch (_) {
+        dateRangeStr = dateFormat.format(DateTime.now());
+      }
+    }
+
+    final isOrders = report.source == 'orders';
+    final buffer = StringBuffer();
+    buffer.writeln('Fecha: $dateRangeStr');
+    buffer.writeln('Fuente: ${isOrders ? 'Órdenes Clínicas' : 'Cotizaciones'}');
+    buffer.writeln();
+    buffer.writeln('Desglose de demanda:');
+
+    for (final item in tests) {
+      final unitPriceVal = item.timesOrdered > 0
+          ? (item.totalRevenue / item.timesOrdered) / 100
+          : 0.0;
+      final unitPriceStr = (unitPriceVal % 1 == 0)
+          ? NumberFormat('#,##0').format(unitPriceVal.toInt())
+          : NumberFormat('#,##0.00').format(unitPriceVal);
+      buffer.writeln('${item.name} - ${item.timesOrdered} X $unitPriceStr');
+    }
+
+    buffer.writeln();
+    buffer.writeln('Total Solicitudes: ${report.summary.totalTestsCount}');
+    final totalRevenueVal = report.summary.totalRevenue / 100;
+    final totalRevenueStr = (totalRevenueVal % 1 == 0)
+        ? NumberFormat('#,##0').format(totalRevenueVal.toInt())
+        : NumberFormat('#,##0.00').format(totalRevenueVal);
+    buffer.writeln('Total Ingresos: $totalRevenueStr');
+
+    Clipboard.setData(ClipboardData(text: buffer.toString().trim()));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Desglose de demanda copiado al portapapeles'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
       ),
     );
   }

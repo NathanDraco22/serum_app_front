@@ -77,6 +77,7 @@ Las pestañas del módulo se dividen por su nivel de sensibilidad:
 - **Conmutador de Fuente**: `SegmentedButton` interactivo para alternar entre **Órdenes Clínicas** y **Cotizaciones** preventivas.
 - **`BarChart` Diferenciado**: Grafica las frecuencias de solicitud diferenciando visualmente mediante colores de la paleta (`ColorPalette.tertiary` vs `ColorPalette.primary`) si se trata de un Pack o un Análisis individual.
 - **Tabla Detallada**: Nombre, Badge de Tipo (PACK / INDIVIDUAL), Categoría, Frecuencia e Ingresos generados.
+- **Copiado Rápido al Portapapeles (Clipboard)**: Botón con icono de copiar (`IconButton.outlined` con `Icons.copy_rounded`) en la cabecera de la tabla que copia el texto con la fecha/rango, fuente de consulta, el desglose limpio de cada examen/pack en formato `Nombre - Cantidad X Precio unitario` (sin etiquetas ni la palabra 'veces', con números puros) y el resumen de totales, ideal para compartir en WhatsApp, notas clínicas o correos.
 
 ### 3.4 Cuentas por Cobrar (`PendingBalancesView`)
 - **KPIs**: Saldo total insoluto, conteo de pacientes deudores y ticket promedio de deuda.
