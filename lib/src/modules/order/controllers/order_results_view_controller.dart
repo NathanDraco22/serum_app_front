@@ -18,6 +18,17 @@ class OrderResultsViewController extends ChangeNotifier {
   bool _isEvaluatingCalculations = false;
   bool _isSubmitting = false;
 
+  /// Resuelve la clave canónica estándar de un parámetro incorporando su contexto clínico
+  /// (subclasificación, clasificación médica y tipo de dato) para evitar colisiones multi-perfil.
+  String? _resolveCanonical(OrderTestResult r) {
+    return ClinicalFormulasRegistry.resolveCanonicalKey(
+      r.parameterName,
+      subclassification: r.subclassification,
+      medicalClassification: r.medicalClassification,
+      dataType: r.dataType,
+    );
+  }
+
   OrderResultsViewController({
     required this.order,
   }) {
@@ -39,7 +50,7 @@ class OrderResultsViewController extends ChangeNotifier {
             ? initial
             : options.first;
       } else {
-        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        final canonical = _resolveCanonical(r);
         final initial = r.resultValue?.trim() ?? '';
         // Serie Blanca: los 7 parámetros diferenciales tienen valor por defecto 0 si están vacíos
         if (canonical != null &&
@@ -200,7 +211,7 @@ class OrderResultsViewController extends ChangeNotifier {
         if (text.isNotEmpty) {
           final val = ThousandsSeparatorInputFormatter.tryParseDouble(text);
           if (val != null) {
-            final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+            final canonical = _resolveCanonical(r);
             if (canonical != null) {
               availableCanonicalInputs[canonical] = val;
             }
@@ -257,24 +268,54 @@ class OrderResultsViewController extends ChangeNotifier {
       controller.text = val;
     }
 
-    final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+    final canonical = _resolveCanonical(r);
     if (val.trim().isEmpty) {
       _manuallyOverriddenFieldIds.remove(r.labTestId);
-    } else if (canonical != 'HTC') {
-      // Si el usuario teclea en HB, ERI o índices de Wintrobe, se registra sobreescritura manual
-      _manuallyOverriddenFieldIds.add(r.labTestId);
-    } else if (canonical == 'HTC') {
-      // Hematocrito es el disparador maestro de la Serie Roja:
+    } else {
+      // 1. Hematocrito es el disparador maestro de la Serie Roja:
       // Al escribir en él, se desbloquean los campos dependientes para que se recalculen siempre
-      for (final other in _results) {
-        final otherCanonical = ClinicalFormulasRegistry.resolveCanonicalKey(other.parameterName);
-        if (otherCanonical == 'HB' ||
-            otherCanonical == 'ERI' ||
-            otherCanonical == 'VCM' ||
-            otherCanonical == 'HCM' ||
-            otherCanonical == 'CHCM') {
-          _manuallyOverriddenFieldIds.remove(other.labTestId);
+      if (canonical == 'HTC') {
+        for (final other in _results) {
+          final otherCanonical = _resolveCanonical(other);
+          if (otherCanonical == 'HB' ||
+              otherCanonical == 'ERI' ||
+              otherCanonical == 'VCM' ||
+              otherCanonical == 'HCM' ||
+              otherCanonical == 'CHCM') {
+            _manuallyOverriddenFieldIds.remove(other.labTestId);
+          }
         }
+      }
+      // 2. Colesterol Total, Triglicéridos y HDL son disparadores del Perfil Lipídico:
+      // Al escribir en cualquiera de ellos, se desbloquean los campos derivados (VLDL, LDL, Riesgo Coronario)
+      else if (canonical == 'COL-T' || canonical == 'TRIG' || canonical == 'HDL') {
+        for (final other in _results) {
+          final otherCanonical = _resolveCanonical(other);
+          if (otherCanonical == 'VLDL' ||
+              otherCanonical == 'LDL' ||
+              otherCanonical == 'RIESG-COR') {
+            _manuallyOverriddenFieldIds.remove(other.labTestId);
+          }
+        }
+      }
+      // 3. Bilirrubina Total y Directa son disparadores de la Indirecta
+      else if (canonical == 'BIL-T' || canonical == 'BIL-D') {
+        for (final other in _results) {
+          final otherCanonical = _resolveCanonical(other);
+          if (otherCanonical == 'BIL-I') {
+            _manuallyOverriddenFieldIds.remove(other.labTestId);
+          }
+        }
+      }
+
+      // Si el usuario teclea en un campo derivado o individual, se marca como sobreescritura manual
+      if (canonical != 'HTC' &&
+          canonical != 'COL-T' &&
+          canonical != 'TRIG' &&
+          canonical != 'HDL' &&
+          canonical != 'BIL-T' &&
+          canonical != 'BIL-D') {
+        _manuallyOverriddenFieldIds.add(r.labTestId);
       }
     }
     _autoCalculatedFieldIds.remove(r.labTestId);
@@ -299,7 +340,7 @@ class OrderResultsViewController extends ChangeNotifier {
       OrderTestResult? chcmResult;
 
       for (var r in _results) {
-        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        final canonical = _resolveCanonical(r);
         if (canonical != null) {
           if (canonical == 'HTC') htcResult = r;
           if (canonical == 'HB') hbResult = r;
@@ -311,7 +352,15 @@ class OrderResultsViewController extends ChangeNotifier {
           final text = _controllers[r.labTestId]?.text.trim() ?? '';
           final val = ThousandsSeparatorInputFormatter.tryParseDouble(text);
           if (val != null) {
-            available[canonical] = val;
+            // Un campo autocalculado previamente por el sistema NO debe insertarse en available
+            // a menos que haya sido sobreescrito manualmente por el usuario. Esto garantiza
+            // que evaluateAll siempre recalcule el valor con los insumos disparadores más recientes
+            // (evitando quedar congelado en estados intermedios mientras el usuario escribe).
+            final wasAuto = _autoCalculatedFieldIds.contains(r.labTestId);
+            final isManual = _manuallyOverriddenFieldIds.contains(r.labTestId);
+            if (!wasAuto || isManual) {
+              available[canonical] = val;
+            }
           }
         }
       }
@@ -324,9 +373,7 @@ class OrderResultsViewController extends ChangeNotifier {
           orElse: () => null,
         );
         if (triggeredResult != null) {
-          triggeredCanonical = ClinicalFormulasRegistry.resolveCanonicalKey(
-            triggeredResult.parameterName,
-          );
+          triggeredCanonical = _resolveCanonical(triggeredResult);
         }
       }
 
@@ -433,7 +480,7 @@ class OrderResultsViewController extends ChangeNotifier {
       ];
 
       for (var r in wintrobeKeys) {
-        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        final canonical = _resolveCanonical(r);
         if (canonical == null) continue;
         if (r.labTestId == triggeredTestId) continue;
 
@@ -457,7 +504,7 @@ class OrderResultsViewController extends ChangeNotifier {
       // 3. EVALUACIÓN DE OTRAS FÓRMULAS DEL SISTEMA (Ej. Bilirrubinas)
       // =========================================================================
       for (var r in _results) {
-        final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+        final canonical = _resolveCanonical(r);
         if (canonical == null) continue;
         if (r.labTestId == triggeredTestId) continue;
         if (canonical == 'HTC' ||
@@ -473,10 +520,10 @@ class OrderResultsViewController extends ChangeNotifier {
           final calc = computedResults[canonical]!;
           final controller = _controllers[r.labTestId];
           if (controller != null) {
-            final currentText = controller.text.trim();
-            final wasAuto = _autoCalculatedFieldIds.contains(r.labTestId);
+            final isManual = _manuallyOverriddenFieldIds.contains(r.labTestId);
 
-            if (currentText.isEmpty || wasAuto) {
+            // Siempre recalcular si el usuario no ha forzado una sobreescritura manual en este campo
+            if (!isManual) {
               final formatted = ThousandsSeparatorInputFormatter.formatText(calc.formattedValue);
               if (controller.text != formatted) {
                 controller.text = formatted;

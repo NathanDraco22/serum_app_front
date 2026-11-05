@@ -90,7 +90,12 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
     final Map<String, ClinicalComparisonPdfRow> map = {};
 
     String resolveKey(OrderTestResult r) {
-      final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+      final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(
+        r.parameterName,
+        subclassification: r.subclassification,
+        medicalClassification: r.medicalClassification,
+        dataType: r.dataType,
+      );
       if (canonical != null) return canonical;
       if (r.labTestId.isNotEmpty) return r.labTestId.toLowerCase();
       return r.parameterName.trim().toLowerCase();

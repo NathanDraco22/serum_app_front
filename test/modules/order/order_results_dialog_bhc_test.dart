@@ -6,9 +6,31 @@ import 'package:serum_app_front/src/modules/order/widgets/order_results_dialog.d
 import 'package:serum_business/serum_business.dart';
 
 class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
+  Map<String, dynamic>? lastUpdatedPayload;
+
   @override
   Future<Map<String, dynamic>?> updateOrderById(String orderId, Map<String, dynamic> order) async {
-    return null;
+    lastUpdatedPayload = order;
+    return {
+      'id': orderId,
+      'patientId': 'PAT-1',
+      'branchId': 'branch-1',
+      'totalPrice': 20000,
+      'paidAmount': 20000,
+      'salePriceApplied': 20000,
+      'originalPrice': 20000,
+      'status': 'paid',
+      'createdAt': 1700000000000,
+      'patientInfo': {
+        'name': 'Paciente PAT-1',
+        'gender': 'male',
+        'age': '30',
+        'phone': '12345678',
+        'address': '',
+      },
+      'items': [],
+      'results': order['results'] ?? [],
+    };
   }
 }
 
@@ -244,5 +266,263 @@ void main() {
 
     // ERI = 42 / 9 = 4.667
     expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('4.667'));
+  });
+
+  testWidgets(
+      '5. Orden multi-perfil (BHC + EGO) autocalcula Eritrocitos en Serie Roja sin sobreescribir ni desviar hacia Sedimento Urinario, y persiste al guardar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final multiOrder = OrderInDb(
+      id: 'ORD-TEST-MULTI-01',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 40000,
+      paidAmount: 40000,
+      status: 'paid',
+      createdAt: 1700000000000,
+      items: [
+        OrderItem(
+          labTestId: 'test-bhc',
+          name: 'Biometría Hemática Completa',
+          salePriceApplied: 25000,
+          originalPrice: 25000,
+          isPack: true,
+        ),
+        OrderItem(
+          labTestId: 'test-ego',
+          name: 'Examen General de Orina',
+          salePriceApplied: 15000,
+          originalPrice: 15000,
+          isPack: true,
+        ),
+      ],
+      results: [
+        // 1. Serie Roja (BHC)
+        OrderTestResult(
+          labTestId: 'test-eri-bhc',
+          parameterName: 'Eritrocitos',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: 'xmm3',
+        ),
+        OrderTestResult(
+          labTestId: 'test-hb-bhc',
+          parameterName: 'Hemoglobina',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: 'g/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-htc-bhc',
+          parameterName: 'Hematocrito',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: '%',
+        ),
+        OrderTestResult(
+          labTestId: 'test-vcm-bhc',
+          parameterName: 'VCM (Volumen Corpuscular Medio)',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: 'fL',
+        ),
+        // 2. Sedimento Urinario (EGO) - Tipo text con nombre similar
+        OrderTestResult(
+          labTestId: 'test-eri-ego',
+          parameterName: 'Eritrocitos (Sedimento Urinario)',
+          medicalClassification: 'Uroanálisis',
+          subclassification: 'Sedimento Microscópico',
+          dataType: 'text',
+          unitOfMeasure: 'x Campos',
+        ),
+        OrderTestResult(
+          labTestId: 'test-leu-ego',
+          parameterName: 'Leucocitos Libres',
+          medicalClassification: 'Uroanálisis',
+          subclassification: 'Sedimento Microscópico',
+          dataType: 'text',
+          unitOfMeasure: 'x Campos',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildTestWidget(multiOrder));
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+
+    // Escribir HTC = 45 % en el campo de Hematocrito (índice 2: test-htc-bhc)
+    await tester.enterText(textFormFields.at(2), '45');
+    await tester.pumpAndSettle();
+
+    // 1. Verificar que Eritrocitos de BHC (test-eri-bhc, índice 0) se autocalculó a 5.000
+    final eriBhcController = tester.widget<TextFormField>(textFormFields.at(0)).controller;
+    expect(eriBhcController?.text, equals('5.000'));
+
+    // 2. Verificar que Hemoglobina de BHC (test-hb-bhc, índice 1) se autocalculó a 15
+    final hbBhcController = tester.widget<TextFormField>(textFormFields.at(1)).controller;
+    expect(hbBhcController?.text, equals('15'));
+
+    // Scroll en ListView para traer a la vista los parámetros de Sedimento Urinario y el botón Guardar
+    final listView = find.byType(ListView);
+    await tester.drag(listView, const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    // 3. Guardar resultados presionando el botón "Guardar Resultados"
+    final saveButton = find.widgetWithText(ElevatedButton, 'Guardar Resultados');
+    expect(saveButton, findsOneWidget);
+    await tester.tap(saveButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 4. Verificar que el payload persistido contenga test-eri-bhc con valor '5.000'
+    final payload = fakeOrdersDataSource.lastUpdatedPayload;
+    expect(payload, isNotNull);
+    final resultsPayload = (payload!['results'] as List).cast<Map<String, dynamic>>();
+
+    final eriSaved = resultsPayload.firstWhere((r) => r['labTestId'] == 'test-eri-bhc');
+    expect(eriSaved['resultValue'], equals('5.000'));
+
+    // 5. Verificar que Eritrocitos (Sedimento Urinario) de EGO permanezca intacto y no contaminado
+    final eriEgoSaved = resultsPayload.firstWhere((r) => r['labTestId'] == 'test-eri-ego');
+    expect(eriEgoSaved['resultValue'] == null || eriEgoSaved['resultValue'] == '', isTrue);
+    expect(eriEgoSaved['resultValue'], equals(''));
+  });
+
+  testWidgets(
+      '6. Perfil Lipídico: Recálculo continuo en vivo de Riesgo Coronario al teclear paso a paso (ej. 4 -> 43 en HDL no se congela en 51.8)',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final lipidOrder = OrderInDb(
+      id: 'ORD-TEST-LIPID-01',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 30000,
+      paidAmount: 30000,
+      status: 'paid',
+      createdAt: 1700000000000,
+      items: [
+        OrderItem(
+          labTestId: 'test-perfil-lip',
+          name: 'Perfil Lipídico',
+          salePriceApplied: 30000,
+          originalPrice: 30000,
+          isPack: true,
+        ),
+      ],
+      results: [
+        OrderTestResult(
+          labTestId: 'test-col-t',
+          parameterName: 'Colesterol Total',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-trig',
+          parameterName: 'Triglicéridos',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-hdl',
+          parameterName: 'Colesterol HDL',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-ldl',
+          parameterName: 'Colesterol LDL',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-vldl',
+          parameterName: 'Colesterol VLDL',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-riesg-cor',
+          parameterName: 'Riesgo Coronario',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Perfil Lipídico',
+          dataType: 'numeric',
+          unitOfMeasure: '%',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildTestWidget(lipidOrder));
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+
+    // 1. Escribir Colesterol Total = 207
+    await tester.enterText(textFormFields.at(0), '207');
+    await tester.pumpAndSettle();
+
+    // 2. Escribir Triglicéridos = 92 -> VLDL = 92 / 5 = 18.4
+    await tester.enterText(textFormFields.at(1), '92');
+    await tester.pumpAndSettle();
+
+    // 3. Simular primer golpe de tecla en HDL: teclear '4'
+    // En ese instante: 207 / 4 = 51.75 -> 51.8
+    await tester.enterText(textFormFields.at(2), '4');
+    await tester.pumpAndSettle();
+
+    // Scroll para ver los campos autocalculados de Riesgo Coronario, VLDL y LDL
+    final listView = find.byType(ListView);
+    await tester.drag(listView, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    // En el paso intermedio con HDL = 4, Riesgo Coronario muestra 51.8
+    expect(find.text('51.8'), findsOneWidget);
+
+    // 4. Regresar el scroll hacia arriba para escribir en HDL
+    await tester.drag(listView, const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    // Completar escritura en HDL: teclear '43'
+    final textFormFieldsTop = find.byType(TextFormField);
+    await tester.enterText(textFormFieldsTop.at(2), '43');
+    await tester.pumpAndSettle();
+
+    // Scroll hacia abajo para verificar los campos derivados actualizados
+    await tester.drag(listView, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    // Debe haberse recalculado de inmediato a 207 / 43 = 4.81... -> '4.8', NUNCA quedarse congelado en 51.8
+    expect(find.text('4.8'), findsOneWidget);
+    expect(find.text('51.8'), findsNothing);
+
+    // 5. Verificar que VLDL (18.4) y LDL (207 - 43 - 18.4 = 145.6) también están calculados correctamente
+    expect(find.text('18.4'), findsOneWidget);
+    expect(find.text('145.6'), findsOneWidget);
   });
 }

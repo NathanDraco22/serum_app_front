@@ -148,6 +148,24 @@ void main() {
       expect(ClinicalFormulasRegistry.resolveCanonicalKey('CHCM'), 'CHCM');
 
       expect(ClinicalFormulasRegistry.resolveCanonicalKey('Glucosa'), isNull);
+
+      // Parámetros de otros perfiles y fluidos (deben aislarse y no colisionar con Serie Roja / Blanca)
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Eritrocitos (Sedimento Urinario)',
+          subclassification: 'Sedimento Microscópico',
+          medicalClassification: 'Uroanálisis',
+          dataType: 'text',
+        ),
+        isNull,
+      );
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Eritrocitos (Sedimento Urinario)'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Hemoglobina (Heces)'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Leucocitos (Orina)'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Leucocitos Libres'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Eritrosedimentación (VSG)'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Bacterias'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Monotest (Mononucleosis Infecciosa)'), isNull);
     });
 
     test('7. Casos Borde: División por Cero y Datos Incompletos', () {
@@ -237,6 +255,20 @@ void main() {
       expect(results['RIESG-COR'], isNotNull);
       expect(results['RIESG-COR']!.formattedValue, '2.9');
       expect(results['RIESG-COR']!.formulaDisplay, 'Colesterol Total / HDL');
+
+      // Caso exacto de reporte clínico: COL-T = 207, TRIG = 92, HDL = 43
+      final inputsCasoReal = {
+        'COL-T': 207.0,
+        'TRIG': 92.0,
+        'HDL': 43.0,
+      };
+      final resultsCasoReal = ClinicalFormulasRegistry.evaluateAll(inputsCasoReal);
+      // VLDL = 92 / 5 = 18.4
+      expect(resultsCasoReal['VLDL']!.formattedValue, '18.4');
+      // LDL = 207 - 43 - 18.4 = 145.6
+      expect(resultsCasoReal['LDL']!.formattedValue, '145.6');
+      // Riesgo Coronario = 207 / 43 = 4.81395... -> '4.8'
+      expect(resultsCasoReal['RIESG-COR']!.formattedValue, '4.8');
     });
 
     test('11. Resolución Canónica de Alias de Perfil Lipídico', () {

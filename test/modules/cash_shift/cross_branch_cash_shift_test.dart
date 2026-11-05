@@ -2,30 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_app_front/src/cubits/app_session_cubit/app_session_cubit.dart';
-import 'package:serum_app_front/src/cubits/cash_shift_cubit/write_cash_shifts_cubit.dart';
 import 'package:serum_app_front/src/cubits/order_cubit/write_orders_cubit.dart';
 import 'package:serum_app_front/src/modules/cash_shift/widgets/cash_shift_open_dialog.dart';
 import 'package:serum_app_front/src/modules/order/widgets/order_pay_dialog.dart';
 import 'package:serum_business/serum_business.dart';
-
-class _FakeCashShiftsDataSource extends Fake implements CashShiftsDataSource {
-  @override
-  Future<Map<String, dynamic>> openCashShift(Map<String, dynamic> cashShift) async {
-    return {
-      'id': 'shift-200',
-      'userId': 'u1',
-      'branchId': 'b2',
-      'branchName': 'Sucursal Norte',
-      'status': 'OPEN',
-      'initialBalance': 10000,
-      'cashBalance': 0,
-      'cardBalance': 0,
-      'transferBalance': 0,
-      'openedAt': 1000,
-      'createdAt': 1000,
-    };
-  }
-}
 
 class _TestAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCubit {
   String? switchedBranchId;

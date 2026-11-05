@@ -22,7 +22,12 @@ class PatientHistoryHelpers {
     final hematologyKeys = {'ERI', 'HB', 'HTC', 'VCM', 'LEU', 'PLAQ'};
     int matches = 0;
     for (final r in order.results) {
-      final key = ClinicalFormulasRegistry.resolveCanonicalKey(r.parameterName);
+      final key = ClinicalFormulasRegistry.resolveCanonicalKey(
+        r.parameterName,
+        subclassification: r.subclassification,
+        medicalClassification: r.medicalClassification,
+        dataType: r.dataType,
+      );
       if (key != null && hematologyKeys.contains(key)) {
         matches++;
       }

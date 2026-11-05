@@ -490,6 +490,49 @@ class ClinicalFormulasRegistry {
     return null;
   }
 
+  /// Palabras clave de fluidos y muestras no sanguíneas que descartan
+  /// que un parámetro pertenezca a la Serie Roja o Serie Blanca sanguínea.
+  static const Set<String> _hematologyExclusionKeywords = {
+    'sedimento',
+    'urinario',
+    'urinaria',
+    'orina',
+    'heces',
+    'fecal',
+    'fecales',
+    'nasal',
+    'nasales',
+    'frotis',
+    'vsg',
+    'sedimentacion',
+    'sedimentación',
+    'monotest',
+    'bacterias',
+    'libres',
+    'agrupados',
+    'campo',
+    'campos',
+  };
+
+  /// Claves canónicas pertenecientes estrictamente a la hematología sanguínea.
+  static const Set<String> _bloodHematologyKeys = {
+    'ERI',
+    'HB',
+    'HTC',
+    'VCM',
+    'HCM',
+    'CHCM',
+    'LEU',
+    'PLAQ',
+    'SEG',
+    'LINF',
+    'EOS',
+    'MON',
+    'BAN',
+    'BAS',
+    'LINF-ATIP',
+  };
+
   /// Lista aplanada de pares (alias, claveCanonica) ordenada por longitud de alias descendente,
   /// garantizando que frases compuestas (ej. 'hemoglobina corpuscular media') se evalúen
   /// antes que términos más genéricos (ej. 'hemoglobina').
@@ -507,35 +550,135 @@ class ClinicalFormulasRegistry {
     return list;
   }();
 
-  /// Resuelve la clave canónica estándar ('ERI', 'HB', etc.) a partir de un texto.
+  /// Resuelve la clave canónica estándar ('ERI', 'HB', etc.) a partir de un texto,
+  /// incorporando contexto clínico opcional para evitar colisiones entre perfiles
+  /// (ej. 'Eritrocitos (Sedimento Urinario)' vs 'Eritrocitos' de Serie Roja).
+  ///
   /// Retorna `null` si el texto no corresponde a ningún parámetro conocido de fórmulas.
-  static String? resolveCanonicalKey(String text) {
+  static String? resolveCanonicalKey(
+    String text, {
+    String? subclassification,
+    String? medicalClassification,
+    String? dataType,
+  }) {
     final clean = text.trim().toLowerCase();
+    if (clean.isEmpty) return null;
 
-    // 1. Coincidencia exacta con la clave canónica (ej. "VCM", "HB")
-    for (final key in _canonicalAliases.keys) {
-      if (clean == key.toLowerCase()) return key;
+    // Validación preventiva por tipo de dato: todos los parámetros analíticos de cálculo
+    // clínico (Serie Roja, diferencial, bioquímica, lípidos) son exclusivamente numéricos.
+    if (dataType != null && dataType.isNotEmpty && dataType != 'numeric') {
+      return null;
     }
 
-    // 2. Coincidencia al inicio con paréntesis (ej. "VCM (Volumen Corpuscular Medio)")
+    // 1. Coincidencia exacta con la clave canónica (ej. "VCM", "HB", "ERI")
+    for (final key in _canonicalAliases.keys) {
+      if (clean == key.toLowerCase()) {
+        return _validateContextualMatch(
+          key,
+          clean,
+          subclassification,
+          medicalClassification,
+        );
+      }
+    }
+
+    // 2. Coincidencia al inicio con delimitadores (ej. "VCM (Volumen Corpuscular Medio)", "ERI-")
     for (final key in _canonicalAliases.keys) {
       final keyLower = key.toLowerCase();
       if (clean.startsWith('$keyLower ') ||
           clean.startsWith('$keyLower(') ||
           clean.startsWith('$keyLower-') ||
           clean.contains('($keyLower)')) {
-        return key;
+        return _validateContextualMatch(
+          key,
+          clean,
+          subclassification,
+          medicalClassification,
+        );
       }
     }
 
-    // 3. Coincidencia de alias ordenados por mayor longitud (evita colisiones como 'hemoglobina' en 'HCM')
+    // 3. Coincidencia de alias ordenados por mayor longitud con delimitación de palabra
     for (final item in _sortedAliases) {
-      if (clean == item.key || clean.contains(item.key)) {
-        return item.value;
+      final alias = item.key;
+      final key = item.value;
+
+      // Coincidencia exacta del alias completo
+      if (clean == alias) {
+        return _validateContextualMatch(
+          key,
+          clean,
+          subclassification,
+          medicalClassification,
+        );
+      }
+
+      // Si el alias es corto (<= 4 caracteres, ej. 'eri', 'hb', 'mon', 'eos'), exigir delimitador estricto
+      // para evitar falsos positivos dentro de palabras mayores (ej. 'bacterias', 'seriado', 'monotest').
+      final bool matches;
+      if (alias.length <= 4) {
+        final pattern = RegExp('(^|[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ])$alias([^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ]|\$)');
+        matches = pattern.hasMatch(clean);
+      } else {
+        matches = clean.contains(alias);
+      }
+
+      if (matches) {
+        final validated = _validateContextualMatch(
+          key,
+          clean,
+          subclassification,
+          medicalClassification,
+        );
+        if (validated != null) return validated;
       }
     }
 
     return null;
+  }
+
+  /// Valida que la coincidencia encontrada no sea un falso positivo proveniente de
+  /// otra muestra o perfil clínico (orina, heces, secreción nasal, etc.).
+  static String? _validateContextualMatch(
+    String key,
+    String cleanText,
+    String? subclassification,
+    String? medicalClassification,
+  ) {
+    if (_bloodHematologyKeys.contains(key)) {
+      // 1. Descartar si el texto contiene palabras clave de exclusión hematológica
+      for (final kw in _hematologyExclusionKeywords) {
+        if (cleanText.contains(kw)) {
+          return null;
+        }
+      }
+
+      // 2. Descartar si la subclasificación pertenece a uroanálisis o coprología
+      if (subclassification != null && subclassification.isNotEmpty) {
+        final subLower = subclassification.toLowerCase();
+        if (subLower.contains('sedimento') ||
+            subLower.contains('orina') ||
+            subLower.contains('uroan') ||
+            subLower.contains('coprolog') ||
+            subLower.contains('heces') ||
+            subLower.contains('frotis')) {
+          return null;
+        }
+      }
+
+      // 3. Descartar si la clasificación médica es uroanálisis o coprología
+      if (medicalClassification != null && medicalClassification.isNotEmpty) {
+        final medLower = medicalClassification.toLowerCase();
+        if (medLower.contains('uroan') ||
+            medLower.contains('coprolog') ||
+            medLower.contains('orina') ||
+            medLower.contains('heces')) {
+          return null;
+        }
+      }
+    }
+
+    return key;
   }
 
   /// Busca si existe una fórmula que tenga como destino el parámetro dado (por nombre o código).
