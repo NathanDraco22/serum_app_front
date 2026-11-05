@@ -75,6 +75,18 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
       return;
     }
 
+    if (sessionCubit.hasShiftBranchMismatch) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Tu turno activo (#${activeShift.id}) pertenece a "${activeShift.branchName ?? 'otra sucursal'}". No puedes cobrar en "${sessionCubit.currentBranchName}".',
+          ),
+          backgroundColor: Colors.orange.shade800,
+        ),
+      );
+      return;
+    }
+
     final parsedDouble = double.tryParse(
             _amountController.text.trim().replaceAll(',', '')) ??
         0.0;
@@ -122,7 +134,12 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
     final isWriting = writeState is WritingOrder;
     final activeShift = session.activeShift;
     final currentUser = session.user;
-    final canPay = activeShift != null && activeShift.isOpen && !isWriting;
+    final isShiftInCurrentBranch = session.isShiftInCurrentBranch;
+    final hasShiftBranchMismatch = session.hasShiftBranchMismatch;
+    final canPay = activeShift != null &&
+        activeShift.isOpen &&
+        isShiftInCurrentBranch &&
+        !isWriting;
 
     return PopScope(
       canPop: !isWriting,
@@ -237,7 +254,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                 const SizedBox(height: 16),
 
                 // Información del Turno de Caja del Usuario
-                if (activeShift != null)
+                if (activeShift != null && isShiftInCurrentBranch)
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),
@@ -274,6 +291,66 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                                 ),
                               ),
                             ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else if (activeShift != null && hasShiftBranchMismatch)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade400),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.amber.shade900,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Turno en Otra Sucursal',
+                                style: TextStyle(
+                                  color: Colors.amber.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tu turno activo (#${activeShift.id}) pertenece a "${activeShift.branchName ?? 'otra sucursal'}". No puedes cobrar órdenes en "${session.currentBranchName}". Cambia a la sucursal de tu turno para continuar.',
+                          style: TextStyle(
+                            color: Colors.amber.shade900,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.tonalIcon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.amber.shade200,
+                              foregroundColor: Colors.amber.shade900,
+                            ),
+                            icon: const Icon(Icons.swap_horiz_rounded, size: 16),
+                            label: Text(
+                              'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                            ),
+                            onPressed: () {
+                              session.changeBranch(activeShift.branchId);
+                              Navigator.of(context).pop();
+                            },
                           ),
                         ),
                       ],

@@ -231,7 +231,10 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final session = context.watch<AppSessionCubit>();
     final isOpen = widget.shift.isOpen;
+    final isShiftInCurrentBranch =
+        widget.shift.branchId == session.currentBranchId;
     final shortId = widget.shift.id.length >= 8
         ? widget.shift.id.substring(0, 8)
         : widget.shift.id;
@@ -341,6 +344,44 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                   ],
                 ),
               ),
+
+              if (!isShiftInCurrentBranch)
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  color: Colors.amber.shade100,
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          size: 18, color: Colors.amber.shade900),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Este turno pertenece a "${widget.shift.branchName ?? widget.shift.branchId}". Estás en "${session.currentBranchName}". Los nuevos movimientos y cancelaciones están deshabilitados hasta que cambies a la sucursal del turno.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber.shade900,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          backgroundColor: Colors.amber.shade200,
+                          foregroundColor: Colors.amber.shade900,
+                        ),
+                        onPressed: () {
+                          session.changeBranch(widget.shift.branchId);
+                          Navigator.of(context).pop(_hasModified);
+                        },
+                        child: const Text('Cambiar'),
+                      ),
+                    ],
+                  ),
+                ),
 
               // Body Content
               Expanded(
@@ -528,7 +569,7 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                         ),
                         icon: const Icon(Icons.add, size: 18),
                         label: const Text('Nuevo Movimiento'),
-                        onPressed: _isProcessing
+                        onPressed: (_isProcessing || !isShiftInCurrentBranch)
                             ? null
                             : () async {
                                 final res = await CashMovementDialog.show(

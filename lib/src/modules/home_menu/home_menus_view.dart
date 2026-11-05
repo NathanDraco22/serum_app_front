@@ -194,87 +194,144 @@ class _SideNav extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 // Active Cash Shift info
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: activeShift != null
-                        ? theme.colorScheme.primaryContainer.withAlpha(50)
-                        : theme.colorScheme.surfaceContainerHighest.withAlpha(40),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: activeShift != null
-                          ? theme.colorScheme.primary.withAlpha(80)
-                          : theme.colorScheme.outlineVariant.withAlpha(80),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        activeShift != null
-                            ? Icons.point_of_sale
-                            : Icons.lock_open_rounded,
-                        size: 18,
-                        color: activeShift != null
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              activeShift != null
-                                  ? '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en caja'
-                                  : 'Sin turno abierto',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              activeShift != null
-                                  ? 'Turno Activo (Fondo: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)})'
-                                  : 'Abre turno para cobrar',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
+                Builder(
+                  builder: (context) {
+                    final hasMismatch = sessionState.hasShiftBranchMismatch;
+                    final isInBranch = sessionState.isShiftInCurrentBranch;
+
+                    Color bgColor;
+                    Color borderColor;
+                    IconData iconData;
+                    Color iconColor;
+                    String titleText;
+                    String subtitleText;
+                    Color titleColor;
+                    Color subtitleColor;
+                    Widget actionButton;
+
+                    if (activeShift != null && hasMismatch) {
+                      bgColor = Colors.amber.shade50;
+                      borderColor = Colors.amber.shade400;
+                      iconData = Icons.warning_amber_rounded;
+                      iconColor = Colors.amber.shade900;
+                      titleText =
+                          'Turno en "${activeShift.branchName ?? 'otra sucursal'}"';
+                      subtitleText =
+                          '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} • Cambia de sucursal';
+                      titleColor = Colors.amber.shade900;
+                      subtitleColor = Colors.amber.shade800;
+                      actionButton = IconButton(
                         icon: Icon(
-                          activeShift != null
-                              ? Icons.lock_clock_rounded
-                              : Icons.add_circle_outline,
+                          Icons.swap_horiz_rounded,
                           size: 18,
-                          color: activeShift != null
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.primary,
+                          color: Colors.amber.shade900,
                         ),
-                        tooltip: activeShift != null
-                            ? 'Corte y Arqueo de Turno'
-                            : 'Abrir Turno de Caja',
+                        tooltip:
+                            'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                        onPressed: () {
+                          context
+                              .read<AppSessionCubit>()
+                              .changeBranch(activeShift.branchId);
+                        },
+                      );
+                    } else if (activeShift != null && isInBranch) {
+                      bgColor =
+                          theme.colorScheme.primaryContainer.withAlpha(50);
+                      borderColor = theme.colorScheme.primary.withAlpha(80);
+                      iconData = Icons.point_of_sale;
+                      iconColor = theme.colorScheme.primary;
+                      titleText =
+                          '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en caja';
+                      subtitleText =
+                          'Turno Activo (Fondo: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)})';
+                      titleColor = theme.colorScheme.onSurface;
+                      subtitleColor = theme.colorScheme.onSurfaceVariant;
+                      actionButton = IconButton(
+                        icon: Icon(
+                          Icons.lock_clock_rounded,
+                          size: 18,
+                          color: theme.colorScheme.error,
+                        ),
+                        tooltip: 'Corte y Arqueo de Turno',
                         onPressed: () async {
-                          if (activeShift != null) {
-                            final res =
-                                await CashShiftCloseDialog.show(context, activeShift);
-                            if (res != null && context.mounted) {
-                              showCashShiftViewerDialog(context, res);
-                            }
-                          } else {
-                            CashShiftOpenDialog.show(context);
+                          final res = await CashShiftCloseDialog.show(
+                              context, activeShift);
+                          if (res != null && context.mounted) {
+                            showCashShiftViewerDialog(context, res);
                           }
                         },
+                      );
+                    } else {
+                      bgColor =
+                          theme.colorScheme.surfaceContainerHighest.withAlpha(40);
+                      borderColor =
+                          theme.colorScheme.outlineVariant.withAlpha(80);
+                      iconData = Icons.lock_open_rounded;
+                      iconColor = theme.colorScheme.onSurfaceVariant;
+                      titleText = 'Sin turno abierto';
+                      subtitleText = 'Abre turno para cobrar';
+                      titleColor = theme.colorScheme.onSurface;
+                      subtitleColor = theme.colorScheme.onSurfaceVariant;
+                      actionButton = IconButton(
+                        icon: Icon(
+                          Icons.add_circle_outline,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                        tooltip: 'Abrir Turno de Caja',
+                        onPressed: () {
+                          CashShiftOpenDialog.show(context);
+                        },
+                      );
+                    }
+
+                    return Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: borderColor,
+                          width: 1,
+                        ),
                       ),
-                    ],
-                  ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            iconData,
+                            size: 18,
+                            color: iconColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  titleText,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: titleColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  subtitleText,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: subtitleColor,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          actionButton,
+                        ],
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
 

@@ -55,7 +55,7 @@ class _BodyState extends State<_Body> {
   void _loadShifts() {
     final bId = context.read<AppSessionCubit>().currentBranchId;
     context.read<ReadCashShiftCubit>().getAll(branchId: bId);
-    context.read<AppSessionCubit>().fetchActiveShift(bId);
+    context.read<AppSessionCubit>().fetchActiveShift();
   }
 
   @override
@@ -64,6 +64,8 @@ class _BodyState extends State<_Body> {
     final sessionState = context.watch<AppSessionCubit>().state;
     final user = sessionState.currentUser;
     final activeShift = sessionState.activeShift;
+    final isShiftInCurrentBranch = sessionState.isShiftInCurrentBranch;
+    final hasShiftBranchMismatch = sessionState.hasShiftBranchMismatch;
 
     final shiftsState = context.watch<ReadCashShiftCubit>().state;
     List<CashShiftInDb> shifts = [];
@@ -139,37 +141,45 @@ class _BodyState extends State<_Body> {
                   ),
                   icon: const Icon(Icons.receipt_long_rounded, size: 18),
                   label: const Text('Movimientos de Caja'),
-                  onPressed: () async {
-                    final res = await CashMovementsListDialog.show(
-                      context,
-                      shift: activeShift,
-                    );
-                    if (res == true) {
-                      _loadShifts();
-                    }
-                  },
+                  onPressed: isShiftInCurrentBranch
+                      ? () async {
+                          final res = await CashMovementsListDialog.show(
+                            context,
+                            shift: activeShift,
+                          );
+                          if (res == true) {
+                            _loadShifts();
+                          }
+                        }
+                      : null,
                 ),
                 const SizedBox(width: 10),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: theme.colorScheme.error,
-                    foregroundColor: theme.colorScheme.onError,
+                    backgroundColor: isShiftInCurrentBranch
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.outlineVariant,
+                    foregroundColor: isShiftInCurrentBranch
+                        ? theme.colorScheme.onError
+                        : theme.colorScheme.onSurfaceVariant,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
                   icon: const Icon(Icons.lock_clock_rounded, size: 18),
                   label: const Text('Corte y Arqueo (Mi Turno)'),
-                  onPressed: () async {
-                    final res =
-                        await CashShiftCloseDialog.show(context, activeShift);
-                    if (res != null) {
-                      _loadShifts();
-                      if (context.mounted) {
-                        showCashShiftViewerDialog(context, res);
-                      }
-                    }
-                  },
+                  onPressed: isShiftInCurrentBranch
+                      ? () async {
+                          final res =
+                              await CashShiftCloseDialog.show(context, activeShift);
+                          if (res != null) {
+                            _loadShifts();
+                            if (context.mounted) {
+                              showCashShiftViewerDialog(context, res);
+                            }
+                          }
+                        }
+                      : null,
                 ),
               ] else
                 FilledButton.icon(
@@ -198,6 +208,62 @@ class _BodyState extends State<_Body> {
             ],
           ),
         ),
+
+        // Banner informativo cuando el turno activo pertenece a otra sucursal
+        if (hasShiftBranchMismatch && activeShift != null)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.shade400),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.amber.shade900,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Turno activo en otra sucursal',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tienes el turno abierto #${activeShift.id} en "${activeShift.branchName ?? 'otra sucursal'}". No puedes registrar cobros, movimientos de caja ni abrir otro turno mientras navegues en "${sessionState.currentBranch?.name ?? 'esta sucursal'}".',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.amber.shade200,
+                    foregroundColor: Colors.amber.shade900,
+                  ),
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                  label: Text('Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}'),
+                  onPressed: () {
+                    context.read<AppSessionCubit>().changeBranch(activeShift.branchId);
+                  },
+                ),
+              ],
+            ),
+          ),
 
         // Filter chips bar
         Container(
@@ -241,26 +307,38 @@ class _BodyState extends State<_Body> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withAlpha(70),
+                    color: isShiftInCurrentBranch
+                        ? theme.colorScheme.primaryContainer.withAlpha(70)
+                        : Colors.amber.shade100,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: theme.colorScheme.primary.withAlpha(120),
+                      color: isShiftInCurrentBranch
+                          ? theme.colorScheme.primary.withAlpha(120)
+                          : Colors.amber.shade400,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.check_circle,
+                        isShiftInCurrentBranch
+                            ? Icons.check_circle
+                            : Icons.warning_amber_rounded,
                         size: 14,
-                        color: theme.colorScheme.primary,
+                        color: isShiftInCurrentBranch
+                            ? theme.colorScheme.primary
+                            : Colors.amber.shade900,
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Tienes un turno activo: \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en efectivo',
+                        isShiftInCurrentBranch
+                            ? 'Tienes un turno activo: \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en efectivo'
+                            : 'Turno en "${activeShift.branchName ?? 'otra sucursal'}": \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                          color: isShiftInCurrentBranch
+                              ? theme.colorScheme.primary
+                              : Colors.amber.shade900,
                         ),
                       ),
                     ],

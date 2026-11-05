@@ -36,6 +36,18 @@ class AppSessionState {
   bool get hasBranch => currentBranch != null;
   bool get hasActiveShift => activeShift != null;
 
+  /// Indica si el turno activo pertenece exactamente a la sucursal actual de la sesión.
+  bool get isShiftInCurrentBranch =>
+      activeShift != null &&
+      currentBranch != null &&
+      activeShift!.branchId == currentBranch!.id;
+
+  /// Indica si el usuario tiene un turno activo pero en una sucursal distinta a la actual.
+  bool get hasShiftBranchMismatch =>
+      activeShift != null &&
+      currentBranch != null &&
+      activeShift!.branchId != currentBranch!.id;
+
   /// Retorna si el usuario en sesión cuenta con privilegios root del sistema.
   bool get isRootUser {
     final u = currentUser;

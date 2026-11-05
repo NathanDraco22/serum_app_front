@@ -40,6 +40,19 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
     final sessionCubit = context.read<AppSessionCubit>();
     final user = sessionCubit.user;
     final branchId = sessionCubit.currentBranchId;
+    final activeShift = sessionCubit.activeShift;
+
+    if (activeShift != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Ya tienes un turno abierto (#${activeShift.id}) en "${activeShift.branchName ?? 'otra sucursal'}". No puedes abrir más de un turno simultáneo.',
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,6 +111,87 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final session = context.watch<AppSessionCubit>();
+    final activeShift = session.activeShift;
+
+    if (activeShift != null) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          width: 480,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.amber.shade900,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Turno Ya Abierto',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.amber.shade400),
+                ),
+                child: Text(
+                  'Actualmente tienes el turno abierto #${activeShift.id} en la sucursal "${activeShift.branchName ?? 'otra sucursal'}".\n\nEl sistema permite únicamente un turno activo por custodio. Para operar una caja en "${session.currentBranchName}", debes cerrar previamente tu turno en "${activeShift.branchName ?? 'la sucursal correspondiente'}".',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.amber.shade900,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cerrar'),
+                  ),
+                  FilledButton.tonalIcon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.amber.shade200,
+                      foregroundColor: Colors.amber.shade900,
+                    ),
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                    label: Text(
+                      'Ir a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                    ),
+                    onPressed: () {
+                      session.changeBranch(activeShift.branchId);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

@@ -73,6 +73,8 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Servin? get servin => state.servin;
   CashShiftInDb? get activeShift => state.activeShift;
   bool get hasActiveShift => state.hasActiveShift;
+  bool get isShiftInCurrentBranch => state.isShiftInCurrentBranch;
+  bool get hasShiftBranchMismatch => state.hasShiftBranchMismatch;
   bool get isRootUser => state.isRootUser;
 
   bool get hasMultipleBranches {
@@ -349,7 +351,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
       // Precargar logotipos de la sucursal activa en caché de disco y memoria
       unawaited(AppImageCache.precacheBranchLogos(branch));
 
-      await fetchActiveShift(branch.id);
+      await fetchActiveShift();
     } catch (error) {
       emit(state.copyWith(errorMessage: error.toString()));
     }
@@ -390,15 +392,16 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     );
   }
 
-  /// Consulta el turno activo del usuario actual para la sucursal activa
+  /// Consulta el turno activo del usuario actual (global o por sucursal).
+  /// Por defecto busca el turno activo global del usuario sin importar la sucursal actual.
   Future<void> fetchActiveShift([String? branchId]) async {
     final currentUser = state.currentUser;
     if (currentUser == null || cashShiftsRepository == null) return;
     try {
-      final targetBranchId = branchId ?? state.currentBranch?.id;
       final shift = await cashShiftsRepository!.getCurrentShift(
         currentUser.id,
-        branchId: targetBranchId,
+        branchId: branchId,
+        ignoreBranch: branchId == null,
       );
       emit(
         state.copyWith(

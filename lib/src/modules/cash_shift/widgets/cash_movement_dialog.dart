@@ -89,6 +89,19 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
 
     final sessionCubit = context.read<AppSessionCubit>();
     final user = sessionCubit.user;
+    final currentBranchId = sessionCubit.currentBranchId;
+
+    if (widget.shift.branchId != currentBranchId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Este turno pertenece a "${widget.shift.branchName ?? widget.shift.branchId}". Debes estar en esa sucursal para registrar movimientos.',
+          ),
+          backgroundColor: Colors.orange.shade800,
+        ),
+      );
+      return;
+    }
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
