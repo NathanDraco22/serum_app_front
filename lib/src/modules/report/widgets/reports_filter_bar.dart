@@ -92,6 +92,13 @@ class ReportsFilterBar extends StatelessWidget {
                 },
               ),
               _PresetButton(
+                label: 'Ayer',
+                onPressed: () {
+                  final yesterday = DateTime.now().subtract(const Duration(days: 1));
+                  reportCubit.setDateRange(yesterday, yesterday);
+                },
+              ),
+              _PresetButton(
                 label: '7 días',
                 onPressed: () {
                   final now = DateTime.now();

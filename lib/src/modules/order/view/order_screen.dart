@@ -86,6 +86,15 @@ class _BodyState extends State<_Body> {
     });
   }
 
+  void _openEditOrder(BuildContext context, OrderInDb order) {
+    context.push<bool>(AppRouter.createOrder, extra: order).then((value) {
+      if (value == true && context.mounted) {
+        final bId = context.read<AppSessionCubit>().currentBranchId;
+        context.read<ReadOrderCubit>().getAll(OrderQueryParams(branchId: bId));
+      }
+    });
+  }
+
   void _openResultsForm(BuildContext context, OrderInDb order) {
     if (order.status == 'completed') {
       showClinicalOrderViewerDialog(context, order);
@@ -505,6 +514,7 @@ class _BodyState extends State<_Body> {
                       orders: filteredOrders,
                       onEditResults: (order) => _openResultsForm(context, order),
                       onPayOrder: (order) => _openPayDialog(context, order),
+                      onEditOrder: (order) => _openEditOrder(context, order),
                     );
                   },
                 ),

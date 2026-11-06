@@ -21,7 +21,9 @@ import '../widgets/add_service_dialog.dart';
 import '../widgets/add_discount_dialog.dart';
 
 class CreateOrderScreen extends StatelessWidget {
-  const CreateOrderScreen({super.key});
+  final OrderInDb? editingOrder;
+
+  const CreateOrderScreen({super.key, this.editingOrder});
 
   @override
   Widget build(BuildContext context) {
@@ -29,13 +31,15 @@ class CreateOrderScreen extends StatelessWidget {
       create: (context) => WriteOrderCubit(
         ordersRepository: RepositoryProvider.of<OrdersRepository>(context),
       ),
-      child: const _CreateOrderContent(),
+      child: _CreateOrderContent(editingOrder: editingOrder),
     );
   }
 }
 
 class _CreateOrderContent extends StatefulWidget {
-  const _CreateOrderContent();
+  final OrderInDb? editingOrder;
+
+  const _CreateOrderContent({this.editingOrder});
 
   @override
   State<_CreateOrderContent> createState() => _CreateOrderContentState();
@@ -43,11 +47,18 @@ class _CreateOrderContent extends StatefulWidget {
 
 class _CreateOrderContentState extends State<_CreateOrderContent> {
   late final CreateOrderViewController viewController;
+  bool _isPopulated = false;
 
   @override
   void initState() {
     super.initState();
-    viewController = CreateOrderViewController();
+    viewController = CreateOrderViewController(editingOrder: widget.editingOrder);
+    if (widget.editingOrder != null) {
+      final labTestState = context.read<ReadLabTestCubit>().state;
+      final tests = labTestState is ReadLabTestSuccess ? labTestState.items : <LabTestInDb>[];
+      viewController.populateFromOrder(widget.editingOrder!, tests);
+      _isPopulated = true;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ReadLabTestCubit>().loadIfNotLoaded(
@@ -237,18 +248,33 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     final activeBranchId = context.read<AppSessionCubit>().currentBranchId;
     final currentUser = context.read<AppSessionCubit>().user;
 
-    final newOrder = viewController.generateCreateOrder(
-      branchId: activeBranchId,
-      currentUser: currentUser,
-      allLabTests: allLabTests,
-    );
+    if (widget.editingOrder != null) {
+      final updateOrder = viewController.generateUpdateOrder(
+        branchId: activeBranchId,
+        currentUser: currentUser,
+        allLabTests: allLabTests,
+      );
 
-    if (newOrder == null) {
-      viewController.setSubmitting(false);
-      return;
+      if (updateOrder == null) {
+        viewController.setSubmitting(false);
+        return;
+      }
+
+      context.read<WriteOrderCubit>().update(widget.editingOrder!.id, updateOrder);
+    } else {
+      final newOrder = viewController.generateCreateOrder(
+        branchId: activeBranchId,
+        currentUser: currentUser,
+        allLabTests: allLabTests,
+      );
+
+      if (newOrder == null) {
+        viewController.setSubmitting(false);
+        return;
+      }
+
+      context.read<WriteOrderCubit>().create(newOrder);
     }
-
-    context.read<WriteOrderCubit>().create(newOrder);
   }
 
   @override
@@ -262,6 +288,14 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       isLoadingTests = true;
     } else if (labTestsState is ReadLabTestSuccess) {
       allLabTests = labTestsState.items;
+      if (widget.editingOrder != null && !_isPopulated) {
+        _isPopulated = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            viewController.populateFromOrder(widget.editingOrder!, allLabTests);
+          }
+        });
+      }
     }
 
     final sessionCubit = context.watch<AppSessionCubit>();
@@ -286,11 +320,21 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
                 const SnackBar(content: Text('¡Orden clínica creada exitosamente!')),
               );
               Navigator.pop(context, true);
+            } else if (state is OrderUpdated) {
+              viewController.setSubmitting(false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('¡Orden #${state.item.id} modificada exitosamente!')),
+              );
+              Navigator.pop(context, true);
             } else if (state is WriteOrderError) {
               viewController.setSubmitting(false);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Error al crear la orden: ${state.message}'),
+                  content: Text(
+                    widget.editingOrder != null
+                        ? 'Error al modificar la orden: ${state.message}'
+                        : 'Error al crear la orden: ${state.message}',
+                  ),
                   backgroundColor: theme.colorScheme.error,
                 ),
               );
@@ -313,12 +357,16 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Nueva Orden Clínica',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  Text(
+                    widget.editingOrder != null
+                        ? 'Modificar Orden #${widget.editingOrder!.id}'
+                        : 'Nueva Orden Clínica',
+                    style: const TextStyle(fontSize: 18, color: Colors.white),
                   ),
                   Text(
-                    'Punto de Registro y Solicitud de Análisis',
+                    widget.editingOrder != null
+                        ? 'Paciente: ${widget.editingOrder!.patientInfo?.name ?? widget.editingOrder!.patientId}'
+                        : 'Punto de Registro y Solicitud de Análisis',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: const Color(0xFFCCE5FF),
                     ),

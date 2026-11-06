@@ -140,7 +140,7 @@ class ReportCubit extends Cubit<ReportState> {
         endDate: _endMs,
         branchId: state.branchId,
         source: state.labTestsSource,
-        limit: 10,
+        limit: 300,
       );
       emit(state.copyWith(
         status: ReportStatus.loaded,

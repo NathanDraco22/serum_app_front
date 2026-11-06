@@ -48,6 +48,13 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
             role: 'Operador',
             createdAt: 1000,
           ),
+          currentBranch: BranchInDb(
+            id: 'b1',
+            name: 'Sucursal Central',
+            address: 'Managua',
+            phone: '22223333',
+            createdAt: 1000,
+          ),
         ));
 
   @override
@@ -55,6 +62,12 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
 
   @override
   UserInDb? get user => state.currentUser;
+
+  @override
+  bool get isShiftInCurrentBranch => true;
+
+  @override
+  bool get hasShiftBranchMismatch => false;
 
   @override
   Future<void> fetchActiveShift([String? branchId]) async {}

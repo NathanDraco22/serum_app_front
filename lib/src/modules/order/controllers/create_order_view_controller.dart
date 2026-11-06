@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 
 class CreateOrderViewController extends ChangeNotifier {
+  OrderInDb? editingOrder;
   PatientInDb? _selectedPatient;
   DoctorInDb? _selectedDoctor;
   final List<LabTestInDb> _selectedItems = [];
@@ -15,6 +16,7 @@ class CreateOrderViewController extends ChangeNotifier {
   late final TextEditingController notesController;
 
   CreateOrderViewController({
+    this.editingOrder,
     PatientInDb? initialPatient,
     DoctorInDb? initialDoctor,
     List<LabTestInDb>? initialItems,
@@ -38,6 +40,7 @@ class CreateOrderViewController extends ChangeNotifier {
 
   // --- Getters de Estado ---
 
+  bool get isEditing => editingOrder != null;
   PatientInDb? get selectedPatient => _selectedPatient;
   DoctorInDb? get selectedDoctor => _selectedDoctor;
   List<LabTestInDb> get selectedItems => List.unmodifiable(_selectedItems);
@@ -226,11 +229,80 @@ class CreateOrderViewController extends ChangeNotifier {
   /// Limpia toda la pantalla regresándola a su estado inicial en blanco.
   void clearAll() {
     clearCart();
+    editingOrder = null;
     _selectedPatient = null;
     _selectedDoctor = null;
     _defaultPriceLevel = 1;
     _isSubmitting = false;
     notesController.clear();
+    notifyListeners();
+  }
+
+  /// Carga y sincroniza la información de una orden existente para modificación.
+  void populateFromOrder(OrderInDb order, List<LabTestInDb> allLabTests) {
+    editingOrder = order;
+
+    _selectedPatient = PatientInDb(
+      id: order.patientId,
+      name: order.patientInfo?.name ?? '',
+      dateOfBirth: order.patientInfo?.dateOfBirth ?? 0,
+      gender: order.patientInfo?.gender ?? 'M',
+      phone: order.patientInfo?.phone ?? '',
+      address: order.patientInfo?.address,
+      cardId: order.patientInfo?.cardId,
+      email: order.patientInfo?.email,
+      age: order.patientInfo?.explicitAge,
+      originBranch: order.branchId,
+      createdAt: 0,
+    );
+
+    if (order.doctorId != null && order.doctorId!.trim().isNotEmpty) {
+      _selectedDoctor = DoctorInDb(
+        id: order.doctorId!,
+        name: order.doctorInfo?.name ?? '',
+        specialty: order.doctorInfo?.specialty ?? 'Medicina General',
+        phone: order.doctorInfo?.phone,
+        cardId: order.doctorInfo?.cardId,
+        email: order.doctorInfo?.email,
+        originBranch: order.branchId,
+        createdAt: 0,
+      );
+    } else {
+      _selectedDoctor = null;
+    }
+
+    _selectedItems.clear();
+    _itemPriceLevels.clear();
+    _customPrices.clear();
+
+    for (final item in order.items) {
+      final catalogTest = allLabTests.cast<LabTestInDb?>().firstWhere(
+        (t) => t?.id == item.labTestId,
+        orElse: () => null,
+      );
+      final testObj = catalogTest ??
+          LabTestInDb(
+            id: item.labTestId,
+            name: item.name,
+            salePrice: item.originalPrice > 0 ? item.originalPrice : item.salePriceApplied,
+            isPack: item.isPack,
+            createdAt: 0,
+          );
+      _selectedItems.add(testObj);
+      _itemPriceLevels[item.labTestId] = item.priceLevel;
+      if (item.salePriceApplied != testObj.salePrice && item.salePriceApplied > 0) {
+        _customPrices[item.labTestId] = item.salePriceApplied;
+      }
+    }
+
+    _services.clear();
+    _services.addAll(order.services);
+
+    _discounts.clear();
+    _discounts.addAll(order.discounts);
+
+    notesController.text = order.notes ?? '';
+
     notifyListeners();
   }
 
@@ -367,6 +439,150 @@ class CreateOrderViewController extends ChangeNotifier {
       discounts: List.of(_discounts),
       totalPrice: totalInCents,
       status: 'pending',
+      results: resultsMap.values.toList(),
+      isBlocked: isBlocked,
+      approval: approval,
+      notes: notes.isNotEmpty ? notes : null,
+    );
+  }
+
+  /// Mapea el estado actual en memoria hacia el DTO [UpdateOrder] para actualizar la orden en el Cubit.
+  ///
+  /// Retorna `null` si faltan requisitos indispensables (paciente o items/servicios).
+  /// Preserva los resultados clínicos previamente capturados (`resultValue`, `alertFlag`, `showInPrint`).
+  UpdateOrder? generateUpdateOrder({
+    required String branchId,
+    required UserInDb? currentUser,
+    required List<LabTestInDb> allLabTests,
+  }) {
+    if (_selectedPatient == null) return null;
+    if (_selectedItems.isEmpty && _services.isEmpty) return null;
+
+    final orderItems = _selectedItems.map((test) {
+      final level = getItemPriceLevel(test.id);
+      final price = getItemEffectivePrice(test);
+      return OrderItem(
+        labTestId: test.id,
+        name: test.name,
+        salePriceApplied: price,
+        originalPrice: test.salePrice,
+        isPack: test.isPack,
+        priceLevel: level,
+      );
+    }).toList();
+
+    final Map<String, OrderTestResult> existingResultsMap = {
+      if (editingOrder != null)
+        for (final r in editingOrder!.results) r.labTestId: r,
+    };
+
+    final Map<String, OrderTestResult> resultsMap = {};
+    final Set<String> visitedPackIds = {};
+
+    void expandTest(LabTestInDb test, String rootItemName) {
+      if (test.isPack && test.childTestIds.isNotEmpty) {
+        if (!visitedPackIds.add(test.id)) return;
+        for (final childId in test.childTestIds) {
+          final childTest = allLabTests.firstWhere(
+            (t) => t.id == childId,
+            orElse: () => LabTestInDb(
+              id: childId,
+              name: 'Análisis ($childId)',
+              createdAt: 0,
+            ),
+          );
+          expandTest(childTest, rootItemName);
+        }
+      } else {
+        if (!resultsMap.containsKey(test.id)) {
+          final existing = existingResultsMap[test.id];
+          resultsMap[test.id] = OrderTestResult(
+            labTestId: test.id,
+            parameterName: test.name,
+            medicalClassification: test.commercialCategory,
+            subclassification: test.subclassification,
+            dataType: test.dataType,
+            unitOfMeasure: test.unitOfMeasure,
+            referenceValues: test.referenceValues,
+            qualitativeOptions: test.qualitativeOptions,
+            expectedQualitativeValue: test.expectedQualitativeValue,
+            referenceText: test.referenceText,
+            parentExamName: rootItemName,
+            resultValue: existing?.resultValue,
+            alertFlag: existing?.alertFlag,
+            showInPrint: existing?.showInPrint ?? true,
+          );
+        }
+      }
+    }
+
+    for (final item in _selectedItems) {
+      expandTest(item, item.name);
+    }
+
+    final hasSupervisorLevel = (currentUser?.accessLevel ?? 0) > 3;
+    bool isBlocked = false;
+    OrderApproval? approval = editingOrder?.approval;
+
+    if (requiresSupervisorApproval) {
+      final defaultReason = hasDiscounts && hasModifiedPrice
+          ? 'Precio modificado y descuento aplicado en ventanilla'
+          : (hasDiscounts
+                ? 'Descuento aplicado a la orden'
+                : 'Precio modificado respecto al catálogo');
+
+      if (hasSupervisorLevel && currentUser != null) {
+        isBlocked = false;
+        approval = OrderApproval(
+          requiresApproval: true,
+          isApproved: true,
+          approvedBy: UserInfo(id: currentUser.id, name: currentUser.name),
+          approvedAt: DateTime.now().millisecondsSinceEpoch,
+          reason: '$defaultReason (Autorizado por supervisor: ${currentUser.name})',
+        );
+      } else {
+        final wasApproved = editingOrder?.approval?.isApproved == true;
+        if (!wasApproved) {
+          isBlocked = true;
+          approval = OrderApproval(
+            requiresApproval: true,
+            isApproved: false,
+            reason: defaultReason,
+          );
+        }
+      }
+    } else {
+      isBlocked = false;
+    }
+
+    return UpdateOrder(
+      patientId: _selectedPatient!.id,
+      doctorId: _selectedDoctor?.id,
+      clearDoctor: _selectedDoctor == null,
+      patientInfo: PatientInfo(
+        name: _selectedPatient!.name,
+        dateOfBirth: _selectedPatient!.dateOfBirth,
+        gender: _selectedPatient!.gender,
+        phone: _selectedPatient!.phone,
+        address: _selectedPatient!.address ?? '',
+        cardId: _selectedPatient!.cardId,
+        email: _selectedPatient!.email,
+        age: _selectedPatient!.age,
+      ),
+      doctorInfo: _selectedDoctor != null
+          ? DoctorInfo(
+              name: _selectedDoctor!.name,
+              specialty: _selectedDoctor!.specialty,
+              phone: _selectedDoctor!.phone ?? '',
+              cardId: _selectedDoctor!.cardId,
+              email: _selectedDoctor!.email,
+            )
+          : null,
+      branchId: branchId,
+      items: orderItems,
+      services: List.of(_services),
+      discounts: List.of(_discounts),
+      totalPrice: totalInCents,
       results: resultsMap.values.toList(),
       isBlocked: isBlocked,
       approval: approval,

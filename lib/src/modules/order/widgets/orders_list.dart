@@ -16,12 +16,14 @@ class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
   final Function(OrderInDb) onEditResults;
   final Function(OrderInDb) onPayOrder;
+  final Function(OrderInDb)? onEditOrder;
 
   const OrdersList({
     super.key,
     required this.orders,
     required this.onEditResults,
     required this.onPayOrder,
+    this.onEditOrder,
   });
 
   String _formatDate(int timestamp) {
@@ -124,6 +126,7 @@ class OrdersList extends StatelessWidget {
             order.status != 'paid' &&
             order.status != 'cancelled';
         final canDelete = (order.status == 'pending' || isBlocked) && order.paidAmount == 0;
+        final canEditOrder = order.paidAmount == 0 && !isCompleted && order.status != 'cancelled';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -649,6 +652,15 @@ class OrdersList extends StatelessWidget {
                         }
                       }
                     },
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (canEditOrder && onEditOrder != null) ...[
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Modificar Orden (Agregar / Quitar Exámenes)',
+                    color: theme.colorScheme.primary,
+                    onPressed: () => onEditOrder!(order),
                   ),
                   const SizedBox(width: 4),
                 ],

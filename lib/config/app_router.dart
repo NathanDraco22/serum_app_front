@@ -188,7 +188,9 @@ class AppRouter {
         GoRoute(
           path: createOrder,
           parentNavigatorKey: rootNavigatorKey,
-          builder: (context, state) => const CreateOrderScreen(),
+          builder: (context, state) => CreateOrderScreen(
+            editingOrder: state.extra is OrderInDb ? state.extra as OrderInDb : null,
+          ),
         ),
         GoRoute(
           path: createQuotation,

@@ -770,8 +770,10 @@ class OrderCartSection extends StatelessWidget {
             // Botón de Envío
             PrimaryButton(
               onPressed: canSubmit ? onSubmitOrder : null,
-              icon: Icons.check_circle_outline,
-              label: isSubmitting ? 'Creando Orden...' : 'Crear Orden Clínica',
+              icon: controller.isEditing ? Icons.save_outlined : Icons.check_circle_outline,
+              label: isSubmitting
+                  ? (controller.isEditing ? 'Guardando Cambios...' : 'Creando Orden...')
+                  : (controller.isEditing ? 'Guardar Cambios' : 'Crear Orden Clínica'),
               isLoading: isSubmitting,
               isCompact: false,
               fullWidth: true,

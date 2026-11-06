@@ -440,5 +440,193 @@ void main() {
       expect(controller.selectedPatient, isNull);
       expect(controller.notes, isEmpty);
     });
+
+    test('populateFromOrder inicializa estado correctamente desde una orden existente', () {
+      final existingOrder = OrderInDb(
+        id: 'ord_500',
+        createdAt: 1700000000000,
+        patientId: 'p_100',
+        patientInfo: PatientInfo(
+          name: 'Maria Lopez',
+          dateOfBirth: 946684800000,
+          gender: 'F',
+          phone: '88889999',
+        ),
+        doctorId: 'doc_200',
+        doctorInfo: DoctorInfo(
+          name: 'Dr. Roberto Gomez',
+          specialty: 'Cardiologia',
+        ),
+        branchId: 'b_1',
+        items: [
+          OrderItem(
+            labTestId: 'test_1',
+            name: 'Glucosa',
+            salePriceApplied: 14000, // precio con descuento manual
+            originalPrice: 15000,
+            priceLevel: 1,
+          ),
+          OrderItem(
+            labTestId: 'test_2',
+            name: 'Colesterol Total',
+            salePriceApplied: 18000,
+            originalPrice: 20000,
+            priceLevel: 2,
+          ),
+        ],
+        services: [
+          OrderService(id: 'srv_1', name: 'Toma a Domicilio', price: 5000),
+        ],
+        discounts: [
+          OrderDiscount(
+            id: 'dsc_1',
+            description: 'Convenio',
+            type: 'amount',
+            value: 2000,
+            appliedAmount: 2000,
+          ),
+        ],
+        notes: 'Paciente en ayuno',
+        results: [
+          OrderTestResult(
+            labTestId: 'test_1',
+            parameterName: 'Glucosa',
+            dataType: 'numeric',
+            resultValue: '95',
+            alertFlag: 'NORMAL',
+          ),
+        ],
+      );
+
+      controller.populateFromOrder(existingOrder, [test1, test2]);
+
+      expect(controller.isEditing, isTrue);
+      expect(controller.editingOrder?.id, 'ord_500');
+      expect(controller.selectedPatient?.id, 'p_100');
+      expect(controller.selectedPatient?.name, 'Maria Lopez');
+      expect(controller.selectedDoctor?.id, 'doc_200');
+      expect(controller.selectedDoctor?.name, 'Dr. Roberto Gomez');
+      expect(controller.selectedItems.length, 2);
+      expect(controller.isItemSelected('test_1'), isTrue);
+      expect(controller.isItemSelected('test_2'), isTrue);
+      expect(controller.getItemCustomPrice('test_1'), 14000);
+      expect(controller.getItemPriceLevel('test_2'), 2);
+      expect(controller.services.length, 1);
+      expect(controller.services.first.name, 'Toma a Domicilio');
+      expect(controller.discounts.length, 1);
+      expect(controller.notes, 'Paciente en ayuno');
+    });
+
+    test('generateUpdateOrder preserva resultados clínicos previos y añade nuevos en blanco', () {
+      final existingOrder = OrderInDb(
+        id: 'ord_500',
+        createdAt: 1700000000000,
+        patientId: 'p_100',
+        branchId: 'b_1',
+        items: [
+          OrderItem(
+            labTestId: 'test_1',
+            name: 'Glucosa',
+            salePriceApplied: 15000,
+            originalPrice: 15000,
+          ),
+        ],
+        results: [
+          OrderTestResult(
+            labTestId: 'test_1',
+            parameterName: 'Glucosa',
+            dataType: 'numeric',
+            resultValue: '105',
+            alertFlag: 'HIGH',
+            showInPrint: true,
+          ),
+        ],
+      );
+
+      // Cargar orden previa
+      controller.populateFromOrder(existingOrder, [test1, test2]);
+
+      // Agregar un nuevo examen (Colesterol Total)
+      controller.toggleItem(test2);
+      expect(controller.selectedItems.length, 2);
+
+      final updateOrder = controller.generateUpdateOrder(
+        branchId: 'b_1',
+        currentUser: null,
+        allLabTests: [test1, test2],
+      );
+
+      expect(updateOrder, isNotNull);
+      expect(updateOrder!.items?.length, 2);
+      expect(updateOrder.results?.length, 2);
+
+      // El resultado de Glucosa debe preservar su valor previo
+      final glucosaResult = updateOrder.results!.firstWhere((r) => r.labTestId == 'test_1');
+      expect(glucosaResult.resultValue, '105');
+      expect(glucosaResult.alertFlag, 'HIGH');
+
+      // El nuevo examen (Colesterol Total) debe tener resultado en blanco
+      final colesterolResult = updateOrder.results!.firstWhere((r) => r.labTestId == 'test_2');
+      expect(colesterolResult.resultValue, isNull);
+      expect(colesterolResult.alertFlag, isNull);
+    });
+
+    test('generateUpdateOrder remueve resultados de exámenes deseleccionados', () {
+      final existingOrder = OrderInDb(
+        id: 'ord_500',
+        createdAt: 1700000000000,
+        patientId: 'p_100',
+        branchId: 'b_1',
+        items: [
+          OrderItem(
+            labTestId: 'test_1',
+            name: 'Glucosa',
+            salePriceApplied: 15000,
+            originalPrice: 15000,
+          ),
+          OrderItem(
+            labTestId: 'test_2',
+            name: 'Colesterol Total',
+            salePriceApplied: 20000,
+            originalPrice: 20000,
+          ),
+        ],
+        results: [
+          OrderTestResult(
+            labTestId: 'test_1',
+            parameterName: 'Glucosa',
+            dataType: 'numeric',
+            resultValue: '90',
+          ),
+          OrderTestResult(
+            labTestId: 'test_2',
+            parameterName: 'Colesterol Total',
+            dataType: 'numeric',
+            resultValue: '180',
+          ),
+        ],
+      );
+
+      controller.populateFromOrder(existingOrder, [test1, test2]);
+
+      // Quitar Colesterol Total
+      controller.removeItem(test2);
+      expect(controller.selectedItems.length, 1);
+
+      final updateOrder = controller.generateUpdateOrder(
+        branchId: 'b_1',
+        currentUser: null,
+        allLabTests: [test1, test2],
+      );
+
+      expect(updateOrder, isNotNull);
+      expect(updateOrder!.items?.length, 1);
+      expect(updateOrder.items!.first.labTestId, 'test_1');
+      expect(updateOrder.results?.length, 1);
+      expect(updateOrder.results!.first.labTestId, 'test_1');
+      expect(updateOrder.results!.first.resultValue, '90');
+      // Colesterol ya no debe existir en results
+      expect(updateOrder.results!.any((r) => r.labTestId == 'test_2'), isFalse);
+    });
   });
 }
