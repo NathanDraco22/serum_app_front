@@ -34,6 +34,28 @@ class ClinicalFormulasRegistry {
       },
     ),
 
+    /// Hematocrito (Regla de los 3: Hemoglobina * 3)
+    /// Unidades: %
+    ClinicalFormula(
+      id: 'hematocrito_rule_of_three',
+      name: 'Hematocrito (Regla de los 3)',
+      targetCanonical: 'HTC',
+      targetAliases: const [
+        'HTC',
+        'HCT',
+        'Hematocrito',
+        'Hematocrit',
+      ],
+      requiredInputs: const ['HB'],
+      formulaDisplay: 'Hemoglobina * 3',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final hb = inputs['HB'];
+        if (hb == null || hb <= 0) return null;
+        return hb * 3.0;
+      },
+    ),
+
     /// Eritrocitos / Glóbulos Rojos (Regla de los 3: Hemoglobina / 3 o Hematocrito / 9)
     /// Unidades: x mm3 (en escala millones con 3 decimales, ej. 5.000)
     ClinicalFormula(
@@ -256,6 +278,39 @@ class ClinicalFormulasRegistry {
         return col / hdl;
       },
     ),
+
+    // -------------------------------------------------------------------------
+    // 5. QUÍMICA SANGUÍNEA / FUNCIÓN RENAL — NITRÓGENO DE UREA (BUN)
+    // -------------------------------------------------------------------------
+
+    /// Nitrógeno de Urea (BUN)
+    /// Fórmula: Urea * 0.47
+    /// Unidades: mg/dL
+    ClinicalFormula(
+      id: 'nitrogeno_de_urea_bun',
+      name: 'Nitrógeno de Urea (BUN)',
+      targetCanonical: 'BUN',
+      targetAliases: const [
+        'BUN',
+        'Nitrógeno de Urea (BUN)',
+        'Nitrogeno de Urea (BUN)',
+        'Nitrógeno de Urea',
+        'Nitrogeno de Urea',
+        'Nitrógeno Ureico',
+        'Nitrogeno Ureico',
+        'Nitrógeno Ureico en Sangre',
+        'Nitrogeno Ureico en Sangre',
+        'Blood Urea Nitrogen',
+      ],
+      requiredInputs: const ['UREA'],
+      formulaDisplay: 'Urea * 0.47',
+      decimalPlaces: 1,
+      compute: (inputs) {
+        final urea = inputs['UREA'];
+        if (urea == null || urea <= 0) return null;
+        return urea * 0.47;
+      },
+    ),
   ];
 
   /// Mapa de equivalencias para normalizar cualquier código o nombre ingresado
@@ -383,7 +438,6 @@ class ClinicalFormulasRegistry {
     ],
     'COL-T': [
       'col-t',
-      'col',
       'colesterol',
       'colesterol total',
       'colesteroltotal',
@@ -429,6 +483,21 @@ class ClinicalFormulasRegistry {
       'castelli i',
       'relacion colesterol/hdl',
       'relación colesterol/hdl',
+    ],
+    'BUN': [
+      'bun',
+      'nitrógeno de urea (bun)',
+      'nitrogeno de urea (bun)',
+      'nitrógeno de urea',
+      'nitrogeno de urea',
+      'nitrógeno ureico',
+      'nitrogeno ureico',
+      'nitrógeno ureico en sangre',
+      'nitrogeno ureico en sangre',
+      'blood urea nitrogen',
+    ],
+    'UREA': [
+      'urea',
     ],
   };
 
@@ -512,6 +581,23 @@ class ClinicalFormulasRegistry {
     'agrupados',
     'campo',
     'campos',
+    'absoluto',
+    'absolutos',
+    'absoluta',
+    'absolutas',
+    'polimorfonucleares',
+    'mononucleares',
+    'wright',
+    'reticulocitos',
+    'moco',
+    'glico',
+    'glicosil',
+    'glucosil',
+    'a1c',
+    'fetal',
+    'electroforesis',
+    'plasmatica',
+    'plasmática',
   };
 
   /// Claves canónicas pertenecientes estrictamente a la hematología sanguínea.
@@ -560,6 +646,7 @@ class ClinicalFormulasRegistry {
     String? subclassification,
     String? medicalClassification,
     String? dataType,
+    String? unitOfMeasure,
   }) {
     final clean = text.trim().toLowerCase();
     if (clean.isEmpty) return null;
@@ -578,6 +665,7 @@ class ClinicalFormulasRegistry {
           clean,
           subclassification,
           medicalClassification,
+          unitOfMeasure,
         );
       }
     }
@@ -594,6 +682,7 @@ class ClinicalFormulasRegistry {
           clean,
           subclassification,
           medicalClassification,
+          unitOfMeasure,
         );
       }
     }
@@ -610,6 +699,7 @@ class ClinicalFormulasRegistry {
           clean,
           subclassification,
           medicalClassification,
+          unitOfMeasure,
         );
       }
 
@@ -629,6 +719,7 @@ class ClinicalFormulasRegistry {
           clean,
           subclassification,
           medicalClassification,
+          unitOfMeasure,
         );
         if (validated != null) return validated;
       }
@@ -644,6 +735,7 @@ class ClinicalFormulasRegistry {
     String cleanText,
     String? subclassification,
     String? medicalClassification,
+    String? unitOfMeasure,
   ) {
     if (_bloodHematologyKeys.contains(key)) {
       // 1. Descartar si el texto contiene palabras clave de exclusión hematológica
@@ -676,15 +768,76 @@ class ClinicalFormulasRegistry {
           return null;
         }
       }
+
+      // 4. Para diferencial leucocitario porcentual: debe medirse en '%' (descartar recuentos absolutos o x campo)
+      if (differentialKeys.contains(key)) {
+        if (unitOfMeasure != null && unitOfMeasure.trim().isNotEmpty) {
+          final cleanUnit = unitOfMeasure.trim().toLowerCase();
+          if (!cleanUnit.contains('%') && !cleanUnit.contains('porc')) {
+            return null;
+          }
+        }
+      }
+
+      // 5. Para Hemoglobina de Serie Roja (HB): descartar si la unidad es porcentual '%' o 'mmol' (ej. HbA1c)
+      if (key == 'HB') {
+        if (unitOfMeasure != null && unitOfMeasure.trim().isNotEmpty) {
+          final cleanUnit = unitOfMeasure.trim().toLowerCase();
+          if (cleanUnit.contains('%') || cleanUnit.contains('porc') || cleanUnit.contains('mmol')) {
+            return null;
+          }
+        }
+      }
+    }
+
+    // Para perfil lipídico: descartar muestras de orina o líquidos biológicos
+    if (key == 'COL-T' || key == 'TRIG' || key == 'HDL' || key == 'LDL' || key == 'VLDL' || key == 'RIESG-COR') {
+      if (cleanText.contains('orina') ||
+          cleanText.contains('urinari') ||
+          cleanText.contains('liquido') ||
+          cleanText.contains('líquido') ||
+          cleanText.contains('pleural') ||
+          cleanText.contains('ascit') ||
+          cleanText.contains('ascít') ||
+          cleanText.contains('cefalorraqu') ||
+          cleanText.contains('cefalorraquí')) {
+        return null;
+      }
+    }
+
+    // Para UREA y BUN sanguíneos: descartar si el texto hace referencia a orina o depuración
+    if (key == 'BUN' || key == 'UREA') {
+      if (cleanText.contains('orina') ||
+          cleanText.contains('urinari') ||
+          cleanText.contains('24h') ||
+          cleanText.contains('24 horas') ||
+          cleanText.contains('depuracion') ||
+          cleanText.contains('depuración')) {
+        return null;
+      }
     }
 
     return key;
   }
 
   /// Busca si existe una fórmula que tenga como destino el parámetro dado (por nombre o código).
-  static ClinicalFormula? findFormulaForTarget(String text) {
+  static ClinicalFormula? findFormulaForTarget(
+    String text, {
+    String? subclassification,
+    String? medicalClassification,
+    String? dataType,
+    String? unitOfMeasure,
+  }) {
+    final canonical = resolveCanonicalKey(
+      text,
+      subclassification: subclassification,
+      medicalClassification: medicalClassification,
+      dataType: dataType,
+      unitOfMeasure: unitOfMeasure,
+    );
+    if (canonical == null) return null;
     for (final formula in formulas) {
-      if (formula.matchesTarget(text)) {
+      if (formula.targetCanonical == canonical) {
         return formula;
       }
     }
@@ -692,8 +845,21 @@ class ClinicalFormulasRegistry {
   }
 
   /// Verifica si un parámetro es un campo potencialmente autocalculado.
-  static bool isCalculatedTarget(String text) {
-    return findFormulaForTarget(text) != null;
+  static bool isCalculatedTarget(
+    String text, {
+    String? subclassification,
+    String? medicalClassification,
+    String? dataType,
+    String? unitOfMeasure,
+  }) {
+    return findFormulaForTarget(
+          text,
+          subclassification: subclassification,
+          medicalClassification: medicalClassification,
+          dataType: dataType,
+          unitOfMeasure: unitOfMeasure,
+        ) !=
+        null;
   }
 
   /// Formatea un valor numérico clínico:

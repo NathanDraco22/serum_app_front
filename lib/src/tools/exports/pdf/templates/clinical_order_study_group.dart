@@ -51,7 +51,7 @@ class ClinicalOrderGrouper {
 
     // 2. Clasificar cada resultado en su estudio correspondiente
     for (final r in results) {
-      final assignedStudy = _resolveStudyNameForResult(r, order);
+      final assignedStudy = resolveStudyNameForResult(r, order);
       studyBuckets.putIfAbsent(assignedStudy, () => []).add(r);
     }
 
@@ -152,7 +152,7 @@ class ClinicalOrderGrouper {
   }
 
   /// Resuelve a qué estudio pertenece un resultado específico con orden de prioridades.
-  static String _resolveStudyNameForResult(OrderTestResult r, OrderInDb order) {
+  static String resolveStudyNameForResult(OrderTestResult r, OrderInDb order) {
     // Prioridad 1: Trazabilidad explícita inmutable
     if (r.parentExamName != null && r.parentExamName!.trim().isNotEmpty) {
       return r.parentExamName!.trim();

@@ -239,9 +239,9 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
      - Permite seleccionar el método de pago (`cash`, `card`, `transfer`).
      - Afecta de inmediato la caja registradora activa y genera un movimiento en el Kardex.
   6. **Captura Reactiva de Resultados y Motor de Fórmulas Clínicas (`OrderResultsDialog`)**:
-     - **Motor de Fórmulas en `tools/calculators/`**: Autocalcula en tiempo real los Índices Eritrocitarios de Wintrobe (VCM, HCM, CHCM a partir de Eritrocitos, Hemoglobina y Hematocrito), estimación de HTC ($\text{HB} \times 3$), Bilirrubina Indirecta ($\text{BIL-T} - \text{BIL-D}$) y suma del Diferencial Leucocitario al 100%.
-     - **Resolución Canónica**: Reconoce códigos mnemónicos internacionales (`VCM`, `HCM`, `CHCM`, `HB`, `HTC`, `ERI`, etc.) y alias textuales en español ordenados por longitud descendente para evitar colisiones.
-     - **Transparencia y Control**: Despliega el badge visual `"Auto ⚡"` con tooltip explicativo de la fórmula, permitiendo la sobreescritura manual del bioanalista.
+     - **Motor de Fórmulas en `tools/calculators/`**: Autocalcula en tiempo real los Índices Eritrocitarios de Wintrobe (VCM, HCM, CHCM a partir de Eritrocitos, Hemoglobina y Hematocrito), cálculo bidireccional de Serie Roja ($\text{HTC} \leftrightarrow \text{HB}$ y $\text{ERI}$), Nitrógeno de Urea / BUN ($\text{Urea} \times 0.47$), Perfil Lipídico (VLDL, LDL, Castelli / Riesgo Coronario), Bilirrubina Indirecta ($\text{BIL-T} - \text{BIL-D}$) y control reactivo de suma del Diferencial Leucocitario al 100%.
+     - **Resolución Canónica y Blindaje Contextual**: Reconoce códigos mnemónicos y alias textuales en español ordenados por longitud descendente; aísla por unidad y contexto biológico para evitar colisiones cruzadas (ej. descarta que `HbA1c` colisione con `HB` o que `EOS-SANG` contamine el diferencial porcentual).
+     - **Transparencia y Control**: Despliega el badge visual `"Auto ⚡"` con tooltip explicativo de la fórmula, permitiendo la sobreescritura manual del bioanalista, limpieza automática ante insumos vaciados y restauración inteligente sin importar el orden de los parámetros al reabrir órdenes guardadas.
      - **Modularización**: Dividido en subwidgets especializados en `widgets/order_results_dialogs/` para máxima legibilidad y aislamiento.
      - Compara automáticamente los valores numéricos contra los rangos de referencia demográficos del paciente y alerta visualmente si un resultado está fuera de límites.
   7. **Emisión de Informes Clínicos y Sobres Físicos de Entrega**:

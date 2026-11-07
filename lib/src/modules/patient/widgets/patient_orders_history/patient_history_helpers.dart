@@ -27,6 +27,7 @@ class PatientHistoryHelpers {
         subclassification: r.subclassification,
         medicalClassification: r.medicalClassification,
         dataType: r.dataType,
+        unitOfMeasure: r.unitOfMeasure,
       );
       if (key != null && hematologyKeys.contains(key)) {
         matches++;

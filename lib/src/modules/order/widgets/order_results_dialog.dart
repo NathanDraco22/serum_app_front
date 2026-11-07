@@ -9,6 +9,7 @@ import '../controllers/order_results_mediator.dart';
 import '../controllers/order_results_view_controller.dart';
 import 'order_results_dialogs/order_results_header.dart';
 import 'order_results_dialogs/order_results_summary_bar.dart';
+import 'order_results_dialogs/order_results_section_header.dart';
 import 'order_results_dialogs/parameter_card.dart';
 import 'order_results_dialogs/order_results_footer.dart';
 
@@ -32,6 +33,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late final OrderResultsViewController _controller;
   late final List<FocusNode> _focusNodes;
   late final FocusNode _notesFocusNode;
+  int? _activeFocusedIndex;
 
   @override
   void initState() {
@@ -43,6 +45,11 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       final node = FocusNode();
       node.addListener(() {
         if (node.hasFocus) {
+          if (mounted && _activeFocusedIndex != index) {
+            setState(() {
+              _activeFocusedIndex = index;
+            });
+          }
           final r = _controller.results[index];
           final c = _controller.getController(r.labTestId);
           if (c != null && c.text.isNotEmpty) {
@@ -56,7 +63,16 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       return node;
     });
 
+    _notesFocusNode.addListener(() {
+      if (_notesFocusNode.hasFocus && mounted && _activeFocusedIndex != -1) {
+        setState(() {
+          _activeFocusedIndex = -1;
+        });
+      }
+    });
+
     if (_focusNodes.isNotEmpty) {
+      _activeFocusedIndex = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _focusNodes.isNotEmpty) {
           _focusNodes.first.requestFocus();
@@ -88,7 +104,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     // Validación de Negocio Estricta: Si se ingresó el diferencial, debe sumar exactamente 100%
-    if (!_controller.isDifferentialValid) {
+    if (_controller.hasDifferentialStarted && !_controller.isDifferentialValid) {
       final sum = _controller.differentialSum;
       final sumText = sum != null
           ? ClinicalFormulasRegistry.formatClinicalValue(sum, 1)
@@ -153,6 +169,15 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
       child: ListenableBuilder(
         listenable: _controller,
         builder: (context, _) {
+          OrderTestResult? activeResult;
+          String? activeStudy;
+          if (_activeFocusedIndex != null &&
+              _activeFocusedIndex! >= 0 &&
+              _activeFocusedIndex! < _controller.results.length) {
+            activeResult = _controller.results[_activeFocusedIndex!];
+            activeStudy = _controller.getStudyName(activeResult);
+          }
+
           return PopScope(
             canPop: !_controller.isSubmitting,
             child: Dialog(
@@ -195,12 +220,47 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                             }
 
                             final r = _controller.results[index];
+                            final currentStudy = _controller.getStudyName(r);
+                            final prevStudy = index > 0
+                                ? _controller.getStudyName(_controller.results[index - 1])
+                                : null;
+                            final isNewStudy = index > 0 &&
+                                prevStudy != null &&
+                                currentStudy.toUpperCase() != prevStudy.toUpperCase();
 
-                            return ParameterCard(
+                            final isStudyActive = activeStudy != null &&
+                                activeStudy.toUpperCase() == currentStudy.toUpperCase();
+
+                            final card = ParameterCard(
+                              key: ValueKey(r.labTestId),
                               result: r,
                               focusNode: _focusNodes[index],
                               isLast: false,
                               onFieldSubmitted: () => _onFieldSubmitted(index),
+                            );
+
+                            // El separador visual de perfil solo se muestra cuando la orden
+                            // contiene múltiples perfiles/estudios clínicos y comienza un nuevo bloque.
+                            if (!_controller.hasMultipleStudies || !isNewStudy) {
+                              return card;
+                            }
+
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                OrderResultsSectionHeader(
+                                  studyTitle: currentStudy,
+                                  clinicalArea: r.medicalClassification,
+                                  completedCount:
+                                      _controller.getStudyCompletedCount(currentStudy),
+                                  totalCount:
+                                      _controller.getStudyTotalCount(currentStudy),
+                                  isCurrentActive: isStudyActive,
+                                ),
+                                const SizedBox(height: 6),
+                                card,
+                              ],
                             );
                           },
                         ),

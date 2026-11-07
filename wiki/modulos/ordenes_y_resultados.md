@@ -72,24 +72,40 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
 
 #### 1. Fórmulas Médicas Integradas (Estándares Internacionales)
 - **Serie Roja / Hematología (Regla de los 3 e Índices de Wintrobe, 1929)**:
-  - **Hematocrito (`HTC` / `HTO`) — Disparador Principal**: Medición física en centrífuga. Al capturarse, dispara en cascada:
+  - **Hematocrito (`HTC` / `HTO`) — Disparador Principal**: Medición física en centrífuga. Al capturarse o reescribirse, desbloquea y dispara siempre en cascada:
     - **Hemoglobina (`HB`)**: $\text{HB} = \frac{\text{HTC}}{3}$ (redondeo a 1 decimal, g/dL).
     - **Eritrocitos (`ERI`)**: $\text{ERI} = \frac{\text{HB}}{3} = \frac{\text{HTC}}{9}$ (redondeo a 3 decimales en escala millones, x mm³).
     - **VCM (Volumen Corpuscular Medio)**: $\text{VCM} = \frac{\text{HTC (\%)} \times 10}{\text{ERI (millones/mm}^3)}$ en $\mu\text{m}^3$ (fL) (constante 90 si deriva estrictamente de regla de los 3).
     - **HCM (Hemoglobina Corpuscular Media)**: $\text{HCM} = \frac{\text{HB (g/dL)} \times 10}{\text{ERI (millones/mm}^3)}$ en $\text{pg}$ (constante 30).
     - **CHCM (Concentración de Hb Corpuscular Media)**: $\text{CHCM} = \frac{\text{HB (g/dL)} \times 100}{\text{HTC (\%)}}$ en $\text{g/dL}$ (constante 33).
-  - **Recálculo Dinámico (Sobreescritura Manual)**: Si el bioanalista edita manualmente la hemoglobina o los eritrocitos en casos patológicos, **NO** se recalcula el hematocrito, pero **SÍ** se recalculan en tiempo real los índices `VCM`, `HCM` y `CHCM` usando los valores en pantalla.
+  - **Cálculo Bidireccional (`HB` $\to$ `HTC` y `Wintrobe`)**:
+    - Si el bioanalista ingresa primero la **Hemoglobina** (`HB`), el sistema calcula de forma bidireccional $\text{HTC} = \text{HB} \times 3$, $\text{ERI} = \text{HB} / 3$ y los índices de Wintrobe.
+    - **Preservación de Mediciones Manuales**: Si el bioanalista ya había ingresado manualmente un `HTC` (ej. `40`) y posteriormente ajusta la `HB` leída en espectrofotómetro (ej. `12.8`), el sistema **respeta el `HTC` manual** y recalcula `ERI` y Wintrobe utilizando los valores reales en pantalla.
+    - **Prioridad Absoluta de Hematocrito**: Si en cualquier momento el bioanalista vuelve a escribir en `HTC`, este actúa como disparador maestro y recalcula de inmediato toda la Serie Roja sin quedar bloqueado.
+  - **Limpieza Reactiva ante Insumos Vaciados**: Si se borra `ERI` en pantalla, `VCM` y `HCM` se limpian de inmediato (evitando cálculos fantasma con valores residuales en memoria), mientras `CHCM` se mantiene si `HB` y `HTC` siguen presentes. Si se vacía `HTC`, se limpian sus campos derivados autocalculados.
   - **Normalización de Escala**: `normalizeErythrocytesToMillions(eri)` garantiza que los eritrocitos ingresados en millones (5.000), miles (5000) o enteros absolutos siempre se calculen sobre base de millones.
+- **Bioquímica / Función Renal**:
+  - **Nitrógeno de Urea (BUN)**: $\text{BUN} = \text{Urea} \times 0.47$ (redondeo a 1 decimal, mg/dL). Escribir en `Urea` desbloquea y recalcula `BUN` en vivo.
 - **Bioquímica / Perfil Hepático**:
   - **Bilirrubina Indirecta**: $\text{BIL-I} = \text{BIL-T} - \text{BIL-D}$ en $\text{mg/dL}$.
+- **Bioquímica / Perfil Lipídico (Friedewald y Castelli)**:
+  - **Colesterol VLDL**: $\text{VLDL} = \frac{\text{TRIG}}{5}$ en $\text{mg/dL}$.
+  - **Colesterol LDL**: $\text{LDL} = \text{COL-T} - \text{HDL} - \text{VLDL}$ en $\text{mg/dL}$.
+  - **Riesgo Coronario (Castelli I)**: $\text{RIESG-COR} = \frac{\text{COL-T}}{\text{HDL}}$ (ratio a 1 decimal).
 - **Serie Blanca / Diferencial Leucocitario**:
   - Parámetros de entrada directa: Leucocitos (`LEU`) y Plaquetas (`PLAQ`).
   - 7 parámetros diferenciales porcentuales con valor por defecto `0`: $\text{SEG} + \text{LINF} + \text{EOS} + \text{MON} + \text{BAN} + \text{BAS} + \text{LINF-ATIP} = 100\%$.
-  - Validación Bloqueante de Negocio: Si se ingresan datos en el diferencial, la suma debe ser **estrictamente igual a 100%**. Si es menor o mayor a 100%, se muestra una alerta visual y se **impide el cierre o guardado** del resultado.
+  - **Control de Guardado Parcial (`hasDifferentialStarted`)**: Los ceros iniciales no bloquean el guardado de análisis no hematológicos si la Serie Blanca no ha iniciado. La validación estricta de suma al 100% se activa si al menos un parámetro diferencial es $> 0$ o si ya se capturó el conteo de `Leucocitos` (`LEU > 0`). Si el usuario revierte un diferencial a `0`, el bloqueo se levanta reactivamente.
 
-#### 2. Detección Inteligente y Resolución Canónica de Parámetros
-- `ClinicalFormulasRegistry.resolveCanonicalKey(text)` analiza el parámetro examinando códigos oficiales (`VCM`, `HCM`, `CHCM`, `HB`, `HTC`, `ERI`, `LEU`, `PLAQ`, `BIL-T`, `BIL-D`, `BIL-I`) y alias textuales en español (`"Volumen Corpuscular Medio"`, `"Hemoglobina"`, `"Hematocrito"`, etc.).
-- Utiliza una lista de alias ordenada por **longitud descendente**, garantizando que frases compuestas (ej. `"hemoglobina corpuscular media"`) se evalúen antes que términos más generales (`"hemoglobina"`), evitando falsos positivos.
+#### 2. Detección Inteligente y Blindaje Contra Colisiones Canónicas
+- `ClinicalFormulasRegistry.resolveCanonicalKey(text, ...)` analiza el parámetro examinando códigos oficiales y alias textuales en español ordenados por **longitud descendente** con delimitadores de frontera.
+- **Blindaje Contextual Multi-Perfil**:
+  - **Aislamiento de Glicohemoglobina (`HBA1C`)**: Exclusión estricta de términos como `'glico'`, `'a1c'`, `'fetal'`, `'electroforesis'` y unidades en `%` para que `HbA1c` jamás colisione ni altere la `Hemoglobina` (`HB`, g/dL) de la BHC en órdenes combinadas.
+  - **Aislamiento de Eosinófilos Absolutos (`EOS-SANG`)**: Exige que los parámetros del diferencial se midan exclusivamente en `%`, evitando que recuentos absolutos en $\text{mm}^3$ contaminen la sumatoria leucocitaria.
+  - **Exclusión de Líquidos Biológicos y Muestras Urinarias**: Se descartan muestras de orina, líquidos pleurales o ascíticos para que no colisionen con los lípidos séricos ni con `BUN`/`Urea` sanguíneos.
+- **Restauración Determinista al Reabrir Órdenes (`_detectAndRestoreAutoCalculatedFields`)**:
+  - Al abrir o reabrir una orden guardada, se detectan matemáticamente los campos que coinciden con las fórmulas para restaurar su badge `Auto ⚡` sin depender del orden de los resultados en la lista.
+  - Los valores guardados que difieren de la fórmula se registran como modificaciones manuales, blindándolos de sobreescrituras accidentales al reabrir la orden.
 
 #### 3. Control Clínico, Flags H/L y Transparencia
 - **Badge `"Auto ⚡"`**: Los campos autocalculados despliegan una insignia distintiva con un tooltip que expone la fórmula matemática utilizada.

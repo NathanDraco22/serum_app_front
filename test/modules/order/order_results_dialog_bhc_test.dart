@@ -211,7 +211,7 @@ void main() {
     expect(tester.widget<TextFormField>(textFormFields.at(3)).controller?.text, equals('90'));
   });
 
-  testWidgets('3. Escribir directamente en Hemoglobina (HB) autocalcula Eritrocitos (ERI) sin alterar Hematocrito',
+  testWidgets('3. Escribir directamente en Hemoglobina (HB) autocalcula Hematocrito (HTC), Eritrocitos (ERI) e Índices',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 1024);
     tester.view.devicePixelRatio = 1.0;
@@ -233,8 +233,8 @@ void main() {
     // Eritrocitos debe calcularse como 15 / 3 = 5.000
     expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('5.000'));
 
-    // Hematocrito NO se altera (permanece vacío porque se mide en centrífuga)
-    expect(tester.widget<TextFormField>(textFormFields.at(2)).controller?.text, equals(''));
+    // Hematocrito se autocalcula bidireccionalmente por Regla de los 3 (15.0 * 3 = 45)
+    expect(tester.widget<TextFormField>(textFormFields.at(2)).controller?.text, equals('45'));
 
     // Scroll para visualizar HCM
     final listView = find.byType(ListView);
@@ -524,5 +524,229 @@ void main() {
     // 5. Verificar que VLDL (18.4) y LDL (207 - 43 - 18.4 = 145.6) también están calculados correctamente
     expect(find.text('18.4'), findsOneWidget);
     expect(find.text('145.6'), findsOneWidget);
+  });
+
+  testWidgets(
+      '7. Nitrógeno de Urea (Pack NU): Escribir Urea (38) autocalcula BUN (17.9) en vivo y re-escribir actualiza sin congelarse',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final nuOrder = OrderInDb(
+      id: 'order-nu-1',
+      branchId: 'branch-1',
+      patientId: 'patient-nu',
+      totalPrice: 25000,
+      paidAmount: 25000,
+      status: 'pending',
+      createdAt: 1700000000000,
+      items: [
+        OrderItem(
+          labTestId: 'test-nu',
+          name: 'Nitrógeno de Urea (BUN)',
+          salePriceApplied: 25000,
+          originalPrice: 25000,
+          isPack: true,
+        ),
+      ],
+      results: [
+        OrderTestResult(
+          labTestId: 'test-bun',
+          parameterName: 'Nitrógeno de Urea (BUN)',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Función Renal',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+          referenceText: '6 - 23 mg/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-urea',
+          parameterName: 'Urea',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Función Renal',
+          dataType: 'numeric',
+          unitOfMeasure: 'mg/dL',
+          referenceText: '10 - 50 mg/dL',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildTestWidget(nuOrder));
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+    // Index 0: Nitrógeno de Urea (BUN)
+    // Index 1: Urea
+
+    // 1. Escribir Urea = 38 (caso real del reporte clínico)
+    await tester.enterText(textFormFields.at(1), '38');
+    await tester.pumpAndSettle();
+
+    // BUN se debe autocalcular instantáneamente: 38 * 0.47 = 17.86 -> '17.9'
+    expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('17.9'));
+    expect(find.text('Auto ⚡'), findsOneWidget);
+    expect(find.byTooltip('Calculado automáticamente: Urea * 0.47'), findsOneWidget);
+
+    // 2. Re-escribir Urea = 100
+    await tester.enterText(textFormFields.at(1), '100');
+    await tester.pumpAndSettle();
+
+    // BUN se actualiza de inmediato a 100 * 0.47 = 47
+    expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('47'));
+
+    // 3. Sobreescritura manual de BUN = 20
+    await tester.enterText(textFormFields.at(0), '20');
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('20'));
+  });
+
+  testWidgets(
+      '8. Eosinófilos Absolutos en Sangre (EOS-SANG) no contamina el diferencial y permite guardar la orden',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final order = OrderInDb(
+      id: 'order-eos-sang',
+      branchId: 'branch-1',
+      patientId: 'patient-eos',
+      totalPrice: 15000,
+      paidAmount: 15000,
+      status: 'pending',
+      createdAt: 1700000000000,
+      items: [
+        OrderItem(
+          labTestId: 'test-eos-sang',
+          name: 'Eosinófilos Absolutos en Sangre',
+          salePriceApplied: 15000,
+          originalPrice: 15000,
+        ),
+      ],
+      results: [
+        OrderTestResult(
+          labTestId: 'test-eos-sang-result',
+          parameterName: 'Eosinófilos Absolutos en Sangre',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Blanca',
+          dataType: 'numeric',
+          unitOfMeasure: 'mm3',
+          referenceText: '50 - 500 mm3',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildTestWidget(order));
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+
+    // Ingresar 250 mm3
+    await tester.enterText(textFormFields.at(0), '250');
+    await tester.pumpAndSettle();
+
+    // Guardar resultados
+    final saveButton = find.widgetWithText(ElevatedButton, 'Guardar Resultados');
+    expect(saveButton, findsOneWidget);
+    await tester.tap(saveButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Debe guardar exitosamente sin ser bloqueado por error de diferencial al 100%
+    final payload = fakeOrdersDataSource.lastUpdatedPayload;
+    expect(payload, isNotNull);
+    final resultsPayload = (payload!['results'] as List).cast<Map<String, dynamic>>();
+    expect(resultsPayload.first['resultValue'], equals('250'));
+  });
+
+  testWidgets(
+      '9. Orden combinada (BHC + Glicohemoglobina A1c HbA1c): Escribir Hematocrito o HbA1c no causa colisión cruzada',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final order = OrderInDb(
+      id: 'order-bhc-hba1c',
+      branchId: 'branch-1',
+      patientId: 'patient-diab',
+      totalPrice: 45000,
+      paidAmount: 45000,
+      status: 'pending',
+      createdAt: 1700000000000,
+      items: [],
+      results: [
+        OrderTestResult(
+          labTestId: 'test-eri',
+          parameterName: 'Eritrocitos',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: 'xmm3',
+        ),
+        OrderTestResult(
+          labTestId: 'test-hb',
+          parameterName: 'Hemoglobina',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: 'g/dL',
+        ),
+        OrderTestResult(
+          labTestId: 'test-htc',
+          parameterName: 'Hematocrito',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Roja',
+          dataType: 'numeric',
+          unitOfMeasure: '%',
+        ),
+        OrderTestResult(
+          labTestId: 'test-hba1c',
+          parameterName: 'Glicohemoglobina A1c (HbA1c)',
+          medicalClassification: 'Química Sanguínea',
+          subclassification: 'Control Glucémico',
+          dataType: 'numeric',
+          unitOfMeasure: '%',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildTestWidget(order));
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+
+    // 1. Escribir Hematocrito = 42 % (índice 2)
+    await tester.enterText(textFormFields.at(2), '42');
+    await tester.pumpAndSettle();
+
+    // Hemoglobina de BHC (índice 1) debe ser 14 y Eritrocitos (índice 0) debe ser 4.667
+    expect(tester.widget<TextFormField>(textFormFields.at(1)).controller?.text, equals('14'));
+    expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('4.667'));
+    // HbA1c (índice 3) debe permanecer vacío
+    expect(tester.widget<TextFormField>(textFormFields.at(3)).controller?.text, equals(''));
+
+    // 2. Escribir HbA1c = 6.5 % (índice 3)
+    await tester.enterText(textFormFields.at(3), '6.5');
+    await tester.pumpAndSettle();
+
+    // Regresar el scroll al inicio para verificar que la Serie Roja de la BHC permanezca intacta
+    await tester.drag(find.byType(ListView), const Offset(0, 300));
+    await tester.pumpAndSettle();
+
+    // La Serie Roja de la BHC debe permanecer intacta (HB=14, ERI=4.667, HTC=42)
+    expect(tester.widget<TextFormField>(textFormFields.at(1)).controller?.text, equals('14'));
+    expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('4.667'));
+    expect(tester.widget<TextFormField>(textFormFields.at(2)).controller?.text, equals('42'));
   });
 }

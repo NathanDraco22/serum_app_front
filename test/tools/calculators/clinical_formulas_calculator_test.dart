@@ -43,13 +43,19 @@ void main() {
       expect(results['ERI']!.formattedValue, '5.000');
       expect(results['ERI']!.formulaDisplay, 'Hemoglobina / 3');
 
+      // Hematocrito = Hemoglobina * 3 = 45.0
+      expect(results['HTC'], isNotNull);
+      expect(results['HTC']!.value, 45.0);
+
       // HCM = (15.0 * 10) / 5.0 = 30
       expect(results['HCM'], isNotNull);
       expect(results['HCM']!.value, 30.0);
 
-      // VCM y CHCM requieren Hematocrito, por lo que son null
-      expect(results['VCM'], isNull);
-      expect(results['CHCM'], isNull);
+      // Con Hematocrito autocalculado, VCM y CHCM se completan
+      expect(results['VCM'], isNotNull);
+      expect(results['VCM']!.value, 90.0);
+      expect(results['CHCM'], isNotNull);
+      expect(results['CHCM']!.value, closeTo(33.3, 0.1));
     });
 
     test('2. Índices de Wintrobe con Serie Roja Completa (Valores Canónicos)', () {
@@ -316,6 +322,150 @@ void main() {
       expect(resultsSinTrig['RIESG-COR']!.formattedValue, '4'); // 200 / 50 = 4.0
       expect(resultsSinTrig['VLDL'], isNull);
       expect(resultsSinTrig['LDL'], isNull);
+    });
+
+    test('13. Función Renal: Autocálculo de BUN a partir de Urea (Urea * 0.47)', () {
+      // Caso 1: Paciente de muestra (Urea = 38)
+      final inputs1 = {'UREA': 38.0};
+      final results1 = ClinicalFormulasRegistry.evaluateAll(inputs1);
+
+      expect(results1['BUN'], isNotNull);
+      expect(results1['BUN']!.value, closeTo(17.86, 0.001));
+      expect(results1['BUN']!.formattedValue, '17.9');
+      expect(results1['BUN']!.formulaDisplay, 'Urea * 0.47');
+
+      // Caso 2: Entero exacto (Urea = 100 -> 47.0 -> formateado '47')
+      final inputs2 = {'UREA': 100.0};
+      final results2 = ClinicalFormulasRegistry.evaluateAll(inputs2);
+      expect(results2['BUN'], isNotNull);
+      expect(results2['BUN']!.value, 47.0);
+      expect(results2['BUN']!.formattedValue, '47');
+
+      // Caso 3: Valores límite (Urea = 0 o negativo no calculan)
+      expect(ClinicalFormulasRegistry.evaluateAll({'UREA': 0.0})['BUN'], isNull);
+      expect(ClinicalFormulasRegistry.evaluateAll({})['BUN'], isNull);
+    });
+
+    test('14. Resolución Canónica de Alias de BUN y Urea', () {
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('BUN'), 'BUN');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Nitrógeno de Urea (BUN)'), 'BUN');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Nitrogeno de Urea (BUN)'), 'BUN');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Nitrógeno de Urea'), 'BUN');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Nitrógeno Ureico'), 'BUN');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Blood Urea Nitrogen'), 'BUN');
+
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Urea'), 'UREA');
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('UREA'), 'UREA');
+
+      // Exclusión estricta de fluidos y orina
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Urea en Orina de 24 Horas'), isNull);
+      expect(ClinicalFormulasRegistry.resolveCanonicalKey('Depuración de Urea'), isNull);
+    });
+
+    test('15. Aislamiento Estricto de Parámetros Especiales (EOS-SANG, PMN-NEUT, COLIN, Líquidos)', () {
+      // Eosinófilos Absolutos en Sangre (EOS-SANG) no debe confundirse con diferencial porcentual (EOS)
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Eosinófilos Absolutos en Sangre',
+          subclassification: 'Serie Blanca',
+          medicalClassification: 'Hematología',
+          unitOfMeasure: 'mm3',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Eosinófilos en Moco Nasal
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Eosinófilos en Moco Nasal',
+          subclassification: 'Frotis Sanguíneo',
+          medicalClassification: 'Hematología',
+          unitOfMeasure: '%',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Polimorfonucleares Neutrófilos (PMN-NEUT) en heces no debe resolver como SEG
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Polimorfonucleares Neutrófilos',
+          subclassification: 'Examen Microscópico',
+          medicalClassification: 'Coprología',
+          unitOfMeasure: '%',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Mononucleares Eosinófilos (MN-EOS) en heces no debe resolver como EOS
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Mononucleares Eosinófilos',
+          subclassification: 'Examen Microscópico',
+          medicalClassification: 'Coprología',
+          unitOfMeasure: '%',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Colinesterasa Sérica (COLIN) no debe resolver como Colesterol Total (COL-T)
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Colinesterasa Sérica',
+          subclassification: 'Función Hepática',
+          medicalClassification: 'Química Sanguínea',
+          unitOfMeasure: 'U/L',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Colesterol en Líquido Pleural no debe resolver como COL-T
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Colesterol en Líquido Pleural',
+          subclassification: 'Líquidos Biológicos',
+          medicalClassification: 'Química Sanguínea',
+          unitOfMeasure: 'mg/dL',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+
+      // Glicohemoglobina A1c (HbA1c) y variantes no deben resolver como Hemoglobina (HB) de Serie Roja
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey(
+          'Glicohemoglobina A1c (HbA1c)',
+          subclassification: 'Control Glucémico',
+          medicalClassification: 'Química Sanguínea',
+          unitOfMeasure: '%',
+          dataType: 'numeric',
+        ),
+        isNull,
+      );
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey('Hemoglobina Glicosilada (HbA1c)'),
+        isNull,
+      );
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey('Hemoglobina Glucosilada'),
+        isNull,
+      );
+      expect(
+        ClinicalFormulasRegistry.resolveCanonicalKey('Electroforesis de Hemoglobina'),
+        isNull,
+      );
+      expect(
+        ClinicalFormulasRegistry.isCalculatedTarget('Glicohemoglobina A1c (HbA1c)', unitOfMeasure: '%'),
+        isFalse,
+      );
+      expect(
+        ClinicalFormulasRegistry.isCalculatedTarget('Eritrocitos (Sedimento Urinario)'),
+        isFalse,
+      );
     });
   });
 }

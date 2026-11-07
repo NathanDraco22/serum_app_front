@@ -141,26 +141,34 @@ class ParameterCard extends StatelessWidget {
     );
 
     final isNormal = hasVal && !resolvedIsAlert;
+    final isFocused = focusNode?.hasFocus == true;
 
     // Decoración de borde reactivo
     final borderColor = !resolvedShowInPrint
         ? theme.colorScheme.outlineVariant.withValues(alpha: 0.5)
         : (resolvedIsAlert
             ? Colors.red.shade300
-            : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant));
+            : (isFocused
+                ? theme.colorScheme.primary.withValues(alpha: 0.85)
+                : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant)));
 
     final cardBg = !resolvedShowInPrint
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
         : (resolvedIsAlert
             ? Colors.red.shade50.withValues(alpha: 0.3)
-            : theme.colorScheme.surfaceContainerLowest);
+            : (isFocused
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.12)
+                : theme.colorScheme.surfaceContainerLowest));
+
+    final borderWidth =
+        (resolvedIsAlert && resolvedShowInPrint) || isFocused ? 1.4 : 1.0;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor, width: resolvedIsAlert && resolvedShowInPrint ? 1.4 : 1.0),
+        border: Border.all(color: borderColor, width: borderWidth),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

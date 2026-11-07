@@ -95,6 +95,7 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
         subclassification: r.subclassification,
         medicalClassification: r.medicalClassification,
         dataType: r.dataType,
+        unitOfMeasure: r.unitOfMeasure,
       );
       if (canonical != null) return canonical;
       if (r.labTestId.isNotEmpty) return r.labTestId.toLowerCase();
