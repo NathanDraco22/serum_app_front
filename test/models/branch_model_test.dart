@@ -212,5 +212,46 @@ void main() {
       );
       expect(updateBranch.toJson()['auxBio'], equals([auxJson]));
     });
+
+    test('Configuración autoCalculateFormulas: retrocompatibilidad, serialización y valor por defecto', () {
+      // 1. Retrocompatibilidad: si no está en el JSON, es true
+      final legacyJson = {
+        'id': 'BR-LEGACY',
+        'name': 'Sucursal Antigua',
+        'address': 'Calle 1',
+        'phone': '123',
+        'createdAt': 1700000000000,
+      };
+      final branchLegacy = BranchInDb.fromJson(legacyJson);
+      expect(branchLegacy.autoCalculateFormulas, isTrue);
+
+      // 2. Si viene explícitamente en false
+      final manualJson = {
+        'id': 'BR-MANUAL',
+        'name': 'Sucursal Manual',
+        'address': 'Calle 2',
+        'phone': '456',
+        'autoCalculateFormulas': false,
+        'createdAt': 1700000000000,
+      };
+      final branchManual = BranchInDb.fromJson(manualJson);
+      expect(branchManual.autoCalculateFormulas, isFalse);
+
+      // 3. CreateBranch serializa autoCalculateFormulas
+      final createBranch = CreateBranch(
+        name: 'Sede Auto Off',
+        address: 'Calle 3',
+        phone: '789',
+        autoCalculateFormulas: false,
+      );
+      expect(createBranch.toJson()['autoCalculateFormulas'], isFalse);
+
+      // 4. UpdateBranch incluye autoCalculateFormulas solo si no es nulo
+      final updateBranch = UpdateBranch(autoCalculateFormulas: false);
+      expect(updateBranch.toJson()['autoCalculateFormulas'], isFalse);
+
+      final updateBranchNull = UpdateBranch();
+      expect(updateBranchNull.toJson().containsKey('autoCalculateFormulas'), isFalse);
+    });
   });
 }

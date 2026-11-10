@@ -55,15 +55,16 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     viewController = CreateOrderViewController(editingOrder: widget.editingOrder);
     if (widget.editingOrder != null) {
       final labTestState = context.read<ReadLabTestCubit>().state;
-      final tests = labTestState is ReadLabTestSuccess ? labTestState.items : <LabTestInDb>[];
-      viewController.populateFromOrder(widget.editingOrder!, tests);
-      _isPopulated = true;
+      if (labTestState is ReadLabTestSuccess && labTestState.items.isNotEmpty) {
+        viewController.populateFromOrder(widget.editingOrder!, labTestState.items);
+        _isPopulated = true;
+      }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ReadLabTestCubit>().loadIfNotLoaded(
-              branchId: context.read<AppSessionCubit>().currentBranchId,
-            );
+          branchId: context.read<AppSessionCubit>().currentBranchId,
+        );
       }
     });
   }
@@ -75,10 +76,46 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   }
 
   Future<void> _pickPatient() async {
+    if (!_ensureEditingLoaded() || !_ensurePatientCanChange()) return;
     final patient = await showPatientSelectionDialog(context);
     if (patient != null && mounted) {
       viewController.selectPatient(patient);
     }
+  }
+
+  /// Evita modificar una orden de edición mientras aún no se cargó su estado.
+  bool _ensureEditingLoaded() {
+    if (widget.editingOrder != null && !viewController.isPopulated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'La orden aún se está cargando. Espera a que el catálogo esté disponible para evitar perder exámenes o resultados.',
+          ),
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /// Evita reasignar el paciente cuando la orden ya tiene resultados capturados.
+  bool _ensurePatientCanChange() {
+    if (widget.editingOrder != null && viewController.hasCapturedResults) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se puede cambiar el paciente porque la orden ya tiene resultados capturados. Corrige o elimina los resultados primero.',
+          ),
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  void _removePatient() {
+    if (!_ensureEditingLoaded() || !_ensurePatientCanChange()) return;
+    viewController.removePatient();
   }
 
   Future<void> _pickDoctor() async {
@@ -89,6 +126,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   }
 
   Future<void> _openCreatePatientDialog() async {
+    if (!_ensureEditingLoaded() || !_ensurePatientCanChange()) return;
     final created = await showDialog<dynamic>(
       context: context,
       builder: (dialogCtx) => BlocProvider<WritePatientCubit>(
@@ -182,7 +220,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('Vaciar Análisis y Servicios'),
-        content: const Text('¿Deseas quitar todos los análisis, servicios y descuentos agregados a esta orden?'),
+        content: const Text(
+          '¿Deseas quitar todos los análisis, servicios y descuentos agregados a esta orden?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx),
@@ -229,6 +269,20 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
   }
 
   void _submit(List<LabTestInDb> allLabTests) {
+    if (viewController.isSubmitting) return;
+
+    if (widget.editingOrder != null && !viewController.isPopulated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'La orden aún no ha terminado de cargar. No se guardará para evitar borrar sus exámenes y resultados.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     if (viewController.selectedPatient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, selecciona un paciente.')),
@@ -239,6 +293,17 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     if (viewController.selectedItems.isEmpty && viewController.services.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Debes agregar al menos un análisis o servicio a la orden.')),
+      );
+      return;
+    }
+
+    final packError = viewController.validatePacksExpansion(allLabTests);
+    if (packError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(packError),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
       return;
     }
@@ -257,6 +322,13 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
       if (updateOrder == null) {
         viewController.setSubmitting(false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo preparar la modificación de la orden. Revisa el catálogo y los exámenes seleccionados.',
+            ),
+          ),
+        );
         return;
       }
 
@@ -270,6 +342,13 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
       if (newOrder == null) {
         viewController.setSubmitting(false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No se pudo preparar la orden. Revisa el catálogo y los exámenes seleccionados.',
+            ),
+          ),
+        );
         return;
       }
 
@@ -288,11 +367,12 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       isLoadingTests = true;
     } else if (labTestsState is ReadLabTestSuccess) {
       allLabTests = labTestsState.items;
-      if (widget.editingOrder != null && !_isPopulated) {
+      if (widget.editingOrder != null && !_isPopulated && allLabTests.isNotEmpty) {
         _isPopulated = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             viewController.populateFromOrder(widget.editingOrder!, allLabTests);
+            setState(() {});
           }
         });
       }
@@ -414,68 +494,105 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
             ),
             body: Padding(
               padding: const EdgeInsets.all(14.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 950;
-
-                  final catalogWidget = ListenableBuilder(
-                    listenable: viewController,
-                    builder: (context, _) => OrderCatalogSection(
-                      allLabTests: allLabTests,
-                      isLoading: isLoadingTests,
-                      selectedItems: viewController.selectedItems,
-                      onToggleItem: viewController.toggleItem,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (widget.editingOrder != null && !viewController.isPopulated)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.hourglass_top_rounded,
+                            size: 18,
+                            color: Colors.amber.shade900,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Cargando la orden y el catálogo. No se permite guardar hasta que termine, para no perder exámenes ni resultados.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.amber.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 950;
 
-                  final cartWidget = OrderCartSection(
-                    onSelectPatient: _pickPatient,
-                    onSelectDoctor: _pickDoctor,
-                    onEditItemPrice: _editItemPrice,
-                    onClearItems: _clearItems,
-                    onAddService: _openAddServiceDialog,
-                    onEditService: _editService,
-                    onAddDiscount: _openAddDiscountDialog,
-                    onEditDiscount: _editDiscount,
-                    onSubmitOrder: () => _submit(allLabTests),
-                  );
+                        final catalogWidget = ListenableBuilder(
+                          listenable: viewController,
+                          builder: (context, _) => OrderCatalogSection(
+                            allLabTests: allLabTests,
+                            isLoading: isLoadingTests,
+                            selectedItems: viewController.selectedItems,
+                            onToggleItem: viewController.toggleItem,
+                          ),
+                        );
 
-                  if (isWide) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Columna 1: Catálogo de Pruebas y Perfiles
-                        Expanded(
-                          flex: 58,
-                          child: catalogWidget,
-                        ),
-                        const SizedBox(width: 14),
-                        // Columna 2: Resumen, Paciente, Médico y Carrito
-                        Expanded(
-                          flex: 42,
-                          child: cartWidget,
-                        ),
-                      ],
-                    );
-                  }
+                        final cartWidget = OrderCartSection(
+                          onSelectPatient: _pickPatient,
+                          onSelectDoctor: _pickDoctor,
+                          onRemovePatient: _removePatient,
+                          onEditItemPrice: _editItemPrice,
+                          onClearItems: _clearItems,
+                          onAddService: _openAddServiceDialog,
+                          onEditService: _editService,
+                          onAddDiscount: _openAddDiscountDialog,
+                          onEditDiscount: _editDiscount,
+                          onSubmitOrder: () => _submit(allLabTests),
+                        );
 
-                  // Layout en columna para pantallas medianas o reducidas
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 520,
-                          child: catalogWidget,
-                        ),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          height: 600,
-                          child: cartWidget,
-                        ),
-                      ],
+                        if (isWide) {
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Columna 1: Catálogo de Pruebas y Perfiles
+                              Expanded(
+                                flex: 58,
+                                child: catalogWidget,
+                              ),
+                              const SizedBox(width: 14),
+                              // Columna 2: Resumen, Paciente, Médico y Carrito
+                              Expanded(
+                                flex: 42,
+                                child: cartWidget,
+                              ),
+                            ],
+                          );
+                        }
+
+                        // Layout en columna para pantallas medianas o reducidas
+                        return SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 520,
+                                child: catalogWidget,
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                height: 600,
+                                child: cartWidget,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
           ),

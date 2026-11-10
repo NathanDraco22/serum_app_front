@@ -332,8 +332,8 @@ class _BodyState extends State<_Body> {
                       const SizedBox(width: 6),
                       Text(
                         isShiftInCurrentBranch
-                            ? 'Tienes un turno activo: \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en efectivo'
-                            : 'Turno en "${activeShift.branchName ?? 'otra sucursal'}": \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)}',
+                            ? 'Tienes un turno activo: ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en efectivo'
+                            : 'Turno en "${activeShift.branchName ?? 'otra sucursal'}": ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: isShiftInCurrentBranch

@@ -749,4 +749,58 @@ void main() {
     expect(tester.widget<TextFormField>(textFormFields.at(0)).controller?.text, equals('4.667'));
     expect(tester.widget<TextFormField>(textFormFields.at(2)).controller?.text, equals('42'));
   });
+
+  testWidgets(
+      '10. Cuando autoCalculateFormulas es false, OrderResultsDialog oculta la alerta de diferencial en la barra de resumen y permite guardar',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1024);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final order = OrderInDb(
+      id: 'order-manual-diff',
+      branchId: 'branch-1',
+      patientId: 'PAT-1',
+      totalPrice: 20000,
+      paidAmount: 20000,
+      status: 'paid',
+      createdAt: 1700000000000,
+      items: [],
+      results: [
+        OrderTestResult(
+          labTestId: 'test-seg',
+          parameterName: 'Segmentados',
+          medicalClassification: 'Hematología',
+          subclassification: 'Serie Blanca',
+          dataType: 'numeric',
+          unitOfMeasure: '%',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BlocProvider<WriteOrderCubit>.value(
+            value: writeOrderCubit,
+            child: OrderResultsDialog(
+              order: order,
+              autoCalculateFormulas: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final textFormFields = find.byType(TextFormField);
+    await tester.enterText(textFormFields.at(0), '62.5');
+    await tester.pumpAndSettle();
+
+    // No debe mostrarse la advertencia "(Debe sumar 100%)" en la barra de resumen
+    expect(find.textContaining('Debe sumar 100%'), findsNothing);
+  });
 }

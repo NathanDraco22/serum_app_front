@@ -5,14 +5,22 @@ import 'package:serum_business/serum_business.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    NumberFormatter.configureCurrencyResolver(() => AppCurrency.nio);
+  });
+
+  tearDown(() {
+    NumberFormatter.configureCurrencyResolver(null);
+  });
+
   group('ReportPdfHelper Tests', () {
     test('formatCurrency formatea centavos a formato de moneda con decimales y comas', () {
-      expect(ReportPdfHelper.formatCurrency(0), equals('\$0.00'));
-      expect(ReportPdfHelper.formatCurrency(100), equals('\$1.00'));
-      expect(ReportPdfHelper.formatCurrency(1550), equals('\$15.50'));
-      expect(ReportPdfHelper.formatCurrency(125000), equals('\$1,250.00'));
-      expect(ReportPdfHelper.formatCurrency(10000000), equals('\$100,000.00'));
-      expect(ReportPdfHelper.formatCurrency(-2500), equals('-\$25.00'));
+      expect(ReportPdfHelper.formatCurrency(0), equals('C\$0.00'));
+      expect(ReportPdfHelper.formatCurrency(100), equals('C\$1.00'));
+      expect(ReportPdfHelper.formatCurrency(1550), equals('C\$15.50'));
+      expect(ReportPdfHelper.formatCurrency(125000), equals('C\$1,250.00'));
+      expect(ReportPdfHelper.formatCurrency(10000000), equals('C\$100,000.00'));
+      expect(ReportPdfHelper.formatCurrency(-2500), equals('-C\$25.00'));
     });
 
     test('formatDate y formatDateTime retornan cadenas coherentes', () {

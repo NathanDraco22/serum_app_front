@@ -410,6 +410,11 @@ class ParameterCard extends StatelessWidget {
     }
     return ParameterBadgePill(
       label: 'PENDIENTE',
+      icon: Icon(
+        Icons.warning_amber_rounded,
+        size: 11,
+        color: Colors.amber.shade800,
+      ),
       bgColor: theme.colorScheme.surfaceContainerHigh,
       textColor: theme.colorScheme.onSurfaceVariant,
       borderColor: theme.colorScheme.outlineVariant,

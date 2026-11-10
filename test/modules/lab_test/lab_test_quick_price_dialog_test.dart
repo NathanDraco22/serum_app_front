@@ -134,7 +134,7 @@ void main() {
 
       // Modify price
       final priceField =
-          find.widgetWithText(TextFormField, 'Precio 1 / Regular (\$)');
+          find.widgetWithText(TextFormField, 'Precio 1 / Regular (C\$)');
       expect(priceField, findsOneWidget);
 
       await tester.enterText(priceField, '195.50');
@@ -218,11 +218,11 @@ void main() {
         ),
       );
 
-      expect(find.text('\$150.00'), findsOneWidget);
-      expect(find.text('P2: \$120.00'), findsOneWidget);
+      expect(find.text('C\$150.00'), findsOneWidget);
+      expect(find.text('P2: C\$120.00'), findsOneWidget);
 
       // Tap on the price badge
-      await tester.tap(find.text('\$150.00'));
+      await tester.tap(find.text('C\$150.00'));
       await tester.pumpAndSettle();
 
       expect(clickedForPrice?.id, 'test-101');

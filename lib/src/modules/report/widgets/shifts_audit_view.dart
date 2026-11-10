@@ -172,7 +172,7 @@ class ShiftsAuditView extends StatelessWidget {
               Icon(Icons.assessment, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
               Text(
-                'Diferencias de Efectivo por Turno (\$)',
+                'Diferencias de Efectivo por Turno (${NumberFormatter.currencySymbol})',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -191,7 +191,10 @@ class ShiftsAuditView extends StatelessWidget {
                   const SizedBox(width: 12),
                   Container(width: 10, height: 10, color: theme.colorScheme.outline),
                   const SizedBox(width: 4),
-                  const Text('Cuadrado (\$0)', style: TextStyle(fontSize: 11)),
+                  Text(
+                    'Cuadrado (${NumberFormatter.currencySymbol}0)',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ],
               ),
             ],
@@ -266,7 +269,7 @@ class ShiftsAuditView extends StatelessWidget {
                       reservedSize: 55,
                       getTitlesWidget: (value, meta) {
                         return Text(
-                          '\$${value.toInt()}',
+                          '${NumberFormatter.currencySymbol}${value.toInt()}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.outline,
                           ),

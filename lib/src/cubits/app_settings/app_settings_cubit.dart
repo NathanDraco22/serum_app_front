@@ -6,7 +6,11 @@ import 'app_settings_state.dart';
 class AppSettingsCubit extends Cubit<AppSettingsState> {
   final AppSettingsRepository appSettingsRepository;
 
-  AppSettingsCubit(this.appSettingsRepository) : super(AppSettingsInitial());
+  AppSettingsCubit(this.appSettingsRepository) : super(AppSettingsInitial()) {
+    // El formatter puro no conoce el Cubit; solo recibe la forma de preguntar
+    // por la moneda vigente. Se registra una sola vez al crear el singleton.
+    NumberFormatter.configureCurrencyResolver(() => currency);
+  }
 
   AppSettingModel? get currentSettings {
     final s = state;
@@ -19,6 +23,7 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
   bool get useCost => currentSettings?.useCost ?? false;
   bool get usePrice2 => currentSettings?.usePrice2 ?? false;
   bool get allowEditPrice => currentSettings?.allowEditPrice ?? false;
+  AppCurrency get currency => currentSettings?.currency ?? AppCurrency.nio;
 
   Future<void> loadSettings() async {
     emit(AppSettingsLoading());
@@ -56,5 +61,18 @@ class AppSettingsCubit extends Cubit<AppSettingsState> {
       emit(AppSettingsError(e.toString(), lastSettings: current));
       return false;
     }
+  }
+
+  /// Limpia la configuración al cerrar sesión o cambiar de tenant.
+  void reset() {
+    appSettingsRepository.clearCache();
+    emit(AppSettingsInitial());
+  }
+
+  @override
+  Future<void> close() async {
+    // Evita que el formatter conserve una referencia al Cubit destruido.
+    NumberFormatter.configureCurrencyResolver(null);
+    await super.close();
   }
 }

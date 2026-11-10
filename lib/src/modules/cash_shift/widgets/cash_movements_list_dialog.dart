@@ -424,7 +424,7 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                                 child: _MetricCard(
                                   label: 'Total Ingresos Libres',
                                   amount:
-                                      '+\$${(totalIncomesCents / 100).toStringAsFixed(2)}',
+                                      '+${NumberFormatter.convertToMoneyLike(totalIncomesCents)}',
                                   icon: Icons.arrow_downward_rounded,
                                   color: Colors.green.shade800,
                                   bgColor: Colors.green.shade50,
@@ -435,7 +435,7 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                                 child: _MetricCard(
                                   label: 'Total Egresos / Retiros',
                                   amount:
-                                      '-\$${(totalWithdrawalsCents / 100).toStringAsFixed(2)}',
+                                      '-${NumberFormatter.convertToMoneyLike(totalWithdrawalsCents)}',
                                   icon: Icons.arrow_upward_rounded,
                                   color: ColorPalette.error,
                                   bgColor: Colors.red.shade50,
@@ -446,7 +446,7 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                                 child: _MetricCard(
                                   label: 'Impacto Neto en Caja',
                                   amount:
-                                      '${netCents >= 0 ? "+" : ""}\$${(netCents / 100).toStringAsFixed(2)}',
+                                      NumberFormatter.convertToMoneyLikeSigned(netCents),
                                   icon: Icons.account_balance_wallet_outlined,
                                   color: netCents >= 0
                                       ? theme.colorScheme.primary

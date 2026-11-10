@@ -59,8 +59,8 @@ class LabTestPricingSection extends StatelessWidget {
                         readOnly: isAutoSum,
                         decoration: InputDecoration(
                           labelText: isAutoSum
-                              ? 'Precio Calculado Automáticamente (\$ USD)'
-                              : 'Precio de Venta Público (\$ USD) *',
+                              ? 'Precio Calculado Automáticamente (${NumberFormatter.currencySymbol})'
+                              : 'Precio de Venta Público (${NumberFormatter.currencySymbol}) *',
                           hintText: 'ej. 15.00',
                           prefixIcon: Icon(
                             isAutoSum ? Icons.calculate : Icons.attach_money,
@@ -106,7 +106,7 @@ class LabTestPricingSection extends StatelessWidget {
                       child: TextFormField(
                         controller: controller.price2Controller,
                         decoration: InputDecoration(
-                          labelText: 'Precio Convenios / Nivel 2 (\$ USD)',
+                          labelText: 'Precio Convenios / Nivel 2 (${NumberFormatter.currencySymbol})',
                           hintText: 'ej. 12.00',
                           prefixIcon: const Icon(Icons.handshake_outlined, size: 20),
                           helperText: 'Opcional (para aseguradoras o tarifas corporativas)',

@@ -51,7 +51,7 @@ class PendingBalancesView extends StatelessWidget {
                     ? NumberFormatter.convertToMoneyLike(
                         (summary.totalPendingAmount / summary.ordersCount).round(),
                       )
-                    : '\$0.00',
+                    : NumberFormatter.convertToMoneyLike(0),
                 subtitle: 'Ticket de deuda promedio',
                 icon: Icons.pie_chart_outline,
                 color: ColorPalette.secondary,

@@ -217,7 +217,7 @@ class _SideNav extends StatelessWidget {
                       titleText =
                           'Turno en "${activeShift.branchName ?? 'otra sucursal'}"';
                       subtitleText =
-                          '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} • Cambia de sucursal';
+                          '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} • Cambia de sucursal';
                       titleColor = Colors.amber.shade900;
                       subtitleColor = Colors.amber.shade800;
                       actionButton = IconButton(
@@ -241,9 +241,9 @@ class _SideNav extends StatelessWidget {
                       iconData = Icons.point_of_sale;
                       iconColor = theme.colorScheme.primary;
                       titleText =
-                          '\$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en caja';
+                          '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en caja';
                       subtitleText =
-                          'Turno Activo (Fondo: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)})';
+                          'Turno Activo (Fondo: ${NumberFormatter.currencyFormat.format(activeShift.initialBalanceDouble)})';
                       titleColor = theme.colorScheme.onSurface;
                       subtitleColor = theme.colorScheme.onSurfaceVariant;
                       actionButton = IconButton(

@@ -2,7 +2,7 @@
 title: Módulos — Órdenes Médicas, Pagos y Resultados
 description: Especificación funcional del flujo clínico de órdenes de laboratorio, cobros en caja registradora y captura de resultados analíticos.
 tags: [orders, payments, clinical_results, pos, ui]
-timestamp: 2026-09-28T19:46:00Z
+timestamp: 2026-11-09T12:00:00Z
 ---
 
 # 📦 Órdenes Médicas, Pagos y Resultados (`order`)
@@ -122,6 +122,11 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
   - **"Ninguno"**, **"No se observa"**, **"Normal"**, **"Negativo"**.
   - Si el análisis posee opciones personalizadas en `qualitativeOptions` (o un `expectedQualitativeValue`), la tarjeta prioriza dinámicamente dichos valores como atajos.
 - **Sincronización Inmediata y Estado Activo**: Al tocar un chip, se transcribe instantáneamente al campo de texto y se sincroniza reactivamente con el estado de la orden (`onNumericChanged`), marcando el parámetro como completado. El chip seleccionado se resalta con un icono de verificación (`Icons.check`). En modo solo lectura (`isReadOnly`), los chips permanecen deshabilitados.
+
+#### 5. Valores por Defecto en Pruebas Cualitativas
+- Las pruebas cualitativas inician con la primera opción de `qualitativeOptions` (normalmente `Negativo` o `No reactivo`) y se guardan con ese valor si el bioanalista no lo cambia. Es un comportamiento esperado para agilizar la captura de resultados negativos.
+- El bioanalista debe cambiar explícitamente la opción cuando el resultado sea positivo o anormal.
+- Si la primera opción no coincide con `expectedQualitativeValue`, la tarjeta puede mostrar `ANORMAL` desde el inicio; en ese caso se recomienda revisar el orden de `qualitativeOptions` o el valor esperado en el catálogo, no el flujo de captura.
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
 - **Informe Clínico PDF y Visor en Pantalla (`ClinicalOrderViewer`, `SingleClinicalOrderTemplate` y `ClinicalOrderGrouper`)**:

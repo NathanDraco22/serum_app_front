@@ -779,7 +779,7 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                     itemBuilder: (context, index) {
                       final test = filteredTests[index];
                       final isSelected = widget.selectedTestIds.contains(test.id);
-                      final testPrice = (test.salePrice / 100.0).toStringAsFixed(2);
+                      final testPrice = NumberFormatter.convertToMoneyLike(test.salePrice);
 
                       return Material(
                         type: MaterialType.transparency,
@@ -820,7 +820,7 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                               ],
                               const SizedBox(width: 8),
                               Text(
-                                '\$$testPrice USD',
+                                testPrice,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 12,
@@ -939,7 +939,7 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Suma de precios individuales: \$${totalIndividualPrice.toStringAsFixed(2)} USD',
+                      'Suma de precios individuales: ${NumberFormatter.currencyFormat.format(totalIndividualPrice)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -964,10 +964,10 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                       children: [
                         Text(
                           widget.useChildTestsPriceSum
-                              ? 'Precio del Pack = Sumatoria: \$${packPrice.toStringAsFixed(2)} USD'
+                              ? 'Precio del Pack = Sumatoria: ${NumberFormatter.currencyFormat.format(packPrice)}'
                               : (savings > 0
-                                  ? 'Ahorro al cliente: \$${savings.toStringAsFixed(2)} USD'
-                                  : 'Precio del Pack: \$${packPrice.toStringAsFixed(2)} USD'),
+                                  ? 'Ahorro al cliente: ${NumberFormatter.currencyFormat.format(savings)}'
+                                  : 'Precio del Pack: ${NumberFormatter.currencyFormat.format(packPrice)}'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,

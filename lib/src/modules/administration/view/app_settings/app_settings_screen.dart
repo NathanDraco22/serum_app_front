@@ -18,12 +18,14 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   bool _useCost = false;
   bool _usePrice2 = false;
   bool _allowEditPrice = false;
+  AppCurrency _currency = AppCurrency.nio;
 
   void _syncWithSettings(AppSettingModel settings) {
     if (!_initialized) {
       _useCost = settings.useCost;
       _usePrice2 = settings.usePrice2;
       _allowEditPrice = settings.allowEditPrice;
+      _currency = settings.currency;
       _initialized = true;
     }
   }
@@ -34,6 +36,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       useCost: _useCost,
       usePrice2: _usePrice2,
       allowEditPrice: _allowEditPrice,
+      currency: _currency,
     );
 
     final success = await cubit.updateSettings(update);
@@ -176,7 +179,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Configura el comportamiento de costos, listas de precios y permisos de edición para la toma de órdenes y cotizaciones.',
+                                  'Configura el comportamiento de costos, listas de precios, permisos de edición y la moneda global del sistema para la toma de órdenes y cotizaciones.',
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -234,9 +237,20 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                                           setState(() => _allowEditPrice = val);
                                         },
                                       ),
+                                      const Divider(height: 1),
+
+                                      // 4. Moneda del sistema
+                                      _SettingCurrencyTile(
+                                        value: _currency,
+                                        onChanged: (val) {
+                                          setState(() => _currency = val);
+                                        },
+                                      ),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+                                _CurrencyInfoBanner(currency: _currency),
                               ],
                             ),
                           ),
@@ -323,6 +337,146 @@ class _SettingSwitchTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SettingCurrencyTile extends StatelessWidget {
+  final AppCurrency value;
+  final ValueChanged<AppCurrency> onChanged;
+
+  const _SettingCurrencyTile({
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withAlpha(120),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.currency_exchange_rounded,
+              color: theme.colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Moneda del sistema',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Símbolo usado en pantalla, tickets, PDFs y reportes. No convierte montos ya registrados.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<AppCurrency>(
+                  key: ValueKey(value),
+                  initialValue: value,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.payments_outlined),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  items: AppCurrency.values.map((currency) {
+                    return DropdownMenuItem<AppCurrency>(
+                      value: currency,
+                      child: Text(
+                        '${currency.symbol}  ${currency.displayName} (${currency.code})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) onChanged(val);
+                  },
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Vista previa: ${NumberFormatter.convertToMoneyLikeWith(value, 123456)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrencyInfoBanner extends StatelessWidget {
+  final AppCurrency currency;
+
+  const _CurrencyInfoBanner({required this.currency});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer.withAlpha(90),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withAlpha(80),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: theme.colorScheme.tertiary,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'La moneda ${currency.code} (${currency.symbol}) solo cambia la presentación. '
+              'Los montos en centavos y los históricos no se convierten ni se reinterpretan.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onTertiaryContainer,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

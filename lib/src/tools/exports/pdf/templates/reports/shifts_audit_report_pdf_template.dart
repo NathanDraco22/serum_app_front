@@ -193,7 +193,7 @@ class ShiftsAuditReportPdfTemplate implements PdfTemplate {
 
                     final diffText = diff > 0
                         ? '+${ReportPdfHelper.formatCurrency(diff)}'
-                        : (diff < 0 ? ReportPdfHelper.formatCurrency(diff) : '\$0.00');
+                        : (diff < 0 ? ReportPdfHelper.formatCurrency(diff) : ReportPdfHelper.formatCurrency(0));
 
                     return pw.TableRow(
                       decoration: pw.BoxDecoration(color: rowBg),

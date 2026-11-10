@@ -373,9 +373,9 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                     decoration: InputDecoration(
                       labelText: isPack && _useChildTestsPriceSum
                           ? 'Precio 1 (Calculado por suma de hijos)'
-                          : 'Precio 1 / Regular (\$)',
+                          : 'Precio 1 / Regular (${NumberFormatter.currencySymbol})',
                       hintText: '0.00',
-                      prefixText: '\$ ',
+                      prefixText: '${NumberFormatter.currencySymbol} ',
                       isDense: true,
                       border: const OutlineInputBorder(),
                       helperText: 'Precio estándar de venta al público',
@@ -404,12 +404,12 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                     ],
                     enabled: !_isSaving,
-                    decoration: const InputDecoration(
-                      labelText: 'Precio 2 / Convenio (\$ opcional)',
+                    decoration: InputDecoration(
+                      labelText: 'Precio 2 / Convenio (${NumberFormatter.currencySymbol} opcional)',
                       hintText: '0.00',
-                      prefixText: '\$ ',
+                      prefixText: '${NumberFormatter.currencySymbol} ',
                       isDense: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       helperText: 'Tarifa preferencial o de convenio',
                     ),
                     validator: (val) {

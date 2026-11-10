@@ -1,22 +1,12 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:serum_business/serum_business.dart';
 
 /// Componentes base y utilidades compartidas para la generación de reportes en PDF.
 class ReportPdfHelper {
-  /// Formatea centavos a formato de moneda (\$X.XX)
+  /// Formatea centavos usando la moneda global configurada.
   static String formatCurrency(int cents) {
-    final isNegative = cents < 0;
-    final absVal = cents.abs() / 100.0;
-    final parts = absVal.toStringAsFixed(2).split('.');
-    final integerPart = parts[0];
-    final decimalPart = parts[1];
-
-    // Formatear separador de miles
-    final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    final formattedInt = integerPart.replaceAllMapped(reg, (Match m) => '${m[1]},');
-    final result = '\$$formattedInt.$decimalPart';
-
-    return isNegative ? '-$result' : result;
+    return NumberFormatter.convertToMoneyLike(cents);
   }
 
   /// Formatea DateTime a DD/MM/YYYY

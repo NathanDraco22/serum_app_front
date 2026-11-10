@@ -20,7 +20,8 @@ void main() {
       status: status,
       createdAt: 1700000000000,
       notes: notes,
-      patientInfo: patientInfo ??
+      patientInfo:
+          patientInfo ??
           PatientInfo(
             name: 'Juan Pérez',
             age: 35,
@@ -35,7 +36,8 @@ void main() {
           originalPrice: 25000,
         ),
       ],
-      results: results ??
+      results:
+          results ??
           [
             OrderTestResult(
               labTestId: 'test-eri',
@@ -202,68 +204,74 @@ void main() {
   });
 
   group('OrderResultsViewController — Fórmulas Clínicas Reactivas', () {
-    test('Cascada de la Serie Roja: Escritura en Hematocrito (HTC) autocalcula HB, ERI y Wintrobe', () {
-      final order = createTestOrder();
-      final controller = OrderResultsViewController(order: order);
+    test(
+      'Cascada de la Serie Roja: Escritura en Hematocrito (HTC) autocalcula HB, ERI y Wintrobe',
+      () {
+        final order = createTestOrder();
+        final controller = OrderResultsViewController(order: order);
 
-      final htcResult = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
+        final htcResult = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
 
-      // Ingresar HTC = 45 %
-      controller.onNumericChanged(htcResult, '45');
+        // Ingresar HTC = 45 %
+        controller.onNumericChanged(htcResult, '45');
 
-      // HB = 45 / 3 = 15
-      expect(controller.getController('test-hb')?.text, equals('15'));
-      expect(controller.isAutoCalculated('test-hb'), isTrue);
-      expect(controller.getFormulaDisplay('test-hb'), equals('Hematocrito / 3'));
+        // HB = 45 / 3 = 15
+        expect(controller.getController('test-hb')?.text, equals('15'));
+        expect(controller.isAutoCalculated('test-hb'), isTrue);
+        expect(controller.getFormulaDisplay('test-hb'), equals('Hematocrito / 3'));
 
-      // ERI = 15 / 3 = 5.000
-      expect(controller.getController('test-eri')?.text, equals('5.000'));
-      expect(controller.isAutoCalculated('test-eri'), isTrue);
-      expect(controller.getFormulaDisplay('test-eri'), equals('Hemoglobina / 3'));
+        // ERI = 15 / 3 = 5.000
+        expect(controller.getController('test-eri')?.text, equals('5.000'));
+        expect(controller.isAutoCalculated('test-eri'), isTrue);
+        expect(controller.getFormulaDisplay('test-eri'), equals('Hemoglobina / 3'));
 
-      // Wintrobe
-      // VCM = (45 * 10) / 5 = 90
-      expect(controller.getController('test-vcm')?.text, equals('90'));
-      expect(controller.isAutoCalculated('test-vcm'), isTrue);
+        // Wintrobe
+        // VCM = (45 * 10) / 5 = 90
+        expect(controller.getController('test-vcm')?.text, equals('90'));
+        expect(controller.isAutoCalculated('test-vcm'), isTrue);
 
-      // HCM = (15 * 10) / 5 = 30
-      expect(controller.getController('test-hcm')?.text, equals('30'));
-      expect(controller.isAutoCalculated('test-hcm'), isTrue);
+        // HCM = (15 * 10) / 5 = 30
+        expect(controller.getController('test-hcm')?.text, equals('30'));
+        expect(controller.isAutoCalculated('test-hcm'), isTrue);
 
-      // CHCM = (15 * 100) / 45 = 33.3
-      expect(controller.getController('test-chcm')?.text, equals('33.3'));
-      expect(controller.isAutoCalculated('test-chcm'), isTrue);
+        // CHCM = (15 * 100) / 45 = 33.3
+        expect(controller.getController('test-chcm')?.text, equals('33.3'));
+        expect(controller.isAutoCalculated('test-chcm'), isTrue);
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
 
-    test('Re-escritura en Hematocrito desbloquea campos editados manualmente y recalcula la serie', () {
-      final order = createTestOrder();
-      final controller = OrderResultsViewController(order: order);
+    test(
+      'Re-escritura en Hematocrito desbloquea campos editados manualmente y recalcula la serie',
+      () {
+        final order = createTestOrder();
+        final controller = OrderResultsViewController(order: order);
 
-      final htcResult = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
-      final eriResult = controller.results.firstWhere((r) => r.labTestId == 'test-eri');
+        final htcResult = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
+        final eriResult = controller.results.firstWhere((r) => r.labTestId == 'test-eri');
 
-      // 1. HTC = 45
-      controller.onNumericChanged(htcResult, '45');
-      expect(controller.getController('test-eri')?.text, equals('5.000'));
+        // 1. HTC = 45
+        controller.onNumericChanged(htcResult, '45');
+        expect(controller.getController('test-eri')?.text, equals('5.000'));
 
-      // 2. Modificar ERI manualmente a 4.850
-      controller.onNumericChanged(eriResult, '4.850');
-      expect(controller.isManuallyOverridden('test-eri'), isTrue);
-      expect(controller.getController('test-eri')?.text, equals('4.850'));
+        // 2. Modificar ERI manualmente a 4.850
+        controller.onNumericChanged(eriResult, '4.850');
+        expect(controller.isManuallyOverridden('test-eri'), isTrue);
+        expect(controller.getController('test-eri')?.text, equals('4.850'));
 
-      // 3. Re-escribir HTC = 36 %
-      // Debe desbloquear ERI y recalcular: 36 / 9 = 4.000
-      controller.onNumericChanged(htcResult, '36');
+        // 3. Re-escribir HTC = 36 %
+        // Debe desbloquear ERI y recalcular: 36 / 9 = 4.000
+        controller.onNumericChanged(htcResult, '36');
 
-      expect(controller.isManuallyOverridden('test-eri'), isFalse);
-      expect(controller.getController('test-eri')?.text, equals('4.000'));
-      expect(controller.getController('test-hb')?.text, equals('12'));
-      expect(controller.getController('test-vcm')?.text, equals('90'));
+        expect(controller.isManuallyOverridden('test-eri'), isFalse);
+        expect(controller.getController('test-eri')?.text, equals('4.000'));
+        expect(controller.getController('test-hb')?.text, equals('12'));
+        expect(controller.getController('test-vcm')?.text, equals('90'));
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
 
     test('Escritura directa en Hemoglobina (HB) autocalcula HTC, ERI e Índices', () {
       final order = createTestOrder();
@@ -441,38 +449,41 @@ void main() {
   });
 
   group('OrderResultsViewController — Generación de DTOs Inmutables', () {
-    test('generateUpdatedResults y generateUpdateOrder empaquetan datos y calculan nuevo estado', () {
-      final order = createTestOrder(
-        totalPrice: 20000,
-        paidAmount: 20000,
-        status: 'pending',
-      );
+    test(
+      'generateUpdatedResults y generateUpdateOrder empaquetan datos y calculan nuevo estado',
+      () {
+        final order = createTestOrder(
+          totalPrice: 20000,
+          paidAmount: 20000,
+          status: 'pending',
+        );
 
-      final controller = OrderResultsViewController(order: order);
+        final controller = OrderResultsViewController(order: order);
 
-      final hbResult = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
-      controller.onNumericChanged(hbResult, '14.5');
-      controller.toggleVisibility('test-vcm', false);
-      controller.notesController.text = 'Muestra procesada correctamente.';
+        final hbResult = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
+        controller.onNumericChanged(hbResult, '14.5');
+        controller.toggleVisibility('test-vcm', false);
+        controller.notesController.text = 'Muestra procesada correctamente.';
 
-      final updatedResults = controller.generateUpdatedResults();
-      expect(updatedResults.length, equals(6));
+        final updatedResults = controller.generateUpdatedResults();
+        expect(updatedResults.length, equals(6));
 
-      final updatedHb = updatedResults.firstWhere((r) => r.labTestId == 'test-hb');
-      expect(updatedHb.resultValue, equals('14.5'));
-      expect(updatedHb.showInPrint, isTrue);
+        final updatedHb = updatedResults.firstWhere((r) => r.labTestId == 'test-hb');
+        expect(updatedHb.resultValue, equals('14.5'));
+        expect(updatedHb.showInPrint, isTrue);
 
-      final updatedVcm = updatedResults.firstWhere((r) => r.labTestId == 'test-vcm');
-      expect(updatedVcm.showInPrint, isFalse);
+        final updatedVcm = updatedResults.firstWhere((r) => r.labTestId == 'test-vcm');
+        expect(updatedVcm.showInPrint, isFalse);
 
-      final updateDto = controller.generateUpdateOrder();
-      // Como totalPrice == paidAmount (20000 == 20000), el nuevo estado es 'paid'
-      expect(updateDto.status, equals('paid'));
-      expect(updateDto.notes, equals('Muestra procesada correctamente.'));
-      expect(updateDto.results?.length, equals(6));
+        final updateDto = controller.generateUpdateOrder();
+        // Como totalPrice == paidAmount (20000 == 20000), el nuevo estado es 'paid'
+        expect(updateDto.status, equals('paid'));
+        expect(updateDto.notes, equals('Muestra procesada correctamente.'));
+        expect(updateDto.results?.length, equals(6));
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
   });
 
   group('OrderResultsViewController — Escenarios Críticos y Blindaje de Producción', () {
@@ -502,135 +513,141 @@ void main() {
       controller.dispose();
     });
 
-    test('Reapertura de orden guardada: detecta campos calculados y recalcula al modificar insumo', () {
-      final order = OrderInDb(
-        id: 'ORD-SAVED-01',
-        patientId: 'PAT-1',
-        branchId: 'branch-1',
-        totalPrice: 25000,
-        paidAmount: 25000,
-        status: 'paid',
-        createdAt: 1700000000000,
-        items: [],
-        results: [
-          OrderTestResult(
-            labTestId: 'test-col-t',
-            parameterName: 'Colesterol Total',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-            resultValue: '207',
-          ),
-          OrderTestResult(
-            labTestId: 'test-trig',
-            parameterName: 'Triglicéridos',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-            resultValue: '92',
-          ),
-          OrderTestResult(
-            labTestId: 'test-hdl',
-            parameterName: 'Colesterol HDL',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-            resultValue: '43',
-          ),
-          OrderTestResult(
-            labTestId: 'test-vldl',
-            parameterName: 'Colesterol VLDL',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-            resultValue: '18.4',
-          ),
-          OrderTestResult(
-            labTestId: 'test-ldl',
-            parameterName: 'Colesterol LDL',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-            resultValue: '145.6',
-          ),
-          OrderTestResult(
-            labTestId: 'test-riesg-cor',
-            parameterName: 'Riesgo Coronario',
-            medicalClassification: 'Química Sanguínea',
-            subclassification: 'Perfil Lipídico',
-            dataType: 'numeric',
-            unitOfMeasure: '%',
-            resultValue: '4.8',
-          ),
-        ],
-      );
+    test(
+      'Reapertura de orden guardada: detecta campos calculados y recalcula al modificar insumo',
+      () {
+        final order = OrderInDb(
+          id: 'ORD-SAVED-01',
+          patientId: 'PAT-1',
+          branchId: 'branch-1',
+          totalPrice: 25000,
+          paidAmount: 25000,
+          status: 'paid',
+          createdAt: 1700000000000,
+          items: [],
+          results: [
+            OrderTestResult(
+              labTestId: 'test-col-t',
+              parameterName: 'Colesterol Total',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+              resultValue: '207',
+            ),
+            OrderTestResult(
+              labTestId: 'test-trig',
+              parameterName: 'Triglicéridos',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+              resultValue: '92',
+            ),
+            OrderTestResult(
+              labTestId: 'test-hdl',
+              parameterName: 'Colesterol HDL',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+              resultValue: '43',
+            ),
+            OrderTestResult(
+              labTestId: 'test-vldl',
+              parameterName: 'Colesterol VLDL',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+              resultValue: '18.4',
+            ),
+            OrderTestResult(
+              labTestId: 'test-ldl',
+              parameterName: 'Colesterol LDL',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+              resultValue: '145.6',
+            ),
+            OrderTestResult(
+              labTestId: 'test-riesg-cor',
+              parameterName: 'Riesgo Coronario',
+              medicalClassification: 'Química Sanguínea',
+              subclassification: 'Perfil Lipídico',
+              dataType: 'numeric',
+              unitOfMeasure: '%',
+              resultValue: '4.8',
+            ),
+          ],
+        );
 
-      final controller = OrderResultsViewController(order: order);
+        final controller = OrderResultsViewController(order: order);
 
-      // Al reabrir, los campos calculados deben tener su badge Auto activo
-      expect(controller.isAutoCalculated('test-vldl'), isTrue);
-      expect(controller.isAutoCalculated('test-ldl'), isTrue);
-      expect(controller.isAutoCalculated('test-riesg-cor'), isTrue);
+        // Al reabrir, los campos calculados deben tener su badge Auto activo
+        expect(controller.isAutoCalculated('test-vldl'), isTrue);
+        expect(controller.isAutoCalculated('test-ldl'), isTrue);
+        expect(controller.isAutoCalculated('test-riesg-cor'), isTrue);
 
-      // Al modificar Colesterol Total a 180, los campos derivados deben recalcularse
-      final colResult = controller.results.firstWhere((r) => r.labTestId == 'test-col-t');
-      controller.onNumericChanged(colResult, '180');
+        // Al modificar Colesterol Total a 180, los campos derivados deben recalcularse
+        final colResult = controller.results.firstWhere((r) => r.labTestId == 'test-col-t');
+        controller.onNumericChanged(colResult, '180');
 
-      // LDL = 180 - 43 - 18.4 = 118.6
-      expect(controller.getController('test-ldl')?.text, equals('118.6'));
-      // Riesgo Coronario = 180 / 43 = 4.186... -> 4.2
-      expect(controller.getController('test-riesg-cor')?.text, equals('4.2'));
+        // LDL = 180 - 43 - 18.4 = 118.6
+        expect(controller.getController('test-ldl')?.text, equals('118.6'));
+        // Riesgo Coronario = 180 / 43 = 4.186... -> 4.2
+        expect(controller.getController('test-riesg-cor')?.text, equals('4.2'));
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
 
-    test('Limpieza reactiva: vaciar insumo disparador limpia los campos dependientes autocalculados', () {
-      final order = OrderInDb(
-        id: 'ORD-NU-CLEAN',
-        patientId: 'PAT-1',
-        branchId: 'branch-1',
-        totalPrice: 20000,
-        paidAmount: 20000,
-        status: 'paid',
-        createdAt: 1700000000000,
-        items: [],
-        results: [
-          OrderTestResult(
-            labTestId: 'test-urea',
-            parameterName: 'Urea',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-          ),
-          OrderTestResult(
-            labTestId: 'test-bun',
-            parameterName: 'Nitrógeno de Urea (BUN)',
-            dataType: 'numeric',
-            unitOfMeasure: 'mg/dL',
-          ),
-        ],
-      );
+    test(
+      'Limpieza reactiva: vaciar insumo disparador limpia los campos dependientes autocalculados',
+      () {
+        final order = OrderInDb(
+          id: 'ORD-NU-CLEAN',
+          patientId: 'PAT-1',
+          branchId: 'branch-1',
+          totalPrice: 20000,
+          paidAmount: 20000,
+          status: 'paid',
+          createdAt: 1700000000000,
+          items: [],
+          results: [
+            OrderTestResult(
+              labTestId: 'test-urea',
+              parameterName: 'Urea',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+            ),
+            OrderTestResult(
+              labTestId: 'test-bun',
+              parameterName: 'Nitrógeno de Urea (BUN)',
+              dataType: 'numeric',
+              unitOfMeasure: 'mg/dL',
+            ),
+          ],
+        );
 
-      final controller = OrderResultsViewController(order: order);
-      final urea = controller.results.firstWhere((r) => r.labTestId == 'test-urea');
+        final controller = OrderResultsViewController(order: order);
+        final urea = controller.results.firstWhere((r) => r.labTestId == 'test-urea');
 
-      // 1. Ingresar Urea = 38 -> BUN = 17.9
-      controller.onNumericChanged(urea, '38');
-      expect(controller.getController('test-bun')?.text, equals('17.9'));
-      expect(controller.isAutoCalculated('test-bun'), isTrue);
+        // 1. Ingresar Urea = 38 -> BUN = 17.9
+        controller.onNumericChanged(urea, '38');
+        expect(controller.getController('test-bun')?.text, equals('17.9'));
+        expect(controller.isAutoCalculated('test-bun'), isTrue);
 
-      // 2. Vaciar Urea = ''
-      controller.onNumericChanged(urea, '');
-      // BUN debe quedar vacío y desmarcado de autocalculado
-      expect(controller.getController('test-bun')?.text, equals(''));
-      expect(controller.isAutoCalculated('test-bun'), isFalse);
+        // 2. Vaciar Urea = ''
+        controller.onNumericChanged(urea, '');
+        // BUN debe quedar vacío y desmarcado de autocalculado
+        expect(controller.getController('test-bun')?.text, equals(''));
+        expect(controller.isAutoCalculated('test-bun'), isFalse);
 
-      controller.dispose();
-    });
+        controller.dispose();
+      },
+    );
 
     test('hasDifferentialStarted detecta si el diferencial leucocitario fue iniciado', () {
       final order = createTestOrder(
@@ -742,94 +759,198 @@ void main() {
       controller.dispose();
     });
 
-    test('Reapertura de orden con hipocromía manual (HTC=40, HB=12.8, ERI=4.850) preserva valores al ajustar HB, pero recalcula todo si se escribe HTC', () {
+    test(
+      'Reapertura de orden con hipocromía manual (HTC=40, HB=12.8, ERI=4.850) preserva valores al ajustar HB, pero recalcula todo si se escribe HTC',
+      () {
+        final order = createTestOrder(
+          results: [
+            OrderTestResult(
+              labTestId: 'test-eri',
+              parameterName: 'Eritrocitos',
+              dataType: 'numeric',
+              unitOfMeasure: 'xmm3',
+              resultValue: '4.850',
+            ),
+            OrderTestResult(
+              labTestId: 'test-hb',
+              parameterName: 'Hemoglobina',
+              dataType: 'numeric',
+              unitOfMeasure: 'g/dL',
+              resultValue: '12.8',
+            ),
+            OrderTestResult(
+              labTestId: 'test-htc',
+              parameterName: 'Hematocrito',
+              dataType: 'numeric',
+              unitOfMeasure: '%',
+              resultValue: '40',
+            ),
+            OrderTestResult(
+              labTestId: 'test-vcm',
+              parameterName: 'VCM',
+              dataType: 'numeric',
+              unitOfMeasure: 'fL',
+              resultValue: '82.5',
+            ),
+            OrderTestResult(
+              labTestId: 'test-hcm',
+              parameterName: 'HCM',
+              dataType: 'numeric',
+              unitOfMeasure: 'pg',
+              resultValue: '26.4',
+            ),
+            OrderTestResult(
+              labTestId: 'test-chcm',
+              parameterName: 'CHCM',
+              dataType: 'numeric',
+              unitOfMeasure: 'g/dL',
+              resultValue: '32',
+            ),
+          ],
+        );
+
+        final controller = OrderResultsViewController(order: order);
+
+        // 1. Si el analista ajusta HB de 12.8 a 13.0, HTC=40 debe preservarse intacto
+        final hb = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
+        controller.onNumericChanged(hb, '13.0');
+        expect(controller.getController('test-htc')?.text, equals('40'));
+
+        // 2. Si el analista escribe o vuelve a escribir en HTC (ej. 45), HTC manda y recalcula toda la Serie Roja
+        final htc = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
+        controller.onNumericChanged(htc, '45');
+        expect(controller.getController('test-hb')?.text, equals('15'));
+        expect(controller.getController('test-eri')?.text, equals('5.000'));
+        expect(controller.getController('test-vcm')?.text, equals('90'));
+        expect(controller.getController('test-hcm')?.text, equals('30'));
+        expect(controller.getController('test-chcm')?.text, equals('33.3'));
+
+        controller.dispose();
+      },
+    );
+
+    test(
+      'Vaciar explícitamente Eritrocitos limpia VCM y HCM sin usar un ERI fantasma en memoria',
+      () {
+        final order = createTestOrder();
+        final controller = OrderResultsViewController(order: order);
+
+        final htc = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
+        final eri = controller.results.firstWhere((r) => r.labTestId == 'test-eri');
+
+        // 1. Escribir HTC = 45 -> llena HB=15, ERI=5.000, VCM=90, HCM=30, CHCM=33.3
+        controller.onNumericChanged(htc, '45');
+        expect(controller.getController('test-vcm')?.text, equals('90'));
+        expect(controller.getController('test-hcm')?.text, equals('30'));
+        expect(controller.getController('test-chcm')?.text, equals('33.3'));
+
+        // 2. Vaciar explícitamente el campo Eritrocitos ('')
+        controller.onNumericChanged(eri, '');
+        expect(controller.getController('test-eri')?.text, equals(''));
+        // VCM y HCM requieren Eritrocitos, por lo que deben limpiarse
+        expect(controller.getController('test-vcm')?.text, equals(''));
+        expect(controller.getController('test-hcm')?.text, equals(''));
+        // CHCM solo depende de HB y HTC, por lo que se mantiene en 33.3
+        expect(controller.getController('test-chcm')?.text, equals('33.3'));
+
+        controller.dispose();
+      },
+    );
+
+    test(
+      'Cuando autoCalculateFormulas es false, no se calculan formulas automaticamente ni se prellenan campos',
+      () {
+        final defaultOrder = createTestOrder();
+        final order = createTestOrder(
+          results: [
+            ...defaultOrder.results,
+            OrderTestResult(
+              labTestId: 'test-seg',
+              parameterName: 'Segmentados / Neutrófilos',
+              dataType: 'numeric',
+              unitOfMeasure: '%',
+            ),
+          ],
+        );
+        final controller = OrderResultsViewController(
+          order: order,
+          autoCalculateFormulas: false,
+        );
+
+        // 1. Serie Blanca no se prellena automáticamente con '0'
+        expect(controller.getController('test-seg')?.text, isEmpty);
+
+        // 2. Escribir en Hematocrito NO autocalcula Hemoglobina, Eritrocitos ni Wintrobe
+        final htc = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
+        controller.onNumericChanged(htc, '45');
+
+        expect(controller.getController('test-htc')?.text, equals('45'));
+        expect(controller.getController('test-hb')?.text, isEmpty);
+        expect(controller.getController('test-eri')?.text, isEmpty);
+        expect(controller.getController('test-vcm')?.text, isEmpty);
+        expect(controller.getController('test-hcm')?.text, isEmpty);
+        expect(controller.getController('test-chcm')?.text, isEmpty);
+
+        // 3. Ningún campo está marcado como autocalculado
+        expect(controller.isAutoCalculated('test-hb'), isFalse);
+        expect(controller.isAutoCalculated('test-eri'), isFalse);
+        expect(controller.getFormulaDisplay('test-hb'), isNull);
+
+        // 4. Captura manual independiente (transcripción libre del analizador)
+        final hb = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
+        controller.onNumericChanged(hb, '18.5'); // Fuera de rango (rango masculino max 17.5)
+        expect(controller.getController('test-hb')?.text, equals('18.5'));
+        expect(controller.getController('test-htc')?.text, equals('45')); // No altera HTC
+
+        // 5. Las alertas clínicas demográficas continúan evaluándose en vivo sin interferir
+        expect(controller.isAlert(hb), isTrue);
+
+        controller.dispose();
+      },
+    );
+
+    test('hasUnsavedChanges no marca los defaults iniciales como cambio', () {
       final order = createTestOrder(
         results: [
           OrderTestResult(
-            labTestId: 'test-eri',
-            parameterName: 'Eritrocitos',
-            dataType: 'numeric',
-            unitOfMeasure: 'xmm3',
-            resultValue: '4.850',
-          ),
-          OrderTestResult(
-            labTestId: 'test-hb',
-            parameterName: 'Hemoglobina',
-            dataType: 'numeric',
-            unitOfMeasure: 'g/dL',
-            resultValue: '12.8',
-          ),
-          OrderTestResult(
-            labTestId: 'test-htc',
-            parameterName: 'Hematocrito',
-            dataType: 'numeric',
-            unitOfMeasure: '%',
-            resultValue: '40',
-          ),
-          OrderTestResult(
-            labTestId: 'test-vcm',
-            parameterName: 'VCM',
-            dataType: 'numeric',
-            unitOfMeasure: 'fL',
-            resultValue: '82.5',
-          ),
-          OrderTestResult(
-            labTestId: 'test-hcm',
-            parameterName: 'HCM',
-            dataType: 'numeric',
-            unitOfMeasure: 'pg',
-            resultValue: '26.4',
-          ),
-          OrderTestResult(
-            labTestId: 'test-chcm',
-            parameterName: 'CHCM',
-            dataType: 'numeric',
-            unitOfMeasure: 'g/dL',
-            resultValue: '32',
+            labTestId: 'test-vdrl',
+            parameterName: 'VDRL',
+            dataType: 'qualitative',
+            qualitativeOptions: ['No reactivo', 'Reactivo'],
+            expectedQualitativeValue: 'No reactivo',
           ),
         ],
       );
-
       final controller = OrderResultsViewController(order: order);
 
-      // 1. Si el analista ajusta HB de 12.8 a 13.0, HTC=40 debe preservarse intacto
-      final hb = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
-      controller.onNumericChanged(hb, '13.0');
-      expect(controller.getController('test-htc')?.text, equals('40'));
+      expect(controller.hasUnsavedChanges, isFalse);
 
-      // 2. Si el analista escribe o vuelve a escribir en HTC (ej. 45), HTC manda y recalcula toda la Serie Roja
-      final htc = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
-      controller.onNumericChanged(htc, '45');
-      expect(controller.getController('test-hb')?.text, equals('15'));
-      expect(controller.getController('test-eri')?.text, equals('5.000'));
-      expect(controller.getController('test-vcm')?.text, equals('90'));
-      expect(controller.getController('test-hcm')?.text, equals('30'));
-      expect(controller.getController('test-chcm')?.text, equals('33.3'));
+      controller.setQualitativeValue('test-vdrl', 'Reactivo');
+      expect(controller.hasUnsavedChanges, isTrue);
+
+      controller.setQualitativeValue('test-vdrl', 'No reactivo');
+      expect(controller.hasUnsavedChanges, isFalse);
 
       controller.dispose();
     });
 
-    test('Vaciar explícitamente Eritrocitos limpia VCM y HCM sin usar un ERI fantasma en memoria', () {
+    test('buildPreviewOrder refleja valores actuales sin modificar la orden original', () {
       final order = createTestOrder();
       final controller = OrderResultsViewController(order: order);
+      final hb = controller.results.firstWhere((r) => r.labTestId == 'test-hb');
 
-      final htc = controller.results.firstWhere((r) => r.labTestId == 'test-htc');
-      final eri = controller.results.firstWhere((r) => r.labTestId == 'test-eri');
+      controller.onNumericChanged(hb, '14.5');
+      controller.notesController.text = 'Nota nueva';
+      expect(controller.hasUnsavedChanges, isTrue);
 
-      // 1. Escribir HTC = 45 -> llena HB=15, ERI=5.000, VCM=90, HCM=30, CHCM=33.3
-      controller.onNumericChanged(htc, '45');
-      expect(controller.getController('test-vcm')?.text, equals('90'));
-      expect(controller.getController('test-hcm')?.text, equals('30'));
-      expect(controller.getController('test-chcm')?.text, equals('33.3'));
+      final preview = controller.buildPreviewOrder();
+      final previewHb = preview.results.firstWhere((r) => r.labTestId == 'test-hb');
+      expect(previewHb.resultValue, '14.5');
+      expect(preview.notes, 'Nota nueva');
 
-      // 2. Vaciar explícitamente el campo Eritrocitos ('')
-      controller.onNumericChanged(eri, '');
-      expect(controller.getController('test-eri')?.text, equals(''));
-      // VCM y HCM requieren Eritrocitos, por lo que deben limpiarse
-      expect(controller.getController('test-vcm')?.text, equals(''));
-      expect(controller.getController('test-hcm')?.text, equals(''));
-      // CHCM solo depende de HB y HTC, por lo que se mantiene en 33.3
-      expect(controller.getController('test-chcm')?.text, equals('33.3'));
+      final originalHb = order.results.firstWhere((r) => r.labTestId == 'test-hb');
+      expect(originalHb.resultValue, isNull);
+      expect(order.notes, isNull);
 
       controller.dispose();
     });

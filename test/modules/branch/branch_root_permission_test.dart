@@ -28,12 +28,9 @@ class FakeAppSessionCubit extends Cubit<AppSessionState>
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeBranchesRepository implements BranchesRepository {
+class FakeBranchesRepository with ReactiveRepository<BranchInDb> implements BranchesRepository {
   @override
   List<BranchInDb> get branches => [];
-
-  @override
-  Stream<RepoEvent<BranchInDb>> get eventStream => const Stream.empty();
 
   @override
   Future<List<BranchInDb>> getAllBranches() async => [];
@@ -41,6 +38,10 @@ class FakeBranchesRepository implements BranchesRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+class FakeAuthRepository extends Fake implements AuthRepository {}
+
+class FakeServinRepository extends Fake implements ServinRepository {}
 
 void main() {
   group('Branch Root Permission & Visibility Tests', () {
@@ -236,6 +237,63 @@ void main() {
       expect(cubit.isRootUser, isFalse);
       // Para usuario común, depende de currentUser.branches.length > 1
       expect(cubit.hasMultipleBranches, isFalse);
+    });
+
+    test('AppSessionCubit actualiza currentBranch ante RepoItemUpdated incluso para usuario no-root', () async {
+      final regularAdmin = UserInDb(
+        id: 'user_admin',
+        username: 'admin1',
+        name: 'Admin Sede',
+        role: 'Admin',
+        accessLevel: 4,
+        branches: ['ORIGIN_BRANCH'],
+        createdAt: 1000,
+      );
+
+      final initialBranch = BranchInDb(
+        id: 'ORIGIN_BRANCH',
+        name: 'Matriz Principal',
+        address: 'Calle 1',
+        phone: '111',
+        autoCalculateFormulas: true,
+        createdAt: 1000,
+      );
+
+      final branchesRepo = FakeBranchesRepository();
+      final sessionCubit = AppSessionCubit(
+        authRepository: FakeAuthRepository(),
+        branchesRepository: branchesRepo,
+        servinRepository: FakeServinRepository(),
+      );
+
+      sessionCubit.emit(
+        AppSessionState(
+          status: AppSessionStatus.authenticated,
+          currentUser: regularAdmin,
+          currentBranch: initialBranch,
+          branches: [initialBranch],
+        ),
+      );
+
+      expect(sessionCubit.isRootUser, isFalse);
+      expect(sessionCubit.currentBranch?.autoCalculateFormulas, isTrue);
+
+      final updatedBranch = BranchInDb(
+        id: 'ORIGIN_BRANCH',
+        name: 'Matriz Principal',
+        address: 'Calle 1',
+        phone: '111',
+        autoCalculateFormulas: false,
+        createdAt: 1000,
+      );
+
+      branchesRepo.notifyItemUpdated(updatedBranch);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(sessionCubit.currentBranch?.autoCalculateFormulas, isFalse);
+      expect(sessionCubit.branches.first.autoCalculateFormulas, isFalse);
+
+      await sessionCubit.close();
     });
   });
 }

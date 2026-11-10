@@ -7,6 +7,7 @@ import '../../../tools/formatters/thousands_separator_input_formatter.dart';
 
 class OrderResultsViewController extends ChangeNotifier {
   final OrderInDb order;
+  final bool autoCalculateFormulas;
 
   late final List<OrderTestResult> _results;
   late final Map<String, bool> _visibilityMap;
@@ -14,6 +15,8 @@ class OrderResultsViewController extends ChangeNotifier {
   late final Map<String, String> _qualitativeValues;
   late final Map<String, String> _studyNameByTestId;
   late final TextEditingController notesController;
+  late final List<OrderTestResult> _initialDraft;
+  late final String _initialNotes;
 
   final Set<String> _autoCalculatedFieldIds = {};
   final Map<String, String> _autoCalculatedFormulas = {};
@@ -35,6 +38,7 @@ class OrderResultsViewController extends ChangeNotifier {
 
   OrderResultsViewController({
     required this.order,
+    this.autoCalculateFormulas = true,
   }) {
     _results = List.from(order.results);
     _visibilityMap = {
@@ -43,8 +47,7 @@ class OrderResultsViewController extends ChangeNotifier {
     _controllers = {};
     _qualitativeValues = {};
     _studyNameByTestId = {
-      for (var r in _results)
-        r.labTestId: ClinicalOrderGrouper.resolveStudyNameForResult(r, order),
+      for (var r in _results) r.labTestId: ClinicalOrderGrouper.resolveStudyNameForResult(r, order),
     };
     notesController = TextEditingController(text: order.notes ?? '');
 
@@ -61,7 +64,8 @@ class OrderResultsViewController extends ChangeNotifier {
         final canonical = _resolveCanonical(r);
         final initial = r.resultValue?.trim() ?? '';
         // Serie Blanca: los 7 parámetros diferenciales tienen valor por defecto 0 si están vacíos
-        if (canonical != null &&
+        if (autoCalculateFormulas &&
+            canonical != null &&
             ClinicalFormulasRegistry.differentialKeys.contains(canonical) &&
             initial.isEmpty) {
           _controllers[r.labTestId] = TextEditingController(text: '0');
@@ -74,11 +78,19 @@ class OrderResultsViewController extends ChangeNotifier {
       }
     }
 
-    // Restauración inteligente de campos autocalculados que ya vengan guardados
-    _detectAndRestoreAutoCalculatedFields();
+    if (autoCalculateFormulas) {
+      // Restauración inteligente de campos autocalculados que ya vengan guardados
+      _detectAndRestoreAutoCalculatedFields();
 
-    // Evaluación inicial preventiva si la orden ya posee valores precargados
-    _evaluateCalculations();
+      // Evaluación inicial preventiva si la orden ya posee valores precargados
+      _evaluateCalculations();
+    }
+
+    // Snapshot del estado inicial visible (incluye defaults y autocalculados).
+    // Se usa para detectar cambios reales del usuario sin marcar como "sucio"
+    // el simple hecho de abrir el diálogo.
+    _initialDraft = generateUpdatedResults();
+    _initialNotes = notesController.text.trim();
   }
 
   /// Analiza los valores precargados en la orden (al abrir o reabrir el diálogo)
@@ -213,9 +225,11 @@ class OrderResultsViewController extends ChangeNotifier {
 
   bool isVisible(String labTestId) => _visibilityMap[labTestId] ?? true;
 
-  bool isAutoCalculated(String labTestId) => _autoCalculatedFieldIds.contains(labTestId);
+  bool isAutoCalculated(String labTestId) =>
+      autoCalculateFormulas && _autoCalculatedFieldIds.contains(labTestId);
 
-  String? getFormulaDisplay(String labTestId) => _autoCalculatedFormulas[labTestId];
+  String? getFormulaDisplay(String labTestId) =>
+      autoCalculateFormulas ? _autoCalculatedFormulas[labTestId] : null;
 
   bool isManuallyOverridden(String labTestId) => _manuallyOverriddenFieldIds.contains(labTestId);
 
@@ -404,6 +418,14 @@ class OrderResultsViewController extends ChangeNotifier {
   /// Procesa el cambio en un campo numérico o de texto libre, sincronizando el controlador,
   /// detectando sobreescrituras manuales y disparando el motor de fórmulas clínicas reactivas.
   void onNumericChanged(OrderTestResult r, String val) {
+    if (!autoCalculateFormulas) {
+      final controller = _controllers[r.labTestId];
+      if (controller != null && controller.text != val) {
+        controller.text = val;
+      }
+      notifyListeners();
+      return;
+    }
     final controller = _controllers[r.labTestId];
     if (controller != null && controller.text != val) {
       controller.text = val;
@@ -452,9 +474,7 @@ class OrderResultsViewController extends ChangeNotifier {
         _manuallyOverriddenFieldIds.add(r.labTestId);
         for (final other in _results) {
           final otherCanonical = _resolveCanonical(other);
-          if (otherCanonical == 'VCM' ||
-              otherCanonical == 'HCM' ||
-              otherCanonical == 'CHCM') {
+          if (otherCanonical == 'VCM' || otherCanonical == 'HCM' || otherCanonical == 'CHCM') {
             _manuallyOverriddenFieldIds.remove(other.labTestId);
           }
         }
@@ -514,12 +534,15 @@ class OrderResultsViewController extends ChangeNotifier {
     _autoCalculatedFieldIds.remove(r.labTestId);
     _autoCalculatedFormulas.remove(r.labTestId);
 
-    _evaluateCalculations(triggeredTestId: r.labTestId);
+    if (autoCalculateFormulas) {
+      _evaluateCalculations(triggeredTestId: r.labTestId);
+    }
     notifyListeners();
   }
 
   /// Evalúa en tiempo real las fórmulas clínicas aplicables según los parámetros presentes
   void _evaluateCalculations({String? triggeredTestId}) {
+    if (!autoCalculateFormulas) return;
     if (_isEvaluatingCalculations) return;
     _isEvaluatingCalculations = true;
 
@@ -621,8 +644,10 @@ class OrderResultsViewController extends ChangeNotifier {
         if (hbVal != null && hbVal > 0) {
           // A) Hematocrito = Hemoglobina * 3 (1 decimal)
           // SOLO si HTC está vacío o si NO fue ingresado manualmente por el usuario
-          final htcIsManual = htcResult != null && _manuallyOverriddenFieldIds.contains(htcResult.labTestId);
-          final htcIsEmpty = htcResult == null || (_controllers[htcResult.labTestId]?.text.trim().isEmpty ?? true);
+          final htcIsManual =
+              htcResult != null && _manuallyOverriddenFieldIds.contains(htcResult.labTestId);
+          final htcIsEmpty =
+              htcResult == null || (_controllers[htcResult.labTestId]?.text.trim().isEmpty ?? true);
           if (htcResult != null && (htcIsEmpty || !htcIsManual)) {
             final approxHtc = hbVal * 3.0;
             final formattedHtc = ClinicalFormulasRegistry.formatClinicalValue(approxHtc, 1);
@@ -688,7 +713,8 @@ class OrderResultsViewController extends ChangeNotifier {
             _autoCalculatedFormulas[eriResult.labTestId] = 'Hemoglobina / 3';
           }
         } else if (hbVal != null && hbVal > 0) {
-          if (htcResult != null && (_controllers[htcResult.labTestId]?.text.trim().isEmpty ?? true)) {
+          if (htcResult != null &&
+              (_controllers[htcResult.labTestId]?.text.trim().isEmpty ?? true)) {
             final approxHtc = hbVal * 3.0;
             final formattedHtc = ClinicalFormulasRegistry.formatClinicalValue(approxHtc, 1);
             _controllers[htcResult.labTestId]?.text = ThousandsSeparatorInputFormatter.formatText(
@@ -861,9 +887,7 @@ class OrderResultsViewController extends ChangeNotifier {
   /// Obtiene la cantidad total de parámetros que pertenecen a un estudio dado.
   int getStudyTotalCount(String studyTitle) {
     final upper = studyTitle.toUpperCase();
-    return _results
-        .where((r) => getStudyName(r).toUpperCase() == upper)
-        .length;
+    return _results.where((r) => getStudyName(r).toUpperCase() == upper).length;
   }
 
   /// Indica si la orden contiene más de un estudio o perfil clínico.
@@ -955,6 +979,35 @@ class OrderResultsViewController extends ChangeNotifier {
       results: updatedResults,
       notes: notesController.text.trim(),
     );
+  }
+
+  /// Indica si hay cambios sin guardar en resultados o notas.
+  /// Compara contra el estado inicial visible (no contra la orden persistida),
+  /// para no marcar como cambio los defaults cualitativos o los autocalculados.
+  bool get hasUnsavedChanges {
+    if (notesController.text.trim() != _initialNotes) return true;
+    final current = generateUpdatedResults();
+    if (current.length != _initialDraft.length) return true;
+    for (var i = 0; i < current.length; i++) {
+      final currentResult = current[i];
+      final initialResult = _initialDraft[i];
+      if (currentResult.labTestId != initialResult.labTestId) return true;
+      if ((currentResult.resultValue ?? '').trim() != (initialResult.resultValue ?? '').trim()) {
+        return true;
+      }
+      if (currentResult.showInPrint != initialResult.showInPrint) return true;
+    }
+    return false;
+  }
+
+  /// Construye una copia de la orden con los valores actuales del diálogo,
+  /// sin persistirlos. Se usa para previsualizar el informe sin cerrar la captura.
+  OrderInDb buildPreviewOrder() {
+    return OrderInDb.fromJson({
+      ...order.toJson(),
+      'results': generateUpdatedResults().map((r) => r.toJson()).toList(),
+      'notes': notes,
+    });
   }
 
   // ---------------------------------------------------------------------------

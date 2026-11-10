@@ -113,7 +113,11 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
     final cents = _amountCents;
     if (cents <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El monto debe ser mayor a \$0.00')),
+        SnackBar(
+          content: Text(
+            'El monto debe ser mayor a ${NumberFormatter.convertToMoneyLike(0)}',
+          ),
+        ),
       );
       return;
     }
@@ -371,7 +375,8 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
                                 ),
                               ),
                               Text(
-                                '\$${_availableCashDouble.toStringAsFixed(2)} MXN',
+                                NumberFormatter.currencyFormat
+                                    .format(_availableCashDouble),
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.onSurface,
@@ -387,7 +392,7 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
 
                   // Campo de Monto
                   Text(
-                    'Monto (\$)',
+                    'Monto (${NumberFormatter.currencySymbol})',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -421,7 +426,7 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
                           _paymentMethod == 'cash') {
                         final cents = (parsed * 100).round();
                         if (cents > _availableCashCents) {
-                          return 'Excede el efectivo en caja (\$${_availableCashDouble.toStringAsFixed(2)})';
+                          return 'Excede el efectivo en caja (${NumberFormatter.currencyFormat.format(_availableCashDouble)})';
                         }
                       }
                       return null;

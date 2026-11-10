@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../../tools/calculators/clinical_formulas_registry.dart';
 import '../../../widgets/dialogs/viewers/clinical_order_viewer.dart';
@@ -21,8 +22,13 @@ import 'order_results_dialogs/order_results_footer.dart';
 /// - Despacha la orden inmutable generada al [WriteOrderCubit] respetando la Regla de Oro.
 class OrderResultsDialog extends StatefulWidget {
   final OrderInDb order;
+  final bool? autoCalculateFormulas;
 
-  const OrderResultsDialog({super.key, required this.order});
+  const OrderResultsDialog({
+    super.key,
+    required this.order,
+    this.autoCalculateFormulas,
+  });
 
   @override
   State<OrderResultsDialog> createState() => _OrderResultsDialogState();
@@ -34,11 +40,30 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
   late final List<FocusNode> _focusNodes;
   late final FocusNode _notesFocusNode;
   int? _activeFocusedIndex;
+  bool _allowPop = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = OrderResultsViewController(order: widget.order);
+    bool shouldAutoCalculate = widget.autoCalculateFormulas ?? true;
+    if (widget.autoCalculateFormulas == null) {
+      try {
+        final sessionState = context.read<AppSessionCubit>().state;
+        final matchingBranch =
+            sessionState.branches.where((b) => b.id == widget.order.branchId).firstOrNull ??
+            sessionState.currentBranch;
+        if (matchingBranch != null) {
+          shouldAutoCalculate = matchingBranch.autoCalculateFormulas;
+        }
+      } catch (_) {
+        shouldAutoCalculate = true;
+      }
+    }
+
+    _controller = OrderResultsViewController(
+      order: widget.order,
+      autoCalculateFormulas: shouldAutoCalculate,
+    );
     _notesFocusNode = FocusNode();
 
     _focusNodes = List.generate(_controller.results.length, (index) {
@@ -89,6 +114,46 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     }
   }
 
+  Future<bool> _confirmDiscard() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Descartar cambios'),
+        content: const Text(
+          'Hay resultados o notas sin guardar. Si sales ahora, se perderán.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Seguir editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Descartar y salir'),
+          ),
+        ],
+      ),
+    );
+    return discard ?? false;
+  }
+
+  Future<void> _requestClose() async {
+    if (_controller.isSubmitting) return;
+
+    if (_controller.hasUnsavedChanges) {
+      final discard = await _confirmDiscard();
+      if (!mounted || !discard) return;
+    }
+
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
   @override
   void dispose() {
     _notesFocusNode.dispose();
@@ -103,12 +168,12 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
     if (_controller.isSubmitting) return;
     if (!_formKey.currentState!.validate()) return;
 
-    // Validación de Negocio Estricta: Si se ingresó el diferencial, debe sumar exactamente 100%
-    if (_controller.hasDifferentialStarted && !_controller.isDifferentialValid) {
+    // Validación de Negocio Estricta: Si se ingresó el diferencial y el cálculo automático está activo, debe sumar exactamente 100%
+    if (_controller.autoCalculateFormulas &&
+        _controller.hasDifferentialStarted &&
+        !_controller.isDifferentialValid) {
       final sum = _controller.differentialSum;
-      final sumText = sum != null
-          ? ClinicalFormulasRegistry.formatClinicalValue(sum, 1)
-          : '0.0';
+      final sumText = sum != null ? ClinicalFormulasRegistry.formatClinicalValue(sum, 1) : '0.0';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -132,6 +197,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
 
       final state = writeCubit.state;
       if (state is OrderUpdated) {
+        setState(() => _allowPop = true);
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop(true);
         }
@@ -179,7 +245,27 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
           }
 
           return PopScope(
-            canPop: !_controller.isSubmitting,
+            canPop: _allowPop || _controller.isSubmitting,
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop || _controller.isSubmitting) return;
+              if (!_controller.hasUnsavedChanges) {
+                setState(() => _allowPop = true);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                });
+                return;
+              }
+              final discard = await _confirmDiscard();
+              if (!mounted || !discard) return;
+              setState(() => _allowPop = true);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              });
+            },
             child: Dialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               clipBehavior: Clip.antiAlias,
@@ -195,11 +281,7 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                     // 1. Cabecera Visual con Icono y Contexto
                     OrderResultsHeader(
                       onShowPatientInfo: () => showOrderPatientInfoDialog(context, widget.order),
-                      onClose: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.pop(context);
-                        }
-                      },
+                      onClose: _requestClose,
                     ),
 
                     // 2. Barra de Resumen / Métricas Compacta
@@ -224,11 +306,13 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                             final prevStudy = index > 0
                                 ? _controller.getStudyName(_controller.results[index - 1])
                                 : null;
-                            final isNewStudy = index > 0 &&
+                            final isNewStudy =
+                                index > 0 &&
                                 prevStudy != null &&
                                 currentStudy.toUpperCase() != prevStudy.toUpperCase();
 
-                            final isStudyActive = activeStudy != null &&
+                            final isStudyActive =
+                                activeStudy != null &&
                                 activeStudy.toUpperCase() == currentStudy.toUpperCase();
 
                             final card = ParameterCard(
@@ -252,10 +336,8 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                                 OrderResultsSectionHeader(
                                   studyTitle: currentStudy,
                                   clinicalArea: r.medicalClassification,
-                                  completedCount:
-                                      _controller.getStudyCompletedCount(currentStudy),
-                                  totalCount:
-                                      _controller.getStudyTotalCount(currentStudy),
+                                  completedCount: _controller.getStudyCompletedCount(currentStudy),
+                                  totalCount: _controller.getStudyTotalCount(currentStudy),
                                   isCurrentActive: isStudyActive,
                                 ),
                                 const SizedBox(height: 6),
@@ -271,16 +353,12 @@ class _OrderResultsDialogState extends State<OrderResultsDialog> {
                     OrderResultsFooter(
                       isReadOnly: isReadOnly,
                       onViewReport: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.pop(context);
-                        }
-                        showClinicalOrderViewerDialog(context, widget.order);
+                        showClinicalOrderViewerDialog(
+                          context,
+                          _controller.buildPreviewOrder(),
+                        );
                       },
-                      onCancel: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.pop(context);
-                        }
-                      },
+                      onCancel: _requestClose,
                       onSubmit: _submit,
                     ),
                   ],

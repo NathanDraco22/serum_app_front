@@ -34,24 +34,29 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   void _handleBranchEvent(RepoEvent<BranchInDb> event) {
     if (isClosed) return;
     if (!state.isAuthenticated || state.currentUser == null) return;
-    if (!isRootUser) return;
 
     if (event is RepoItemCreated<BranchInDb>) {
+      if (!isRootUser) return;
       final existing = state.branches;
       if (!existing.any((b) => b.id == event.item.id)) {
         emit(state.copyWith(branches: [...existing, event.item]));
       }
     } else if (event is RepoItemUpdated<BranchInDb>) {
+      final hasBranchInList = state.branches.any((b) => b.id == event.item.id);
+      final isCurrentBranch = state.currentBranch?.id == event.item.id;
+      if (!hasBranchInList && !isCurrentBranch) return;
+
       final updatedList = state.branches
           .map((b) => b.id == event.item.id ? event.item : b)
           .toList();
       final updatedCurrent =
-          state.currentBranch?.id == event.item.id ? event.item : state.currentBranch;
+          isCurrentBranch ? event.item : state.currentBranch;
       emit(state.copyWith(
         branches: updatedList,
         currentBranch: updatedCurrent,
       ));
     } else if (event is RepoItemDeleted<BranchInDb>) {
+      if (!isRootUser) return;
       final updatedList =
           state.branches.where((b) => b.id != event.item.id).toList();
       emit(state.copyWith(branches: updatedList));
@@ -381,6 +386,9 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   Future<void> logout() async {
     await authRepository.logout();
     AppSerumConfig().setBranchId(null);
+    if (sl.isRegistered<AppSettingsCubit>()) {
+      sl<AppSettingsCubit>().reset();
+    }
     emit(
       state.copyWith(
         status: AppSessionStatus.unauthenticated,
@@ -521,6 +529,16 @@ class AppSessionCubit extends Cubit<AppSessionState> {
     AppSerumConfig().setBranchId(selectedBranch.id);
     await AppConfigManager().saveSelectedBranchId(selectedBranch.id);
 
+    // Cargar la configuración global antes de publicar la sesión autenticada
+    // para que la primera pantalla se construya con la moneda correcta.
+    try {
+      if (sl.isRegistered<AppSettingsCubit>()) {
+        await sl<AppSettingsCubit>()
+            .loadSettings()
+            .timeout(const Duration(seconds: 5), onTimeout: () {});
+      }
+    } catch (_) {}
+
     emit(
       state.copyWith(
         status: AppSessionStatus.authenticated,
@@ -534,13 +552,6 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
     // Precargar logotipos de la sucursal activa en caché de disco y memoria
     unawaited(AppImageCache.precacheBranchLogos(selectedBranch));
-
-    // Cargar configuraciones del sistema ahora que el tenant y la sesión están activos
-    try {
-      if (sl.isRegistered<AppSettingsCubit>()) {
-        sl<AppSettingsCubit>().loadSettings();
-      }
-    } catch (_) {}
 
     // Consultar turno activo tras configurar usuario
     await fetchActiveShift();

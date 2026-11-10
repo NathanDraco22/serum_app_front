@@ -111,6 +111,7 @@ void main() {
   );
 
   setUp(() {
+    NumberFormatter.configureCurrencyResolver(() => AppCurrency.nio);
     fakeReceiptsDataSource = _FakeReceiptsDataSource();
     receiptsRepo = ReceiptsRepository(fakeReceiptsDataSource);
     fakeCashShiftsDataSource = _FakeCashShiftsDataSource();
@@ -118,6 +119,10 @@ void main() {
     writeCashShiftCubit =
         WriteCashShiftCubit(cashShiftsRepository: cashShiftsRepo);
     fakeSessionCubit = _FakeAppSessionCubit();
+  });
+
+  tearDown(() {
+    NumberFormatter.configureCurrencyResolver(null);
   });
 
   testWidgets('CashShiftCloseDialog carga y desglosa transferencias por banco en vivo', (tester) async {
@@ -149,16 +154,16 @@ void main() {
 
     // Validar indicadores generales
     expect(find.text('Transferencias'), findsOneWidget);
-    expect(find.text('\$80.00'), findsOneWidget);
+    expect(find.text('C\$80.00'), findsOneWidget);
 
     // Validar encabezado del desglose por banco
     expect(find.text('Desglose por Banco (Referencia):'), findsOneWidget);
 
     // Validar los bancos desglosados y sus montos
     expect(find.text('BAC: '), findsOneWidget);
-    expect(find.text('\$55.00'), findsOneWidget);
+    expect(find.text('C\$55.00'), findsOneWidget);
 
     expect(find.text('BANPRO: '), findsOneWidget);
-    expect(find.text('\$25.00'), findsOneWidget);
+    expect(find.text('C\$25.00'), findsOneWidget);
   });
 }

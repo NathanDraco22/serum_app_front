@@ -2,6 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_business/serum_business.dart';
 
 void main() {
+  setUp(() {
+    NumberFormatter.configureCurrencyResolver(() => AppCurrency.nio);
+  });
+
+  tearDown(() {
+    NumberFormatter.configureCurrencyResolver(null);
+  });
+
   group('CashMovementModel Tests', () {
     test('Serialización y deserialización de CashMovementInDb con formato monetario y tipos', () {
       final json = {
@@ -36,7 +44,7 @@ void main() {
       expect(movement.paymentMethodLabel, 'Efectivo');
       expect(movement.amount, 20000);
       expect(movement.amountDouble, 200.00);
-      expect(movement.formattedAmount, '\$200.00');
+      expect(movement.formattedAmount, 'C\$200.00');
       expect(movement.resultingBalance, 70000);
       expect(movement.performedBy.name, 'Carlos Cajero');
       expect(movement.formattedDate, isNotEmpty);

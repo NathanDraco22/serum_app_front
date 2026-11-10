@@ -243,8 +243,8 @@ class CashShiftCard extends StatelessWidget {
                     _MetricBox(
                       width: boxWidth,
                       label: 'Fondo Inicial',
-                      amount:
-                          '\$${shift.initialBalanceDouble.toStringAsFixed(2)}',
+                      amount: NumberFormatter.currencyFormat
+                          .format(shift.initialBalanceDouble),
                       icon: Icons.savings_outlined,
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -252,31 +252,31 @@ class CashShiftCard extends StatelessWidget {
                       width: boxWidth,
                       label: 'Efectivo Cobrado',
                       amount:
-                          '+\$${shift.cashBalanceDouble.toStringAsFixed(2)}',
+                          '+${NumberFormatter.currencyFormat.format(shift.cashBalanceDouble)}',
                       icon: Icons.payments_outlined,
                       color: Colors.green.shade700,
                     ),
                     _MetricBox(
                       width: boxWidth,
                       label: 'Tarjeta',
-                      amount:
-                          '\$${shift.cardBalanceDouble.toStringAsFixed(2)}',
+                      amount: NumberFormatter.currencyFormat
+                          .format(shift.cardBalanceDouble),
                       icon: Icons.credit_card,
                       color: Colors.blue.shade700,
                     ),
                     _MetricBox(
                       width: boxWidth,
                       label: 'Transferencia',
-                      amount:
-                          '\$${shift.transferBalanceDouble.toStringAsFixed(2)}',
+                      amount: NumberFormatter.currencyFormat
+                          .format(shift.transferBalanceDouble),
                       icon: Icons.swap_horiz_rounded,
                       color: Colors.purple.shade700,
                     ),
                     _MetricBox(
                       width: boxWidth,
                       label: 'Total Efectivo Gaveta',
-                      amount:
-                          '\$${shift.totalCashExpectedDouble.toStringAsFixed(2)}',
+                      amount: NumberFormatter.currencyFormat
+                          .format(shift.totalCashExpectedDouble),
                       icon: Icons.account_balance_wallet_rounded,
                       color: theme.colorScheme.primary,
                       isBold: true,
@@ -315,9 +315,9 @@ class CashShiftCard extends StatelessWidget {
                         spacing: 8,
                         runSpacing: 4,
                         children: shift.bankTransfers.entries.map((e) {
-                          final amt = (e.value / 100.0).toStringAsFixed(2);
+                          final amt = NumberFormatter.convertToMoneyLike(e.value);
                           return Text(
-                            '${e.key}: \$$amt',
+                            '${e.key}: $amt',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -359,7 +359,7 @@ class CashShiftCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Arqueo: Efectivo Declarado \$${(shift.declaredCashDouble ?? 0.0).toStringAsFixed(2)}',
+                            'Arqueo: Efectivo Declarado ${NumberFormatter.currencyFormat.format(shift.declaredCashDouble ?? 0.0)}',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -440,16 +440,20 @@ class CashShiftCard extends StatelessWidget {
 
   String _getDiffDescription(double diff) {
     if (diff == 0.0) return 'El conteo físico cuadró exactamente con el sistema.';
+    final formatted = NumberFormatter.currencyFormat.format(diff);
     if (diff < 0) {
-      return 'Faltante en gaveta de -\$${(-diff).toStringAsFixed(2)}.';
+      return 'Faltante en gaveta de $formatted.';
     }
-    return 'Sobrante en gaveta de +\$${diff.toStringAsFixed(2)}.';
+    return 'Sobrante en gaveta de +$formatted.';
   }
 
   String _formatDiffText(double diff) {
-    if (diff == 0.0) return 'Cuadrado (\$0.00)';
-    if (diff < 0) return 'Faltante: -\$${(-diff).toStringAsFixed(2)}';
-    return 'Sobrante: +\$${diff.toStringAsFixed(2)}';
+    if (diff == 0.0) {
+      return 'Cuadrado (${NumberFormatter.convertToMoneyLike(0)})';
+    }
+    final formatted = NumberFormatter.currencyFormat.format(diff);
+    if (diff < 0) return 'Faltante: $formatted';
+    return 'Sobrante: +$formatted';
   }
 }
 

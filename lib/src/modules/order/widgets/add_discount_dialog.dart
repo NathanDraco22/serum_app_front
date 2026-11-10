@@ -46,12 +46,28 @@ class _AddDiscountDialogState extends State<AddDiscountDialog> {
     {'label': 'Ajuste Comercial (5%)', 'desc': 'Ajuste Comercial', 'val': 5.0},
   ];
 
-  final List<Map<String, dynamic>> _amountShortcuts = const [
-    {'label': 'C\$ 50.00', 'desc': 'Descuento C\$ 50.00', 'val': 50.0},
-    {'label': 'C\$ 100.00', 'desc': 'Descuento C\$ 100.00', 'val': 100.0},
-    {'label': 'C\$ 200.00', 'desc': 'Descuento C\$ 200.00', 'val': 200.0},
-    {'label': 'Ajuste de Saldo', 'desc': 'Ajuste de Saldo Comercial', 'val': 0.0},
-  ];
+  List<Map<String, dynamic>> get _amountShortcuts => [
+        {
+          'label': '${NumberFormatter.currencySymbol} 50.00',
+          'desc': 'Descuento ${NumberFormatter.currencySymbol} 50.00',
+          'val': 50.0,
+        },
+        {
+          'label': '${NumberFormatter.currencySymbol} 100.00',
+          'desc': 'Descuento ${NumberFormatter.currencySymbol} 100.00',
+          'val': 100.0,
+        },
+        {
+          'label': '${NumberFormatter.currencySymbol} 200.00',
+          'desc': 'Descuento ${NumberFormatter.currencySymbol} 200.00',
+          'val': 200.0,
+        },
+        {
+          'label': 'Ajuste de Saldo',
+          'desc': 'Ajuste de Saldo Comercial',
+          'val': 0.0,
+        },
+      ];
 
   @override
   void initState() {
@@ -199,16 +215,18 @@ class _AddDiscountDialogState extends State<AddDiscountDialog> {
                 // Selector de Modalidad (Porcentaje vs Monto Fijo)
                 Center(
                   child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
+                    segments: [
+                      const ButtonSegment(
                         value: 'percentage',
                         label: Text('Porcentaje (%)'),
                         icon: Icon(Icons.percent, size: 16),
                       ),
                       ButtonSegment(
                         value: 'amount',
-                        label: Text('Monto Fijo (C\$)'),
-                        icon: Icon(Icons.attach_money, size: 16),
+                        label: Text(
+                          'Monto Fijo (${NumberFormatter.currencySymbol})',
+                        ),
+                        icon: const Icon(Icons.attach_money, size: 16),
                       ),
                     ],
                     selected: {_discountType},
@@ -288,10 +306,10 @@ class _AddDiscountDialogState extends State<AddDiscountDialog> {
                   decoration: InputDecoration(
                     labelText: _discountType == 'percentage'
                         ? 'Porcentaje de descuento (%) *'
-                        : 'Monto de descuento (C\$) *',
+                        : 'Monto de descuento (${NumberFormatter.currencySymbol}) *',
                     hintText: _discountType == 'percentage' ? 'Ej. 15' : 'Ej. 100.00',
                     prefixIcon: Icon(_discountType == 'percentage' ? Icons.percent : Icons.attach_money),
-                    suffixText: _discountType == 'percentage' ? '%' : 'C\$',
+                    suffixText: _discountType == 'percentage' ? '%' : NumberFormatter.currencySymbol,
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {

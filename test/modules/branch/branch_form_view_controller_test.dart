@@ -299,5 +299,44 @@ void main() {
 
       controller.dispose();
     });
+
+    test('Gestión reactiva de preferencia autoCalculateFormulas en creación y edición', () async {
+      // 1. En creación: por defecto true
+      final createController = BranchFormViewController();
+      expect(createController.autoCalculateFormulas, isTrue);
+
+      // Mutación reactiva
+      bool notified = false;
+      createController.addListener(() => notified = true);
+      createController.setAutoCalculateFormulas(false);
+      expect(createController.autoCalculateFormulas, isFalse);
+      expect(notified, isTrue);
+
+      createController.nameController.text = 'Sede Manual';
+      createController.addressController.text = 'Calle 1';
+      createController.phoneController.text = '123';
+      final createDto = await createController.generateCreateDto();
+      expect(createDto.autoCalculateFormulas, isFalse);
+      createController.dispose();
+
+      // 2. En edición: inicializa desde la sucursal existente
+      final initialBranch = BranchInDb(
+        id: 'BR-MANUAL',
+        name: 'Sede Analizador',
+        address: 'Calle 2',
+        phone: '456',
+        autoCalculateFormulas: false,
+        createdAt: 1700000000000,
+      );
+      final editController = BranchFormViewController(initialBranch: initialBranch);
+      expect(editController.autoCalculateFormulas, isFalse);
+
+      editController.setAutoCalculateFormulas(true);
+      expect(editController.autoCalculateFormulas, isTrue);
+
+      final updateDto = await editController.generateUpdateDto();
+      expect(updateDto.autoCalculateFormulas, isTrue);
+      editController.dispose();
+    });
   });
 }

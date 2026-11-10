@@ -12,6 +12,7 @@ class CreateOrderViewController extends ChangeNotifier {
   final Map<String, int> _customPrices = {};
   int _defaultPriceLevel = 1;
   bool _isSubmitting = false;
+  bool _isPopulated = false;
 
   late final TextEditingController notesController;
 
@@ -51,6 +52,15 @@ class CreateOrderViewController extends ChangeNotifier {
   int get defaultPriceLevel => _defaultPriceLevel;
   bool get isSubmitting => _isSubmitting;
   String get notes => notesController.text.trim();
+
+  /// Indica si la orden de edición ya fue cargada desde el catálogo/snapshots.
+  /// Mientras sea `false`, no se permite generar un `UpdateOrder` para evitar
+  /// enviar `items`/`results` vacíos y borrar la orden original.
+  bool get isPopulated => _isPopulated;
+
+  /// Indica si la orden de edición ya tiene al menos un resultado capturado.
+  bool get hasCapturedResults =>
+      editingOrder?.results.any((r) => (r.resultValue ?? '').trim().isNotEmpty) ?? false;
 
   /// Indica si la pantalla está completamente vacía (sin selecciones ni datos cargados).
   bool get isEmpty =>
@@ -112,12 +122,20 @@ class CreateOrderViewController extends ChangeNotifier {
   // --- Mutaciones de Estado ---
 
   void selectPatient(PatientInDb? patient) {
+    if (editingOrder != null && hasCapturedResults && patient?.id != _selectedPatient?.id) {
+      return;
+    }
     if (_selectedPatient?.id == patient?.id) return;
     _selectedPatient = patient;
     notifyListeners();
   }
 
-  void removePatient() => selectPatient(null);
+  void removePatient() {
+    if (editingOrder != null && hasCapturedResults) return;
+    if (_selectedPatient == null) return;
+    _selectedPatient = null;
+    notifyListeners();
+  }
 
   void selectDoctor(DoctorInDb? doctor) {
     if (_selectedDoctor?.id == doctor?.id) return;
@@ -280,7 +298,8 @@ class CreateOrderViewController extends ChangeNotifier {
         (t) => t?.id == item.labTestId,
         orElse: () => null,
       );
-      final testObj = catalogTest ??
+      final testObj =
+          catalogTest ??
           LabTestInDb(
             id: item.labTestId,
             name: item.name,
@@ -303,6 +322,7 @@ class CreateOrderViewController extends ChangeNotifier {
 
     notesController.text = order.notes ?? '';
 
+    _isPopulated = true;
     notifyListeners();
   }
 
@@ -312,11 +332,54 @@ class CreateOrderViewController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Mapeo al Dominio (Generación de DTOs) ---
+  // --- Validación de Integridad de Packs y Mapeo al Dominio ---
+
+  /// Verifica que todos los perfiles/packs (`isPack == true`) seleccionados en la orden
+  /// existan en el catálogo y puedan expandir íntegramente sus parámetros hijos.
+  ///
+  /// Retorna `null` si todo es válido, o un mensaje descriptivo de error si algún pack
+  /// no tiene parámetros o el catálogo aún no está disponible.
+  String? validatePacksExpansion(List<LabTestInDb> allLabTests) {
+    if (_selectedItems.isEmpty) return null;
+    if (allLabTests.isEmpty) {
+      return 'El catálogo de pruebas clínicas aún está cargando. Espera un momento e intenta guardar nuevamente.';
+    }
+
+    final catalogById = {for (final t in allLabTests) t.id: t};
+
+    bool isValidPackTree(LabTestInDb pack, Set<String> visited) {
+      if (pack.childTestIds.isEmpty) return false;
+      if (!visited.add(pack.id)) return true;
+
+      int atomicCount = 0;
+      for (final childId in pack.childTestIds) {
+        final child = catalogById[childId];
+        if (child == null) return false;
+        if (child.isPack) {
+          if (!isValidPackTree(child, visited)) return false;
+          atomicCount++;
+        } else {
+          atomicCount++;
+        }
+      }
+      return atomicCount > 0;
+    }
+
+    for (final item in _selectedItems) {
+      final resolved = catalogById[item.id] ?? item;
+      if (resolved.isPack) {
+        if (!isValidPackTree(resolved, <String>{})) {
+          return 'El perfil "${resolved.name}" no pudo sincronizar todos sus parámetros del catálogo. Recarga e intenta de nuevo.';
+        }
+      }
+    }
+
+    return null;
+  }
 
   /// Mapea el estado actual en memoria hacia el DTO [CreateOrder] listo para persistir en el Cubit.
   ///
-  /// Retorna `null` si faltan requisitos indispensables (paciente o items/servicios).
+  /// Retorna `null` si faltan requisitos indispensables (paciente, items/servicios o integridad de packs).
   CreateOrder? generateCreateOrder({
     required String branchId,
     required UserInDb? currentUser,
@@ -324,17 +387,21 @@ class CreateOrderViewController extends ChangeNotifier {
   }) {
     if (_selectedPatient == null) return null;
     if (_selectedItems.isEmpty && _services.isEmpty) return null;
+    if (validatePacksExpansion(allLabTests) != null) return null;
+
+    final catalogById = {for (final t in allLabTests) t.id: t};
 
     // 1. Construir lista de OrderItem congelando precios efectivos
     final orderItems = _selectedItems.map((test) {
+      final resolved = catalogById[test.id] ?? test;
       final level = getItemPriceLevel(test.id);
       final price = getItemEffectivePrice(test);
       return OrderItem(
-        labTestId: test.id,
-        name: test.name,
+        labTestId: resolved.id,
+        name: resolved.name,
         salePriceApplied: price,
-        originalPrice: test.salePrice,
-        isPack: test.isPack,
+        originalPrice: resolved.salePrice,
+        isPack: resolved.isPack,
         priceLevel: level,
       );
     }).toList();
@@ -344,40 +411,46 @@ class CreateOrderViewController extends ChangeNotifier {
     final Set<String> visitedPackIds = {};
 
     void expandTest(LabTestInDb test, String rootItemName) {
-      if (test.isPack && test.childTestIds.isNotEmpty) {
-        if (!visitedPackIds.add(test.id)) return; // Prevenir posibles referencias circulares
-        for (final childId in test.childTestIds) {
-          final childTest = allLabTests.firstWhere(
-            (t) => t.id == childId,
-            orElse: () => LabTestInDb(
-              id: childId,
-              name: 'Análisis ($childId)',
-              createdAt: 0,
-            ),
-          );
-          expandTest(childTest, rootItemName);
+      final resolvedTest = catalogById[test.id] ?? test;
+
+      if (resolvedTest.isPack) {
+        if (!visitedPackIds.add(resolvedTest.id)) {
+          return; // Prevenir posibles referencias circulares
         }
-      } else {
-        if (!resultsMap.containsKey(test.id)) {
-          resultsMap[test.id] = OrderTestResult(
-            labTestId: test.id,
-            parameterName: test.name,
-            medicalClassification: test.commercialCategory,
-            subclassification: test.subclassification,
-            dataType: test.dataType,
-            unitOfMeasure: test.unitOfMeasure,
-            referenceValues: test.referenceValues,
-            qualitativeOptions: test.qualitativeOptions,
-            expectedQualitativeValue: test.expectedQualitativeValue,
-            referenceText: test.referenceText,
-            parentExamName: rootItemName,
-          );
+        for (final childId in resolvedTest.childTestIds) {
+          final childTest = catalogById[childId];
+          if (childTest != null) {
+            expandTest(childTest, rootItemName);
+          }
         }
+        return; // Un pack JAMÁS se registra como parámetro clínico individual
+      }
+
+      if (!resultsMap.containsKey(resolvedTest.id)) {
+        resultsMap[resolvedTest.id] = OrderTestResult(
+          labTestId: resolvedTest.id,
+          parameterName: resolvedTest.name,
+          medicalClassification: resolvedTest.commercialCategory,
+          subclassification: resolvedTest.subclassification,
+          dataType: resolvedTest.dataType,
+          unitOfMeasure: resolvedTest.unitOfMeasure,
+          referenceValues: resolvedTest.referenceValues,
+          qualitativeOptions: resolvedTest.qualitativeOptions,
+          expectedQualitativeValue: resolvedTest.expectedQualitativeValue,
+          referenceText: resolvedTest.referenceText,
+          parentExamName: rootItemName,
+        );
       }
     }
 
     for (final item in _selectedItems) {
-      expandTest(item, item.name);
+      final resolved = catalogById[item.id] ?? item;
+      expandTest(resolved, resolved.name);
+    }
+
+    if (_selectedItems.isNotEmpty && resultsMap.isEmpty) return null;
+    if (orderItems.any((item) => item.isPack && resultsMap.containsKey(item.labTestId))) {
+      return null;
     }
 
     // 3. Evaluar reglas de autorización por supervisor
@@ -455,18 +528,25 @@ class CreateOrderViewController extends ChangeNotifier {
     required UserInDb? currentUser,
     required List<LabTestInDb> allLabTests,
   }) {
+    // Guard de seguridad: si la orden existente no se ha cargado todavía, no
+    // se debe generar un PATCH con items/results vacíos (borraría la orden).
+    if (editingOrder != null && !_isPopulated) return null;
     if (_selectedPatient == null) return null;
     if (_selectedItems.isEmpty && _services.isEmpty) return null;
+    if (validatePacksExpansion(allLabTests) != null) return null;
+
+    final catalogById = {for (final t in allLabTests) t.id: t};
 
     final orderItems = _selectedItems.map((test) {
+      final resolved = catalogById[test.id] ?? test;
       final level = getItemPriceLevel(test.id);
       final price = getItemEffectivePrice(test);
       return OrderItem(
-        labTestId: test.id,
-        name: test.name,
+        labTestId: resolved.id,
+        name: resolved.name,
         salePriceApplied: price,
-        originalPrice: test.salePrice,
-        isPack: test.isPack,
+        originalPrice: resolved.salePrice,
+        isPack: resolved.isPack,
         priceLevel: level,
       );
     }).toList();
@@ -480,44 +560,48 @@ class CreateOrderViewController extends ChangeNotifier {
     final Set<String> visitedPackIds = {};
 
     void expandTest(LabTestInDb test, String rootItemName) {
-      if (test.isPack && test.childTestIds.isNotEmpty) {
-        if (!visitedPackIds.add(test.id)) return;
-        for (final childId in test.childTestIds) {
-          final childTest = allLabTests.firstWhere(
-            (t) => t.id == childId,
-            orElse: () => LabTestInDb(
-              id: childId,
-              name: 'Análisis ($childId)',
-              createdAt: 0,
-            ),
-          );
-          expandTest(childTest, rootItemName);
+      final resolvedTest = catalogById[test.id] ?? test;
+
+      if (resolvedTest.isPack) {
+        if (!visitedPackIds.add(resolvedTest.id)) return;
+        for (final childId in resolvedTest.childTestIds) {
+          final childTest = catalogById[childId];
+          if (childTest != null) {
+            expandTest(childTest, rootItemName);
+          }
         }
-      } else {
-        if (!resultsMap.containsKey(test.id)) {
-          final existing = existingResultsMap[test.id];
-          resultsMap[test.id] = OrderTestResult(
-            labTestId: test.id,
-            parameterName: test.name,
-            medicalClassification: test.commercialCategory,
-            subclassification: test.subclassification,
-            dataType: test.dataType,
-            unitOfMeasure: test.unitOfMeasure,
-            referenceValues: test.referenceValues,
-            qualitativeOptions: test.qualitativeOptions,
-            expectedQualitativeValue: test.expectedQualitativeValue,
-            referenceText: test.referenceText,
-            parentExamName: rootItemName,
-            resultValue: existing?.resultValue,
-            alertFlag: existing?.alertFlag,
-            showInPrint: existing?.showInPrint ?? true,
-          );
-        }
+        return; // Un pack JAMÁS se registra como parámetro clínico individual
+      }
+
+      if (!resultsMap.containsKey(resolvedTest.id)) {
+        final existing = existingResultsMap[resolvedTest.id];
+        resultsMap[resolvedTest.id] = OrderTestResult(
+          labTestId: resolvedTest.id,
+          parameterName: resolvedTest.name,
+          medicalClassification: resolvedTest.commercialCategory,
+          subclassification: resolvedTest.subclassification,
+          dataType: resolvedTest.dataType,
+          unitOfMeasure: resolvedTest.unitOfMeasure,
+          referenceValues: resolvedTest.referenceValues,
+          qualitativeOptions: resolvedTest.qualitativeOptions,
+          expectedQualitativeValue: resolvedTest.expectedQualitativeValue,
+          referenceText: resolvedTest.referenceText,
+          parentExamName: rootItemName,
+          resultValue: existing?.resultValue,
+          alertFlag: existing?.alertFlag,
+          showInPrint: existing?.showInPrint ?? true,
+        );
       }
     }
 
     for (final item in _selectedItems) {
-      expandTest(item, item.name);
+      final resolved = catalogById[item.id] ?? item;
+      expandTest(resolved, resolved.name);
+    }
+
+    if (_selectedItems.isNotEmpty && resultsMap.isEmpty) return null;
+    if (orderItems.any((item) => item.isPack && resultsMap.containsKey(item.labTestId))) {
+      return null;
     }
 
     final hasSupervisorLevel = (currentUser?.accessLevel ?? 0) > 3;

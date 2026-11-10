@@ -53,6 +53,7 @@ serum_app_front/
 │   └── src/
 │       ├── cubits/                     # Cubits de alcance global o transversal
 │       │   ├── app_session_cubit/      # Sesión de usuario activo y caja registradora en operación
+│       │   ├── app_settings/           # Configuración global (costos, precios y moneda)
 │       │   ├── branch_cubit/           # Sucursal activa
 │       │   ├── cash_movement_cubit/    # Movimientos libres de caja (Read, Write)
 │       │   ├── cash_register_cubit/    # Operaciones y lectura de cajas
@@ -363,7 +364,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ## 💎 4. Convenciones Críticas de Datos y UI en Flutter
 
-1. **Montos Siempre en Centavos**: Todos los precios y saldos son enteros (`int`). En la UI se formatean dividiendo entre 100 mediante utilidades de `tools/` (ej. `(amount / 100).toStringAsFixed(2)`).
+1. **Montos Siempre en Centavos**: Todos los precios y saldos son enteros (`int`). La UI los formatea con `NumberFormatter` (`convertToMoneyLike`, `currencySymbol`, `currencyFormat`). La moneda global la resuelve `AppSettingsCubit` mediante un callback registrado en `NumberFormatter`; el selector está en **Administración ➔ Configuración del Sistema**. Ver [Formatter Global con Resolver Inyectado](/wiki/convenciones/global-formatter-resolver.md).
 2. **Timestamps en Milisegundos**: Las fechas de creación y actualización son enteros Unix en milisegundos (`DateTime.fromMillisecondsSinceEpoch(ms)`).
 3. **Manejo Seguro de Contexto Asíncrono**: En todas las operaciones asíncronas de diálogos y pantallas, validar siempre `if (!context.mounted) return;` antes de usar `context` tras un `await`.
 4. **Listados con `Refreshing`**: Las búsquedas o recargas no borran la lista previa; emiten el estado `Refreshing` mostrando un `LinearProgressIndicator` superior para máxima fluidez.

@@ -41,6 +41,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
           resolvedAlertCount: alertCount ?? controller.alertCount,
           resolvedDifferentialSum: differentialSum ?? controller.differentialSum,
           hasDifferentialStarted: controller.hasDifferentialStarted,
+          autoCalculateFormulas: controller.autoCalculateFormulas,
         ),
       );
     }
@@ -53,6 +54,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
       resolvedAlertCount: alertCount ?? 0,
       resolvedDifferentialSum: differentialSum,
       hasDifferentialStarted: false,
+      autoCalculateFormulas: true,
     );
   }
 
@@ -64,6 +66,7 @@ class OrderResultsSummaryBar extends StatelessWidget {
     required int resolvedAlertCount,
     required double? resolvedDifferentialSum,
     required bool hasDifferentialStarted,
+    required bool autoCalculateFormulas,
   }) {
     final theme = Theme.of(context);
 
@@ -118,7 +121,8 @@ class OrderResultsSummaryBar extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 16),
-            if (resolvedDifferentialSum != null &&
+            if (autoCalculateFormulas &&
+                resolvedDifferentialSum != null &&
                 (resolvedDifferentialSum > 0 || hasDifferentialStarted)) ...[
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

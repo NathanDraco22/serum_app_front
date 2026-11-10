@@ -887,7 +887,7 @@ class _ImportsScaffold extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Modo: ${result.mustOverridePrice ? 'Sobreescritura total' : 'Actualización en \$0'}',
+                    'Modo: ${result.mustOverridePrice ? 'Sobreescritura total' : 'Actualización en ${NumberFormatter.currencySymbol}0'}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

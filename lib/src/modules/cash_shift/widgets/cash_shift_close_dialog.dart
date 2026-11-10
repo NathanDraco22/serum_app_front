@@ -217,19 +217,22 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
                     children: [
                       _BalanceRow(
                         label: 'Fondo Inicial',
-                        amount: '\$${shift.initialBalanceDouble.toStringAsFixed(2)}',
+                        amount: NumberFormatter.currencyFormat
+                            .format(shift.initialBalanceDouble),
                         icon: Icons.savings_outlined,
                       ),
                       const Divider(height: 14),
                       _BalanceRow(
                         label: 'Efectivo Cobrado en Turno',
-                        amount: '\$${shift.cashBalanceDouble.toStringAsFixed(2)}',
+                        amount: NumberFormatter.currencyFormat
+                            .format(shift.cashBalanceDouble),
                         icon: Icons.payments_outlined,
                       ),
                       const Divider(height: 14),
                       _BalanceRow(
                         label: 'Total Efectivo Esperado en Caja',
-                        amount: '\$${_expectedCashDouble.toStringAsFixed(2)}',
+                        amount: NumberFormatter.currencyFormat
+                            .format(_expectedCashDouble),
                         icon: Icons.account_balance_wallet_rounded,
                         isHighlight: true,
                         highlightColor: theme.colorScheme.primary,
@@ -241,7 +244,8 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
                           Expanded(
                             child: _SmallStat(
                               label: 'Tarjetas',
-                              value: '\$${shift.cardBalanceDouble.toStringAsFixed(2)}',
+                              value: NumberFormatter.currencyFormat
+                                  .format(shift.cardBalanceDouble),
                               icon: Icons.credit_card,
                             ),
                           ),
@@ -249,7 +253,8 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
                           Expanded(
                             child: _SmallStat(
                               label: 'Transferencias',
-                              value: '\$${shift.transferBalanceDouble.toStringAsFixed(2)}',
+                              value: NumberFormatter.currencyFormat
+                                  .format(shift.transferBalanceDouble),
                               icon: Icons.swap_horiz,
                             ),
                           ),
@@ -318,7 +323,8 @@ class _CashShiftCloseDialogState extends State<CashShiftCloseDialog> {
                                           ),
                                         ),
                                         Text(
-                                          '\$${amountDouble.toStringAsFixed(2)}',
+                                          NumberFormatter.currencyFormat
+                                              .format(amountDouble),
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.bold,
@@ -561,19 +567,19 @@ class _DifferenceBanner extends StatelessWidget {
       bg = Colors.green.shade50;
       fg = Colors.green.shade800;
       icon = Icons.check_circle_rounded;
-      title = 'Corte Cuadrado Exacto (\$0.00)';
+      title = 'Corte Cuadrado Exacto (${NumberFormatter.convertToMoneyLike(0)})';
       subtitle = 'El efectivo contado coincide exactamente con el sistema.';
     } else if (diffCents < 0) {
       bg = ColorPalette.errorContainer.withAlpha(80);
       fg = ColorPalette.error;
       icon = Icons.warning_rounded;
-      title = 'Faltante de -\$${(-diffDouble).toStringAsFixed(2)}';
+      title = 'Faltante de ${NumberFormatter.currencyFormat.format(diffDouble)}';
       subtitle = 'Hay menos efectivo en la gaveta del esperado.';
     } else {
       bg = ColorPalette.primaryContainer.withAlpha(50);
       fg = ColorPalette.primary;
       icon = Icons.info_rounded;
-      title = 'Sobrante de +\$${diffDouble.toStringAsFixed(2)}';
+      title = 'Sobrante de +${NumberFormatter.currencyFormat.format(diffDouble)}';
       subtitle = 'Hay más efectivo en la gaveta del registrado.';
     }
 

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../controllers/branch_form_mediator.dart';
 
 /// Subsección para la captura de datos generales de la sucursal:
-/// Nombre comercial, dirección completa, teléfono de contacto, email y Facebook.
+/// Nombre comercial, dirección completa, teléfono de contacto, email, Facebook
+/// y preferencias de cálculo automático de fórmulas clínicas.
 class BranchGeneralInfoSection extends StatelessWidget {
   const BranchGeneralInfoSection({super.key});
 
@@ -101,6 +102,50 @@ class BranchGeneralInfoSection extends StatelessWidget {
             prefixIcon: Icon(Icons.facebook_outlined),
             border: OutlineInputBorder(),
           ),
+        ),
+        const SizedBox(height: 16),
+
+        // Preferencia clínica: Fórmulas automáticas
+        ListenableBuilder(
+          listenable: controller,
+          builder: (context, _) {
+            return Material(
+              color: theme.colorScheme.surfaceContainerHighest.withAlpha(80),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withAlpha(120),
+                ),
+              ),
+              child: SwitchListTile.adaptive(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                secondary: Icon(
+                  Icons.calculate_outlined,
+                  color: controller.autoCalculateFormulas
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline,
+                ),
+                title: const Text(
+                  'Cálculo automático de fórmulas clínicas',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                ),
+                subtitle: Text(
+                  'Autocalcular en vivo serie roja (HTC ↔ HB), índices de Wintrobe, lípidos y BUN. Si se desactiva, los campos se capturan manualmente para transcribir equipos analizadores.',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                value: controller.autoCalculateFormulas,
+                onChanged: controller.isSaving
+                    ? null
+                    : controller.setAutoCalculateFormulas,
+              ),
+            );
+          },
         ),
       ],
     );

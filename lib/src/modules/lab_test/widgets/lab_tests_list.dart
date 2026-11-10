@@ -67,7 +67,7 @@ class LabTestsList extends StatelessWidget {
       itemCount: sortedTests.length,
       itemBuilder: (context, index) {
         final labTest = sortedTests[index];
-        final priceFormatted = (labTest.salePrice / 100.0).toStringAsFixed(2);
+        final priceFormatted = NumberFormatter.convertToMoneyLike(labTest.salePrice);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
@@ -206,7 +206,7 @@ class LabTestsList extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 5),
                                         Text(
-                                          '\$$priceFormatted',
+                                          priceFormatted,
                                           style: theme.textTheme.bodySmall?.copyWith(
                                             fontWeight: FontWeight.bold,
                                             color: theme.colorScheme.primary,
@@ -224,7 +224,7 @@ class LabTestsList extends StatelessWidget {
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              'P2: \$${(labTest.salePrice2 / 100.0).toStringAsFixed(2)}',
+                                              'P2: ${NumberFormatter.convertToMoneyLike(labTest.salePrice2)}',
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,

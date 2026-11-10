@@ -167,7 +167,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                         child: Text(
                           _mustOverridePrice
                               ? 'MODO SOBREESCRITURA: Todos los precios en la sede destino serán reemplazados por los de origen, incluso si ya tenían un valor establecido.'
-                              : 'MODO ACTUALIZACIÓN EN \$0: Solo se asignarán precios a las pruebas que tengan su valor en \$0 en la sede destino. Los precios existentes se mantendrán intactos.',
+                              : 'MODO ACTUALIZACIÓN EN ${NumberFormatter.currencySymbol}0: Solo se asignarán precios a las pruebas que tengan su valor en ${NumberFormatter.currencySymbol}0 en la sede destino. Los precios existentes se mantendrán intactos.',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -451,7 +451,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                       subtitle: Text(
                         _mustOverridePrice
                             ? 'ACTIVO: Sobrescribe todos los precios en la sede destino con los valores de origen.'
-                            : 'INACTIVO: Solo actualiza aquellas pruebas cuyo precio sea \$0 en la sede destino.',
+                            : 'INACTIVO: Solo actualiza aquellas pruebas cuyo precio sea ${NumberFormatter.currencySymbol}0 en la sede destino.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: _mustOverridePrice
                               ? Colors.amber.shade900

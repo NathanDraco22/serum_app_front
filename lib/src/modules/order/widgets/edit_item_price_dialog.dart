@@ -135,9 +135,9 @@ class _EditItemPriceDialogState extends State<EditItemPriceDialog> {
               ],
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Nuevo Precio Aplicado (\$)',
+                labelText: 'Nuevo Precio Aplicado (${NumberFormatter.currencySymbol})',
                 hintText: '0.00',
-                prefixText: '\$ ',
+                prefixText: '${NumberFormatter.currencySymbol} ',
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.refresh, size: 20),

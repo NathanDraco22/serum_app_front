@@ -129,8 +129,8 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
       labTests = labTestsState.items;
     }
 
-    final totalFormatted = (_selectedItems.fold(0, (sum, i) => sum + i.salePrice) / 100.0)
-        .toStringAsFixed(2);
+    final totalCents = _selectedItems.fold<int>(0, (sum, i) => sum + i.salePrice);
+    final totalFormatted = NumberFormatter.convertToMoneyLike(totalCents);
 
     return AlertDialog(
       title: const Text('Nueva Orden Clínica'),
@@ -178,7 +178,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
 
               Autocomplete<LabTestInDb>(
                 displayStringForOption: (option) =>
-                    '${option.name} (\$${(option.salePrice / 100).toStringAsFixed(2)})',
+                    '${option.name} (${NumberFormatter.convertToMoneyLike(option.salePrice)})',
                 optionsBuilder: (textEditingValue) {
                   final availableTests = labTests.where((t) => !t.isProfileParameter);
                   if (textEditingValue.text.isEmpty) {
@@ -248,7 +248,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '\$${(item.salePrice / 100).toStringAsFixed(2)}',
+                              NumberFormatter.convertToMoneyLike(item.salePrice),
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             IconButton(
@@ -273,7 +273,7 @@ class _OrderFormDialogState extends State<OrderFormDialog> {
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '\$$totalFormatted USD',
+                    totalFormatted,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,

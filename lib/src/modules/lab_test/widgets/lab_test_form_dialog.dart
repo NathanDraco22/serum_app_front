@@ -472,8 +472,8 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               readOnly: _isPack && _useChildTestsPriceSum,
                               decoration: InputDecoration(
                                 labelText: _isPack && _useChildTestsPriceSum
-                                    ? 'Precio Calculado Automáticamente (\$ USD)'
-                                    : 'Precio de Venta (\$ USD) *',
+                                    ? 'Precio Calculado Automáticamente (${NumberFormatter.currencySymbol})'
+                                    : 'Precio de Venta (${NumberFormatter.currencySymbol}) *',
                                 hintText: 'ej. 15.00',
                                 prefixIcon: Icon(
                                   _isPack && _useChildTestsPriceSum
@@ -516,7 +516,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                             child: TextFormField(
                               controller: _price2Controller,
                               decoration: const InputDecoration(
-                                labelText: 'Precio 2 (\$ USD)',
+                                labelText: 'Precio 2 (${NumberFormatter.currencySymbol})',
                                 hintText: 'Tarifa especial',
                                 prefixIcon: Icon(Icons.attach_money, size: 20),
                               ),

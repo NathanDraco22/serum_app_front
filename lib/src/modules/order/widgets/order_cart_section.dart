@@ -19,6 +19,7 @@ class OrderCartSection extends StatelessWidget {
   // Callbacks para acciones que requieren abrir diálogos modales en la UI
   final VoidCallback? onSelectPatient;
   final VoidCallback? onSelectDoctor;
+  final VoidCallback? onRemovePatient;
   final void Function(LabTestInDb)? onEditItemPrice;
   final VoidCallback? onClearItems;
   final VoidCallback? onAddService;
@@ -32,6 +33,7 @@ class OrderCartSection extends StatelessWidget {
     this.viewController,
     this.onSelectPatient,
     this.onSelectDoctor,
+    this.onRemovePatient,
     this.onEditItemPrice,
     this.onClearItems,
     this.onAddService,
@@ -86,9 +88,7 @@ class OrderCartSection extends StatelessWidget {
       totalParameters += item.isPack ? item.childTestIds.length : 1;
     }
 
-    final canSubmit = patient != null &&
-        (items.isNotEmpty || services.isNotEmpty) &&
-        !isSubmitting;
+    final canSubmit = patient != null && (items.isNotEmpty || services.isNotEmpty) && !isSubmitting;
 
     return Card(
       elevation: 0,
@@ -107,7 +107,7 @@ class OrderCartSection extends StatelessWidget {
             OrderPatientCard(
               patient: patient,
               onSelect: onSelectPatient ?? () {},
-              onRemove: controller.removePatient,
+              onRemove: onRemovePatient ?? controller.removePatient,
             ),
             const SizedBox(height: 8),
             OrderDoctorCard(
@@ -229,7 +229,10 @@ class OrderCartSection extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     item.name,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                                 if (isPriceModified)
@@ -269,10 +272,15 @@ class OrderCartSection extends StatelessWidget {
                                   child: InkWell(
                                     onTap: isSubmitting
                                         ? null
-                                        : (onEditItemPrice != null ? () => onEditItemPrice!(item) : null),
+                                        : (onEditItemPrice != null
+                                              ? () => onEditItemPrice!(item)
+                                              : null),
                                     borderRadius: BorderRadius.circular(6),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -284,8 +292,8 @@ class OrderCartSection extends StatelessWidget {
                                               color: isPriceModified
                                                   ? Colors.amber.shade900
                                                   : (level == 2
-                                                      ? theme.colorScheme.tertiary
-                                                      : theme.colorScheme.primary),
+                                                        ? theme.colorScheme.tertiary
+                                                        : theme.colorScheme.primary),
                                             ),
                                           ),
                                           const SizedBox(width: 4),
@@ -306,7 +314,9 @@ class OrderCartSection extends StatelessWidget {
                                   icon: const Icon(Icons.close, size: 18),
                                   color: theme.colorScheme.error,
                                   tooltip: 'Quitar análisis',
-                                  onPressed: isSubmitting ? null : () => controller.removeItem(item),
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => controller.removeItem(item),
                                 ),
                               ],
                             ),
@@ -326,7 +336,11 @@ class OrderCartSection extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            Icon(Icons.medical_services_outlined, size: 18, color: theme.colorScheme.secondary),
+                            Icon(
+                              Icons.medical_services_outlined,
+                              size: 18,
+                              color: theme.colorScheme.secondary,
+                            ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
@@ -410,10 +424,15 @@ class OrderCartSection extends StatelessWidget {
                                   child: InkWell(
                                     onTap: isSubmitting
                                         ? null
-                                        : (onEditService != null ? () => onEditService!(service) : null),
+                                        : (onEditService != null
+                                              ? () => onEditService!(service)
+                                              : null),
                                     borderRadius: BorderRadius.circular(6),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -441,7 +460,9 @@ class OrderCartSection extends StatelessWidget {
                                   icon: const Icon(Icons.close, size: 18),
                                   color: theme.colorScheme.error,
                                   tooltip: 'Quitar servicio',
-                                  onPressed: isSubmitting ? null : () => controller.removeService(service),
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => controller.removeService(service),
                                 ),
                               ],
                             ),
@@ -461,7 +482,11 @@ class OrderCartSection extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            Icon(Icons.discount_outlined, size: 18, color: theme.colorScheme.tertiary),
+                            Icon(
+                              Icons.discount_outlined,
+                              size: 18,
+                              color: theme.colorScheme.tertiary,
+                            ),
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
@@ -550,10 +575,15 @@ class OrderCartSection extends StatelessWidget {
                                   child: InkWell(
                                     onTap: isSubmitting
                                         ? null
-                                        : (onEditDiscount != null ? () => onEditDiscount!(discount) : null),
+                                        : (onEditDiscount != null
+                                              ? () => onEditDiscount!(discount)
+                                              : null),
                                     borderRadius: BorderRadius.circular(6),
                                     child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 2,
+                                      ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -581,7 +611,9 @@ class OrderCartSection extends StatelessWidget {
                                   icon: const Icon(Icons.close, size: 18),
                                   color: theme.colorScheme.error,
                                   tooltip: 'Quitar descuento',
-                                  onPressed: isSubmitting ? null : () => controller.removeDiscount(discount),
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () => controller.removeDiscount(discount),
                                 ),
                               ],
                             ),
@@ -714,19 +746,29 @@ class OrderCartSection extends StatelessWidget {
                   ],
                   const SizedBox(height: 6),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Total a Cobrar:',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Total a Cobrar:',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(
-                        totalFormatted,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            totalFormatted,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -749,8 +791,8 @@ class OrderCartSection extends StatelessWidget {
                               hasDiscounts && hasModifiedPrices
                                   ? 'Precios modificados y descuentos aplicados: La orden se creará con requerimiento de autorización de supervisor.'
                                   : (hasDiscounts
-                                      ? 'Descuento aplicado: La orden se creará con requerimiento de autorización de supervisor.'
-                                      : 'Precios modificados: La orden se creará con requerimiento de autorización de supervisor.'),
+                                        ? 'Descuento aplicado: La orden se creará con requerimiento de autorización de supervisor.'
+                                        : 'Precios modificados: La orden se creará con requerimiento de autorización de supervisor.'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.amber.shade900,

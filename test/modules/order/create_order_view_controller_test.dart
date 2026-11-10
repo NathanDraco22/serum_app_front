@@ -254,13 +254,15 @@ void main() {
       controller.toggleItem(packTest); // Pack con test_1 y test_2
 
       // Aplicar descuento
-      controller.addDiscount(OrderDiscount(
-        id: 'disc_1',
-        description: 'Descuento Familiar',
-        type: 'amount',
-        value: 20.0,
-        appliedAmount: 2000,
-      ));
+      controller.addDiscount(
+        OrderDiscount(
+          id: 'disc_1',
+          description: 'Descuento Familiar',
+          type: 'amount',
+          value: 20.0,
+          appliedAmount: 2000,
+        ),
+      );
 
       final allTests = [packTest, test1, test2];
       final order = controller.generateCreateOrder(
@@ -390,37 +392,40 @@ void main() {
       expect(resultIds.contains('pcr_pack'), isFalse);
     });
 
-    test('generateCreateOrder auto-aprueba si el usuario es supervisor/admin (accessLevel > 3)', () {
-      final supervisorUser = UserInDb(
-        id: 'u_sup',
-        name: 'Dra. Claudia Supervisor',
-        username: 'supervisor',
-        role: 'supervisor',
-        accessLevel: 4,
-        branches: ['b_1'],
-        isActive: true,
-        isDeleted: false,
-        createdAt: 0,
-      );
+    test(
+      'generateCreateOrder auto-aprueba si el usuario es supervisor/admin (accessLevel > 3)',
+      () {
+        final supervisorUser = UserInDb(
+          id: 'u_sup',
+          name: 'Dra. Claudia Supervisor',
+          username: 'supervisor',
+          role: 'supervisor',
+          accessLevel: 4,
+          branches: ['b_1'],
+          isActive: true,
+          isDeleted: false,
+          createdAt: 0,
+        );
 
-      controller.selectPatient(samplePatient);
-      controller.toggleItem(test1);
-      controller.editItemPrice(test1.id, 9900, test1.salePrice); // precio modificado
+        controller.selectPatient(samplePatient);
+        controller.toggleItem(test1);
+        controller.editItemPrice(test1.id, 9900, test1.salePrice); // precio modificado
 
-      final order = controller.generateCreateOrder(
-        branchId: 'b_1',
-        currentUser: supervisorUser,
-        allLabTests: [test1],
-      );
+        final order = controller.generateCreateOrder(
+          branchId: 'b_1',
+          currentUser: supervisorUser,
+          allLabTests: [test1],
+        );
 
-      expect(order, isNotNull);
-      expect(order!.isBlocked, isFalse);
-      expect(order.approval, isNotNull);
-      expect(order.approval!.requiresApproval, isTrue);
-      expect(order.approval!.isApproved, isTrue);
-      expect(order.approval!.approvedBy?.id, 'u_sup');
-      expect(order.approval!.reason, contains('Autorizado por supervisor'));
-    });
+        expect(order, isNotNull);
+        expect(order!.isBlocked, isFalse);
+        expect(order.approval, isNotNull);
+        expect(order.approval!.requiresApproval, isTrue);
+        expect(order.approval!.isApproved, isTrue);
+        expect(order.approval!.approvedBy?.id, 'u_sup');
+        expect(order.approval!.reason, contains('Autorizado por supervisor'));
+      },
+    );
 
     test('clearCart y clearAll limpian los datos adecuadamente', () {
       controller.selectPatient(samplePatient);
@@ -627,6 +632,173 @@ void main() {
       expect(updateOrder.results!.first.resultValue, '90');
       // Colesterol ya no debe existir en results
       expect(updateOrder.results!.any((r) => r.labTestId == 'test_2'), isFalse);
+    });
+
+    test(
+      'Blindaje estricto de packs: impide crear o actualizar orden si el pack no hace match con sus parámetros en catálogo',
+      () {
+        final existingOrderWithBhc = OrderInDb(
+          id: 'ord_44',
+          createdAt: 1700000000000,
+          patientId: 'p_100',
+          branchId: 'b_1',
+          items: [
+            OrderItem(
+              labTestId: 'pack_1',
+              name: 'Perfil Lipidico',
+              salePriceApplied: 30000,
+              originalPrice: 30000,
+              isPack: true,
+            ),
+          ],
+          results: [],
+        );
+
+        // 1. Si populateFromOrder se llamó cuando el catálogo aún estaba vacío ([]),
+        // el ítem en memoria queda como stub (isPack: true, childTestIds: []).
+        controller.populateFromOrder(existingOrderWithBhc, []);
+
+        // 2. Intentar actualizar con catálogo vacío DEBE ser bloqueado (retorna null),
+        // jamás convirtiendo el pack en un único parámetro.
+        expect(controller.validatePacksExpansion([]), isNotNull);
+        expect(
+          controller.generateUpdateOrder(
+            branchId: 'b_1',
+            currentUser: null,
+            allLabTests: [],
+          ),
+          isNull,
+        );
+
+        // 3. Intentar actualizar si al catálogo le faltan los parámetros hijos del pack
+        // también DEBE ser bloqueado.
+        expect(controller.validatePacksExpansion([packTest]), isNotNull);
+        expect(
+          controller.generateUpdateOrder(
+            branchId: 'b_1',
+            currentUser: null,
+            allLabTests: [packTest], // Faltan test1 y test2
+          ),
+          isNull,
+        );
+
+        // 4. Cuando el catálogo completo está presente ([packTest, test1, test2]),
+        // valida exitosamente y expande los 2 parámetros hijos sin incluir pack_1 en results.
+        expect(controller.validatePacksExpansion([packTest, test1, test2]), isNull);
+        final validUpdate = controller.generateUpdateOrder(
+          branchId: 'b_1',
+          currentUser: null,
+          allLabTests: [packTest, test1, test2],
+        );
+        expect(validUpdate, isNotNull);
+        expect(validUpdate!.results, isNotNull);
+        expect(validUpdate.results!.length, 2);
+        expect(validUpdate.results!.any((r) => r.labTestId == 'pack_1'), isFalse);
+        expect(
+          validUpdate.results!.map((r) => r.labTestId),
+          containsAll(['test_1', 'test_2']),
+        );
+      },
+    );
+
+    test('UpdateOrder.toJson incluye patientInfo', () {
+      final update = UpdateOrder(
+        patientId: 'p_nuevo',
+        patientInfo: PatientInfo(
+          name: 'Paciente Nuevo',
+          gender: 'F',
+          age: 40,
+        ),
+      );
+
+      final json = update.toJson();
+      expect(json['patientInfo'], isNotNull);
+      expect(json['patientInfo']['name'], 'Paciente Nuevo');
+      expect(json['patientInfo']['age'], 40);
+    });
+
+    test('generateUpdateOrder retorna null si la orden de edición no fue poblada', () {
+      final order = OrderInDb(
+        id: 'ord_sin_poblar',
+        createdAt: 1700000000000,
+        patientId: 'p_100',
+        branchId: 'b_1',
+        items: [
+          OrderItem(
+            labTestId: 'test_1',
+            name: 'Glucosa',
+            salePriceApplied: 15000,
+            originalPrice: 15000,
+          ),
+        ],
+      );
+
+      final editingController = CreateOrderViewController(editingOrder: order);
+      editingController.selectPatient(samplePatient);
+      editingController.addService(
+        OrderService(id: 'serv_1', name: 'Servicio', price: 1000),
+      );
+
+      expect(editingController.isPopulated, isFalse);
+      expect(
+        editingController.generateUpdateOrder(
+          branchId: 'b_1',
+          currentUser: null,
+          allLabTests: [test1],
+        ),
+        isNull,
+      );
+
+      editingController.dispose();
+    });
+
+    test('selectPatient no cambia el paciente si la orden tiene resultados capturados', () {
+      final order = OrderInDb(
+        id: 'ord_con_resultados',
+        createdAt: 1700000000000,
+        patientId: 'p_100',
+        branchId: 'b_1',
+        items: [
+          OrderItem(
+            labTestId: 'test_1',
+            name: 'Glucosa',
+            salePriceApplied: 15000,
+            originalPrice: 15000,
+          ),
+        ],
+        results: [
+          OrderTestResult(
+            labTestId: 'test_1',
+            parameterName: 'Glucosa',
+            dataType: 'numeric',
+            resultValue: '95',
+          ),
+        ],
+      );
+
+      final editingController = CreateOrderViewController(editingOrder: order);
+      editingController.populateFromOrder(order, [test1]);
+
+      expect(editingController.hasCapturedResults, isTrue);
+      expect(editingController.selectedPatient?.id, 'p_100');
+
+      editingController.selectPatient(
+        PatientInDb(
+          id: 'p_200',
+          name: 'Otro Paciente',
+          dateOfBirth: 0,
+          gender: 'F',
+          phone: '',
+          originBranch: 'b_1',
+          createdAt: 0,
+        ),
+      );
+      expect(editingController.selectedPatient?.id, 'p_100');
+
+      editingController.removePatient();
+      expect(editingController.selectedPatient?.id, 'p_100');
+
+      editingController.dispose();
     });
   });
 }

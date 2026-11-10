@@ -87,7 +87,7 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Turno abierto correctamente con fondo de \$${(cents / 100.0).toStringAsFixed(2)}',
+            'Turno abierto correctamente con fondo de ${NumberFormatter.convertToMoneyLike(cents)}',
           ),
           backgroundColor: Colors.green.shade700,
         ),

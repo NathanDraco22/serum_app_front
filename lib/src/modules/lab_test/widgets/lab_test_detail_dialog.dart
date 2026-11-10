@@ -16,7 +16,7 @@ class LabTestDetailDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final priceFormatted = (labTest.salePrice / 100.0).toStringAsFixed(2);
+    final priceFormatted = NumberFormatter.convertToMoneyLike(labTest.salePrice);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -137,7 +137,7 @@ class LabTestDetailDialog extends StatelessWidget {
                         Expanded(
                           child: _InfoTile(
                             label: 'Precio de Venta',
-                            value: '\$$priceFormatted USD',
+                            value: priceFormatted,
                             icon: Icons.sell,
                             isHighlighted: true,
                             tooltip: onEditPrice != null
@@ -154,7 +154,7 @@ class LabTestDetailDialog extends StatelessWidget {
                           child: _InfoTile(
                             label: 'Precio 2 (Especial)',
                             value: labTest.salePrice2 > 0
-                                ? '\$${(labTest.salePrice2 / 100.0).toStringAsFixed(2)} USD'
+                                ? NumberFormatter.convertToMoneyLike(labTest.salePrice2)
                                 : 'Sin asignar',
                             icon: Icons.local_offer_outlined,
                             isHighlighted: labTest.salePrice2 > 0,
@@ -479,7 +479,7 @@ class LabTestDetailDialog extends StatelessWidget {
                   border: Border.all(color: Colors.green.shade300),
                 ),
                 child: Text(
-                  'Ahorro del Pack: \$${savings.toStringAsFixed(2)} USD (${((savings / individualSum) * 100).toStringAsFixed(0)}%)',
+                  'Ahorro del Pack: ${NumberFormatter.currencyFormat.format(savings)} (${((savings / individualSum) * 100).toStringAsFixed(0)}%)',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -517,7 +517,7 @@ class LabTestDetailDialog extends StatelessWidget {
               separatorBuilder: (context, index) => Divider(height: 1, color: theme.colorScheme.outlineVariant),
               itemBuilder: (context, index) {
                 final test = childTests[index];
-                final price = (test.salePrice / 100.0).toStringAsFixed(2);
+                final price = NumberFormatter.convertToMoneyLike(test.salePrice);
 
                 return ListTile(
                   dense: true,
@@ -532,7 +532,7 @@ class LabTestDetailDialog extends StatelessWidget {
                     style: const TextStyle(fontSize: 11),
                   ),
                   trailing: Text(
-                    '\$$price USD',
+                    price,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,

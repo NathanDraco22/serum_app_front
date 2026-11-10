@@ -2,6 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_business/serum_business.dart';
 
 void main() {
+  setUp(() {
+    NumberFormatter.configureCurrencyResolver(() => AppCurrency.nio);
+  });
+
+  tearDown(() {
+    NumberFormatter.configureCurrencyResolver(null);
+  });
+
   group('ReceiptModel Tests', () {
     test('Serialización y deserialización de ReceiptInDb con formato monetario y fechas', () {
       final json = {
@@ -33,7 +41,7 @@ void main() {
       expect(receipt.orderNumber, '55');
       expect(receipt.amount, 25050);
       expect(receipt.amountDouble, 250.50);
-      expect(receipt.formattedAmount, '\$250.50');
+      expect(receipt.formattedAmount, 'C\$250.50');
       expect(receipt.paymentMethod, 'card');
       expect(receipt.paymentMethodLabel, 'Tarjeta');
       expect(receipt.patientName, 'Ana Gómez');

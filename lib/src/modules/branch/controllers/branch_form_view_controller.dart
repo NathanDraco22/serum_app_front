@@ -50,6 +50,9 @@ class BranchFormViewController extends ChangeNotifier {
   String? _selectedSealName;
   bool _isUploadingSeal = false;
 
+  // Preferencias operativas y clínicas de la sucursal
+  bool _autoCalculateFormulas = true;
+
   // Estado de persistencia general
   bool _isSaving = false;
 
@@ -75,6 +78,8 @@ class BranchFormViewController extends ChangeNotifier {
     _logoUrl = initialBranch?.effectiveLogo;
     _isoLogoUrl = initialBranch?.isoLogoUrl;
     _sealUrl = initialBranch?.bioanalyst?.sealUrl;
+
+    _autoCalculateFormulas = initialBranch?.autoCalculateFormulas ?? true;
 
     if (initialBranch?.auxBio != null) {
       _auxBioList = List<AuxBioanalyst>.from(initialBranch!.auxBio!);
@@ -113,10 +118,17 @@ class BranchFormViewController extends ChangeNotifier {
 
   List<AuxBioanalyst> get auxBioList => List.unmodifiable(_auxBioList);
 
+  bool get autoCalculateFormulas => _autoCalculateFormulas;
+
   // --- Mutaciones de Estado ---
 
   void setSaving(bool saving) {
     _isSaving = saving;
+    notifyListeners();
+  }
+
+  void setAutoCalculateFormulas(bool value) {
+    _autoCalculateFormulas = value;
     notifyListeners();
   }
 
@@ -292,6 +304,7 @@ class BranchFormViewController extends ChangeNotifier {
       isoLogoUrl: images.isoLogoUrl,
       bioanalyst: _buildBioanalyst(images.sealUrl),
       auxBio: _auxBioList.isNotEmpty ? List<AuxBioanalyst>.from(_auxBioList) : null,
+      autoCalculateFormulas: _autoCalculateFormulas,
     );
   }
 
@@ -314,6 +327,7 @@ class BranchFormViewController extends ChangeNotifier {
       isoLogoUrl: images.isoLogoUrl,
       bioanalyst: _buildBioanalyst(images.sealUrl),
       auxBio: _auxBioList,
+      autoCalculateFormulas: _autoCalculateFormulas,
     );
   }
 

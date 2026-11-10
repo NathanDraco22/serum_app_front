@@ -276,7 +276,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Turno Activo: \$${activeShift.totalCashExpectedDouble.toStringAsFixed(2)} en efectivo',
+                                'Turno Activo: ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en efectivo',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -284,7 +284,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                                 ),
                               ),
                               Text(
-                                'Fondo inicial: \$${activeShift.initialBalanceDouble.toStringAsFixed(2)} • Listo para cobrar',
+                                'Fondo inicial: ${NumberFormatter.currencyFormat.format(activeShift.initialBalanceDouble)} • Listo para cobrar',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: Colors.green.shade800,
@@ -431,7 +431,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                   controller: _amountController,
                   decoration: InputDecoration(
                     labelText: 'Monto a Cobrar *',
-                    prefixText: '\$ ',
+                    prefixText: '${NumberFormatter.currencySymbol} ',
                     isDense: true,
                     helperText: _remainingBalance > 0
                         ? 'Saldo pendiente: ${NumberFormatter.convertToMoneyLike(_remainingBalance)}'

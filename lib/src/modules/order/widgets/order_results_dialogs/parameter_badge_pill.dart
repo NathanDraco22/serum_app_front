@@ -6,6 +6,7 @@ class ParameterBadgePill extends StatelessWidget {
   final Color bgColor;
   final Color textColor;
   final Color borderColor;
+  final Widget? icon;
 
   const ParameterBadgePill({
     super.key,
@@ -13,10 +14,20 @@ class ParameterBadgePill extends StatelessWidget {
     required this.bgColor,
     required this.textColor,
     required this.borderColor,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textWidget = Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.bold,
+        color: textColor,
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -24,14 +35,16 @@ class ParameterBadgePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: borderColor),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        ),
-      ),
+      child: icon == null
+          ? textWidget
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                icon!,
+                const SizedBox(width: 3.5),
+                textWidget,
+              ],
+            ),
     );
   }
 }

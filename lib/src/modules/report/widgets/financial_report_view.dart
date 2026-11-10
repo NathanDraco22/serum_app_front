@@ -182,7 +182,7 @@ class FinancialReportView extends StatelessWidget {
                     getTooltipColor: (_) => ColorPalette.inverseSurface,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       return BarTooltipItem(
-                        '${labels[group.x.toInt()]}\n\$${NumberFormatter.decimalPattern(rod.toY)}',
+                        '${labels[group.x.toInt()]}\n${NumberFormatter.currencySymbol}${NumberFormatter.decimalPattern(rod.toY)}',
                         const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -227,7 +227,7 @@ class FinancialReportView extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         if (value == 0) return const SizedBox.shrink();
                         return Text(
-                          '\$${NumberFormatter.decimalPattern(value.toInt())}',
+                          '${NumberFormatter.currencySymbol}${NumberFormatter.decimalPattern(value.toInt())}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.outline,
                           ),

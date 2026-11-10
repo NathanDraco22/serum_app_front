@@ -18,3 +18,4 @@ En este directorio se documenta el diseño arquitectónico de `serum_app_front` 
 | :--- | :--- |
 | **[Flujo de Capas (flujo_de_capas.md)](flujo_de_capas.md)** | Desglose paso a paso del ciclo de vida de los datos: View ➔ Cubit ➔ Repository ➔ DataSource ➔ Services. |
 | **[Patrón ViewController + Mediator (view_controller_mediator.md)](view_controller_mediator.md)** | Estándar OKF v0.2 para pantallas complejas con estado efímero, eliminación de prop-drilling y generación de DTOs. |
+| **[Formatter Global con Resolver Inyectado](/wiki/convenciones/global-formatter-resolver.md)** | Moneda global resuelta por callback desde `AppSettingsCubit`; formatters puros sin dependencias del frontend. |

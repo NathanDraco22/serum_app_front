@@ -109,7 +109,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Total: \$${(totalAmount / 100).toStringAsFixed(2)}',
+                          'Total: ${NumberFormatter.convertToMoneyLike(totalAmount)}',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -125,7 +125,7 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                           return ListTile(
                             dense: true,
                             title: Text(item.name),
-                            subtitle: Text('\$${(item.quotedPrice / 100).toStringAsFixed(2)}'),
+                            subtitle: Text(NumberFormatter.convertToMoneyLike(item.quotedPrice)),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -198,14 +198,14 @@ class _QuotationFormDialogState extends State<QuotationFormDialog> {
                       itemCount: labTests.length,
                       itemBuilder: (context, index) {
                         final test = labTests[index];
-                        final price1Str = (test.salePrice / 100).toStringAsFixed(2);
+                        final price1Str = NumberFormatter.convertToMoneyLike(test.salePrice);
                         /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
                         final price2Str = (test.salePrice2 / 100).toStringAsFixed(2);
                         final priceDisplay = test.salePrice2 > 0
-                            ? 'P1: \$$price1Str | P2: \$$price2Str'
-                            : '\$$price1Str';
+                            ? 'P1: $price1Str | P2: $price2Str'
+                            : price1Str;
                         */
-                        final priceDisplay = '\$$price1Str';
+                        final priceDisplay = price1Str;
 
                         return ListTile(
                           dense: true,

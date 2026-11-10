@@ -147,7 +147,7 @@ class TopDoctorsReportView extends StatelessWidget {
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final doc = chartItems[group.x.toInt()];
                       return BarTooltipItem(
-                        '${doc.doctorName}\n${doc.totalOrders} órdenes\n\$${NumberFormatter.decimalPattern(rod.toY)}',
+                        '${doc.doctorName}\n${doc.totalOrders} órdenes\n${NumberFormatter.currencySymbol}${NumberFormatter.decimalPattern(rod.toY)}',
                         const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -196,7 +196,7 @@ class TopDoctorsReportView extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         if (value == 0) return const SizedBox.shrink();
                         return Text(
-                          '\$${NumberFormatter.decimalPattern(value.toInt())}',
+                          '${NumberFormatter.currencySymbol}${NumberFormatter.decimalPattern(value.toInt())}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.outline,
                           ),

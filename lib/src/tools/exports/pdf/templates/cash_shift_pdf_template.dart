@@ -46,10 +46,8 @@ class CashShiftPdfTemplate implements PdfTemplate {
   }
 
   String _formatDiffText(int diffCents) {
-    if (diffCents == 0) return 'Exacto (\$0.00)';
-    final sign = diffCents > 0 ? '+' : '-';
-    final absVal = (diffCents.abs() / 100.0).toStringAsFixed(2);
-    return '$sign\$$absVal';
+    if (diffCents == 0) return 'Exacto (${NumberFormatter.convertToMoneyLike(0)})';
+    return NumberFormatter.convertToMoneyLikeSigned(diffCents);
   }
 
   String _formatPaymentMethod(String method) {
