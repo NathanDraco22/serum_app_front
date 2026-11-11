@@ -4,10 +4,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
 import '../../../cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
-import '../../../widgets/dialogs/viewers/cash_shift_viewer.dart';
-import '../widgets/cash_movements_list_dialog.dart';
 import '../widgets/cash_shift_card.dart';
-import '../widgets/cash_shift_close_dialog.dart';
 import '../widgets/cash_shift_open_dialog.dart';
 
 class CashShiftsScreen extends StatelessWidget {
@@ -98,90 +95,29 @@ class _BodyState extends State<_Body> {
           ),
           child: Row(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Turnos de Caja',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Turnos de Caja',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Historial de turnos de trabajo, cobros en tiempo real y arqueos contables',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Historial de turnos de trabajo, cobros en tiempo real y arqueos contables',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
-              // Action Button (Abrir o Cerrar Turno)
-              if (activeShift != null) ...[
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-                  label: const Text('Ver Arqueo (PDF)'),
-                  onPressed: () {
-                    showCashShiftViewerDialog(context, activeShift);
-                  },
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                  label: const Text('Movimientos de Caja'),
-                  onPressed: isShiftInCurrentBranch
-                      ? () async {
-                          final res = await CashMovementsListDialog.show(
-                            context,
-                            shift: activeShift,
-                          );
-                          if (res == true) {
-                            _loadShifts();
-                          }
-                        }
-                      : null,
-                ),
-                const SizedBox(width: 10),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: isShiftInCurrentBranch
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.outlineVariant,
-                    foregroundColor: isShiftInCurrentBranch
-                        ? theme.colorScheme.onError
-                        : theme.colorScheme.onSurfaceVariant,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.lock_clock_rounded, size: 18),
-                  label: const Text('Corte y Arqueo (Mi Turno)'),
-                  onPressed: isShiftInCurrentBranch
-                      ? () async {
-                          final res =
-                              await CashShiftCloseDialog.show(context, activeShift);
-                          if (res != null) {
-                            _loadShifts();
-                            if (context.mounted) {
-                              showCashShiftViewerDialog(context, res);
-                            }
-                          }
-                        }
-                      : null,
-                ),
-              ] else
+              if (activeShift == null) ...[
+                const SizedBox(width: 16),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -199,6 +135,7 @@ class _BodyState extends State<_Body> {
                     }
                   },
                 ),
+              ],
               const SizedBox(width: 12),
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -304,8 +241,7 @@ class _BodyState extends State<_Body> {
               const Spacer(),
               if (activeShift != null)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: isShiftInCurrentBranch
                         ? theme.colorScheme.primaryContainer.withAlpha(70)
@@ -321,9 +257,7 @@ class _BodyState extends State<_Body> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isShiftInCurrentBranch
-                            ? Icons.check_circle
-                            : Icons.warning_amber_rounded,
+                        isShiftInCurrentBranch ? Icons.check_circle : Icons.warning_amber_rounded,
                         size: 14,
                         color: isShiftInCurrentBranch
                             ? theme.colorScheme.primary
@@ -373,16 +307,15 @@ class _BodyState extends State<_Body> {
                       Icon(
                         Icons.lock_clock_outlined,
                         size: 56,
-                        color:
-                            theme.colorScheme.onSurfaceVariant.withAlpha(120),
+                        color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         _filter == _ShiftFilter.all
                             ? 'No hay turnos registrados'
                             : (_filter == _ShiftFilter.open
-                                ? 'No hay turnos abiertos actualmente'
-                                : 'No hay turnos cerrados'),
+                                  ? 'No hay turnos abiertos actualmente'
+                                  : 'No hay turnos cerrados'),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -397,8 +330,7 @@ class _BodyState extends State<_Body> {
                 itemCount: filteredShifts.length,
                 itemBuilder: (context, index) {
                   final shift = filteredShifts[index];
-                  final isCurrentUser =
-                      shift.userId == user?.id || shift.id == activeShift?.id;
+                  final isCurrentUser = shift.userId == user?.id || shift.id == activeShift?.id;
 
                   return CashShiftCard(
                     shift: shift,

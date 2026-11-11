@@ -2,7 +2,7 @@
 title: Arquitectura — Patrón ViewController + Mediator (OKF v0.2)
 description: Guía de diseño y estándares para el desacoplamiento de estado efímero complejo, eliminación de prop-drilling y generación de DTOs en Flutter.
 tags: [architecture, patterns, view_controller, mediator, flutter, dart, state_management]
-timestamp: 2026-11-03T23:00:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # 🏛️ Patrón ViewController + Mediator (Estándar OKF v0.2)
@@ -122,7 +122,7 @@ Es un `InheritedWidget` mudo con `updateShouldNotify: false`:
 - **Ubicación**: `lib/src/modules/branch/controllers/`
 - **Responsabilidad**:
   - Desacopla el formulario más grande del frontend (~1,311 líneas originales) a un orquestador declarativo (< 250 líneas) y 4 subsecciones modulares en `widgets/sections/`.
-  - Centraliza 8 controladores de texto con `dispose()` riguroso (`name`, `address`, `phone`, `email`, `facebook`, `bioanalystName`, `bioanalystTitle`, `bioanalystCode`).
+  - Centraliza 9 controladores de texto con `dispose()` riguroso (`name`, `address`, `city`, `phone`, `email`, `facebook`, `bioanalystName`, `bioanalystTitle`, `bioanalystCode`).
   - Administra el estado y subida de 3 activos binarios (Logo, IsoLogo y Sello de tinta) con banderas reactivas e invalidación de caché (`AppImageCache.evict`).
   - Mantiene la colección en memoria de bioanalistas auxiliares (`List<AuxBioanalyst>`) con mutaciones reactivas.
   - Métodos exportadores: `generateCreateDto({ImageUploadFunction? uploader})` y `generateUpdateDto({ImageUploadFunction? uploader})`, permitiendo inyección de funciones mock para pruebas unitarias sin red.

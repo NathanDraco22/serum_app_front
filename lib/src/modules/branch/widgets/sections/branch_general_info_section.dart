@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../controllers/branch_form_mediator.dart';
 
 /// Subsección para la captura de datos generales de la sucursal:
-/// Nombre comercial, dirección completa, teléfono de contacto, email, Facebook
-/// y preferencias de cálculo automático de fórmulas clínicas.
+/// Nombre comercial, dirección completa, ciudad/localidad, teléfono de contacto,
+/// email, Facebook y preferencias de cálculo automático de fórmulas clínicas.
 class BranchGeneralInfoSection extends StatelessWidget {
   const BranchGeneralInfoSection({super.key});
 
@@ -58,6 +58,19 @@ class BranchGeneralInfoSection extends StatelessWidget {
             }
             return null;
           },
+        ),
+        const SizedBox(height: 16),
+
+        // Ciudad / Localidad
+        TextFormField(
+          controller: controller.cityController,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Ciudad / Localidad',
+            hintText: 'Ej. Matagalpa, Estelí, Managua...',
+            prefixIcon: Icon(Icons.location_city_outlined),
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
 

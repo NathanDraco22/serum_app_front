@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 
-class CashTransactionsList extends StatelessWidget {
+class CashShiftTransactionsList extends StatelessWidget {
   final List<CashTransactionInDb> items;
 
-  const CashTransactionsList({
+  const CashShiftTransactionsList({
     super.key,
     required this.items,
   });
@@ -19,6 +19,23 @@ class CashTransactionsList extends StatelessWidget {
     return '$day/$month/${date.year} $hour:$minute';
   }
 
+  String _subTypeLabel(String subType) {
+    switch (subType) {
+      case 'opening':
+        return 'Apertura';
+      case 'payment':
+        return 'Cobro';
+      case 'income':
+        return 'Ingreso';
+      case 'withdrawal':
+        return 'Retiro';
+      case 'closing':
+        return 'Cierre';
+      default:
+        return subType;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -28,10 +45,7 @@ class CashTransactionsList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final tx = items[index];
-        final isEnflow = tx.flowType == 'inflow' || tx.flowType == 'in';
-        final shiftShortId = tx.shiftId != null
-            ? (tx.shiftId!.length >= 8 ? tx.shiftId!.substring(0, 8) : tx.shiftId!)
-            : null;
+        final isInflow = tx.flowType == 'inflow' || tx.flowType == 'in';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -44,9 +58,9 @@ class CashTransactionsList extends StatelessWidget {
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: CircleAvatar(
-              backgroundColor: isEnflow ? Colors.green.shade100 : Colors.red.shade100,
-              foregroundColor: isEnflow ? Colors.green.shade800 : Colors.red.shade800,
-              child: Icon(isEnflow ? Icons.arrow_upward : Icons.arrow_downward),
+              backgroundColor: isInflow ? Colors.green.shade100 : Colors.red.shade100,
+              foregroundColor: isInflow ? Colors.green.shade800 : Colors.red.shade800,
+              child: Icon(isInflow ? Icons.arrow_upward : Icons.arrow_downward),
             ),
             title: Text(
               tx.concept,
@@ -61,9 +75,12 @@ class CashTransactionsList extends StatelessWidget {
                   runSpacing: 6,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    // Badge del Turno
+                    // Tipo de asiento contable
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primaryContainer.withAlpha(80),
                         borderRadius: BorderRadius.circular(6),
@@ -75,13 +92,13 @@ class CashTransactionsList extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.lock_clock_outlined,
+                            Icons.receipt_long_outlined,
                             size: 13,
                             color: theme.colorScheme.primary,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            shiftShortId != null ? 'Turno #$shiftShortId' : 'Turno General',
+                            _subTypeLabel(tx.subType).toUpperCase(),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w600,
@@ -143,11 +160,11 @@ class CashTransactionsList extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '${isEnflow ? "+" : "-"}${NumberFormatter.convertToMoneyLike(tx.amount)}',
+                  '${isInflow ? "+" : "-"}${NumberFormatter.convertToMoneyLike(tx.amount)}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isEnflow ? Colors.green.shade800 : Colors.red.shade800,
+                    color: isInflow ? Colors.green.shade800 : Colors.red.shade800,
                   ),
                 ),
                 const SizedBox(height: 4),

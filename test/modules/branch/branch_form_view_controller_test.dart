@@ -15,6 +15,7 @@ void main() {
 
       expect(controller.nameController.text, isEmpty);
       expect(controller.addressController.text, isEmpty);
+      expect(controller.cityController.text, isEmpty);
       expect(controller.phoneController.text, isEmpty);
       expect(controller.emailController.text, isEmpty);
       expect(controller.facebookController.text, isEmpty);
@@ -55,6 +56,7 @@ void main() {
         id: 'BR-100',
         name: 'Sucursal Norte',
         address: 'Km 5 Carretera Norte',
+        city: 'Matagalpa',
         phone: '2244-8899',
         email: 'norte@laboratorio.com',
         facebook: 'fb.com/laboratorionorte',
@@ -75,6 +77,7 @@ void main() {
       expect(controller.isEditing, isTrue);
       expect(controller.nameController.text, equals('Sucursal Norte'));
       expect(controller.addressController.text, equals('Km 5 Carretera Norte'));
+      expect(controller.cityController.text, equals('Matagalpa'));
       expect(controller.phoneController.text, equals('2244-8899'));
       expect(controller.emailController.text, equals('norte@laboratorio.com'));
       expect(controller.facebookController.text, equals('fb.com/laboratorionorte'));
@@ -205,6 +208,7 @@ void main() {
       final controller = BranchFormViewController();
       controller.nameController.text = 'Nueva Sucursal';
       controller.addressController.text = 'Calle Central';
+      controller.cityController.text = 'Estelí';
       controller.phoneController.text = '2222-1111';
       controller.emailController.text = 'info@sucursal.com';
       controller.facebookController.text = 'fb.com/sucursal';
@@ -236,6 +240,7 @@ void main() {
 
       expect(createDto.name, equals('Nueva Sucursal'));
       expect(createDto.address, equals('Calle Central'));
+      expect(createDto.city, equals('Estelí'));
       expect(createDto.phone, equals('2222-1111'));
       expect(createDto.email, equals('info@sucursal.com'));
       expect(createDto.facebook, equals('fb.com/sucursal'));
@@ -257,6 +262,7 @@ void main() {
         id: 'BR-200',
         name: 'Sucursal Original',
         address: 'Dir Original',
+        city: 'Matagalpa',
         phone: '555-0000',
         logoUrl: 'https://cdn.example.com/original_logo.png',
         isoLogoUrl: 'https://cdn.example.com/original_iso.png',
@@ -271,12 +277,14 @@ void main() {
 
       final controller = BranchFormViewController(initialBranch: initialBranch);
       controller.nameController.text = 'Sucursal Modificada';
+      controller.cityController.text = 'Estelí';
 
       // No se seleccionan nuevos bytes, debe preservar las URLs previas
       final updateDto = await controller.generateUpdateDto();
 
       expect(updateDto.name, equals('Sucursal Modificada'));
       expect(updateDto.address, equals('Dir Original'));
+      expect(updateDto.city, equals('Estelí'));
       expect(updateDto.logoUrl, equals('https://cdn.example.com/original_logo.png'));
       expect(updateDto.isoLogoUrl, equals('https://cdn.example.com/original_iso.png'));
       expect(updateDto.bioanalyst?.sealUrl, equals('https://cdn.example.com/original_seal.png'));

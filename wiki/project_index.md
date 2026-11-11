@@ -3,7 +3,7 @@ type: index
 title: Frontend — Mapa del Proyecto (Project Index)
 description: Mapa maestro y exhaustivo de la arquitectura de la aplicación Flutter, módulos, cubits, widgets, flujo de capas y responsabilidades funcionales.
 tags: [frontend, architecture, flutter, dart, bloc, cubit, index, map]
-timestamp: 2026-09-28T19:46:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # 🗺️ Project Index — Frontend (Serum App Flutter & LIS)
@@ -75,7 +75,7 @@ serum_app_front/
 │       │   ├── branch/                 # Consola de Sucursales / Sedes (CRUD en pantalla completa)
 │       │   ├── cash_register_selection/# Selección obligatoria de caja física
 │       │   ├── cash_register/          # Gestión de cajas, apertura y arqueo/cierre
-│       │   ├── cash_transaction/       # Kardex contable de auditoría
+│       │   ├── cash_shift/             # Turnos de caja, arqueos y Kardex de detalle por turno
 │       │   ├── dashboard/              # Panel principal y bienvenida
 │       │   ├── doctor/                 # Directorio de médicos referentes
 │       │   ├── home_menu/              # Shell interactivo con barra lateral (StatefulNavigationShell)
@@ -263,7 +263,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ---
 
-### 💵 3.10 Módulo `cash_register` (Apertura, Cierre y Control de Cajas)
+### 🏧 3.10 Módulo `cash_register` (Apertura, Cierre y Control de Cajas)
 * **Ubicación**: `lib/src/modules/cash_register/`
 * **Vistas**: `view/cash_register_screen.dart`
 * **Widgets**: `widgets/cash_register_card.dart`, `widgets/cash_register_open_dialog.dart`, `widgets/cash_register_close_dialog.dart`, `widgets/cash_register_form_dialog.dart`
@@ -276,15 +276,29 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 
 ---
 
-### 📜 3.11 Módulo `cash_transaction` (Kardex Financiero e Historial de Movimientos)
-* **Ubicación**: `lib/src/modules/cash_transaction/`
-* **Vistas**: `view/cash_transaction_screen.dart`
-* **Widgets**: `widgets/cash_transaction_list.dart`
+### 💵 3.11 Módulo `cash_shift` (Turnos de Caja, Arqueos y Kardex de Detalle)
+* **Ubicación**: `lib/src/modules/cash_shift/`
+* **Vistas**: `view/cash_shifts_screen.dart`, `view/cash_shift_transactions_screen.dart`
+* **Widgets**: `widgets/cash_shift_card.dart`, `widgets/cash_shift_open_dialog.dart`, `widgets/cash_shift_close_dialog.dart`, `widgets/cash_movement_dialog.dart`, `widgets/cash_movements_list_dialog.dart`, `widgets/cash_shift_transactions_list.dart`
+* **Cubits Asociados**: `ReadCashShiftCubit`, `WriteCashShiftCubit`, `ReadCashMovementCubit`, `WriteCashMovementCubit`, `ReadCashTransactionCubit`
+* **Funciones Clave**:
+  1. **Turno Individual por Custodio**: Bajo la premisa "La persona es la caja", permite abrir un turno con fondo inicial, consultar el turno activo y revisar el historial de turnos abiertos/cerrados.
+  2. **Arqueo y Cierre**: Captura el efectivo declarado, calcula diferencias y genera el comprobante de turno en PDF.
+  3. **Movimientos Libres**: Diálogo para registrar ingresos/egresos extraordinarios y anularlos con contra-asiento en el Kardex.
+  4. **Sub-vista de Kardex por Turno**: Cada tarjeta de turno expone el botón **Transacciones**, que abre la ruta hija `/cash-shifts/:shiftId/transactions` con el detalle contable completo del turno, filtrado en servidor por `shiftId` y en modo solo lectura. El turno actual se resalta visualmente con franja y borde ámbar, fondo tintado y badge **TURNO ACTUAL**.
+
+---
+
+#### 📜 3.11.1 Sub-vista `cash_shift_transactions` (Kardex Financiero del Turno)
+* **Ubicación**: `lib/src/modules/cash_shift/view/cash_shift_transactions_screen.dart`
+* **Widgets**: `widgets/cash_shift_transactions_list.dart`
 * **Cubits Asociados**: `ReadCashTransactionCubit`
 * **Funciones Clave**:
-  1. **Auditoría Inmutable**: Libro contable de solo lectura donde se visualizan todos los movimientos monetarios de la sucursal y caja activa.
-  2. **Tipificación de Transacciones**: Clasifica los movimientos en Apertura (`opening`), Cobro de Orden (`order_payment`), Ingreso Extraordinario (`income`), Retiro/Gasto (`withdrawal`) y Cierre (`closing`).
-  3. **Desglose de Montos y Métodos**: Muestra el sentido contable (entrada `in` / salida `out`), método utilizado y nota de justificación.
+  1. **Auditoría Inmutable por Turno**: Libro contable de solo lectura con todos los asientos del turno seleccionado, sin mezclar transacciones de otros turnos.
+  2. **Cabecera del Turno**: Muestra estado abierto/cerrado, custodio, sucursal, fechas de apertura/cierre y KPIs de fondo inicial, efectivo, tarjeta, transferencia y saldo total.
+  3. **Tipificación de Transacciones**: Clasifica los movimientos en Apertura (`opening`), Cobro de Orden (`payment`), Ingreso Extraordinario (`income`), Retiro/Gasto (`withdrawal`) y Cierre (`closing`).
+  4. **Desglose de Montos y Métodos**: Muestra el sentido contable (entrada `in` / salida `out`), método utilizado, fecha, operador, monto y saldo resultante (`resultingBalance`).
+  5. **Navegación de Detalle**: Se abre como ruta hija de la Branch de Turnos, conservando la barra lateral y el botón atrás del `AppBar`.
 
 ---
 
@@ -292,7 +306,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 * **Ubicación**: `lib/src/modules/administration/`
 * **Vistas**: `view/administration_screen.dart`
 * **Widgets**: `widgets/admin_module_card.dart`
-* **Cubits Asociados**: Integrado en el Shell de navegación (`HomeMenusScreen`, Branch 8 `/admin`).
+* **Cubits Asociados**: Integrado en el Shell de navegación (`HomeMenusScreen`, Branch 9 `/admin`).
 * **Funciones Clave**:
   1. **Consola Central**: Submenú moderno con tarjetas interactivas en cuadrícula responsiva (`GridView.extent`) para acceder a las áreas de configuración del sistema.
   2. **Tarjetas de Submódulos (`AdminModuleCard`)**: Componentes con hover interactivo y microanimaciones que abren las consolas de gestión en pantalla completa.
@@ -309,7 +323,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`, `ReadUserCubit`, `WriteUserCubit`
 * **Funciones Clave**:
   1. **Apertura a Pantalla Completa (`parentNavigatorKey: _rootNavigatorKey`)**: Oculta la barra lateral para otorgar máxima amplitud y concentración operativa, con botón de retroceso (`Icons.arrow_back`) para volver al hub.
-  2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con buscador reactivo y protección para la sede matriz (`ORIGIN_BRANCH`).
+  2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con ciudad/localidad (`city`), buscador reactivo por nombre, ciudad o dirección y protección para la sede matriz (`ORIGIN_BRANCH`).
   3. **CRUD Completo de Usuarios**: Control de credenciales, roles (`Admin`, `Cashier`, `Bioanalyst`, `Doctor`), asignación dinámica de sucursales autorizadas (`FilterChip`), switch de usuario activo y blindaje de la cuenta `root`.
 
 ---

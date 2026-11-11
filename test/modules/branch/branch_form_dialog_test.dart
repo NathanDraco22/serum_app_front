@@ -21,6 +21,7 @@ class MockWriteBranchCubit extends Cubit<WriteBranchState>
       id: 'NEW-ID',
       name: branch.name,
       address: branch.address,
+      city: branch.city,
       phone: branch.phone,
       bioanalyst: branch.bioanalyst,
       createdAt: 1000,
@@ -35,6 +36,7 @@ class MockWriteBranchCubit extends Cubit<WriteBranchState>
       id: id,
       name: branch.name ?? '',
       address: branch.address ?? '',
+      city: branch.city ?? '',
       phone: branch.phone ?? '',
       bioanalyst: branch.bioanalyst,
       createdAt: 1000,
@@ -100,6 +102,7 @@ void main() {
       expect(find.text('Nueva Sucursal / Sede'), findsOneWidget);
       expect(find.text('Identidad Visual de la Sucursal'), findsOneWidget);
       expect(find.text('Información General'), findsOneWidget);
+      expect(find.text('Ciudad / Localidad'), findsOneWidget);
       expect(find.text('Bioanalista Representante de la Sede'), findsOneWidget);
       expect(find.text('Bioanalistas Auxiliares'), findsOneWidget);
       expect(find.text('Crear Sucursal'), findsOneWidget);
@@ -141,6 +144,10 @@ void main() {
         'Av. Independencia 123',
       );
       await tester.enterText(
+        find.widgetWithText(TextFormField, 'Ciudad / Localidad'),
+        'Matagalpa',
+      );
+      await tester.enterText(
         find.widgetWithText(TextFormField, 'Teléfono de Contacto *'),
         '2255-0000',
       );
@@ -153,6 +160,7 @@ void main() {
       expect(writeCubit.lastCreated, isNotNull);
       expect(writeCubit.lastCreated!.name, equals('Sucursal Central'));
       expect(writeCubit.lastCreated!.address, equals('Av. Independencia 123'));
+      expect(writeCubit.lastCreated!.city, equals('Matagalpa'));
       expect(writeCubit.lastCreated!.phone, equals('2255-0000'));
     });
 
@@ -167,6 +175,7 @@ void main() {
         id: 'BR-99',
         name: 'Sucursal Vieja',
         address: 'Calle Vieja',
+        city: 'Estelí',
         phone: '1111-2222',
         createdAt: 1000,
       );
@@ -206,6 +215,7 @@ void main() {
       expect(writeCubit.lastUpdatedId, equals('BR-99'));
       expect(writeCubit.lastUpdated, isNotNull);
       expect(writeCubit.lastUpdated!.name, equals('Sucursal Renovada'));
+      expect(writeCubit.lastUpdated!.city, equals('Estelí'));
     });
   });
 }

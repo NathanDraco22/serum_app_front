@@ -46,6 +46,15 @@ class BranchSelectionDialog extends StatelessWidget {
                   final initial = branch.name.isNotEmpty
                       ? branch.name.substring(0, 1).toUpperCase()
                       : 'S';
+                  final locationParts = <String>[
+                    if (branch.city.isNotEmpty) branch.city,
+                    if (branch.address.isNotEmpty) branch.address,
+                  ];
+                  final subtitle = locationParts.isNotEmpty
+                      ? locationParts.join(' · ')
+                      : (branch.phone.isNotEmpty
+                          ? 'Tel: ${branch.phone}'
+                          : 'Sin dirección');
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: theme.colorScheme.primaryContainer,
@@ -56,11 +65,7 @@ class BranchSelectionDialog extends StatelessWidget {
                       branch.name,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text(
-                      branch.address.isNotEmpty
-                          ? branch.address
-                          : (branch.phone.isNotEmpty ? 'Tel: ${branch.phone}' : 'Sin dirección'),
-                    ),
+                    subtitle: Text(subtitle),
                     trailing: const Icon(Icons.chevron_right, size: 20),
                     onTap: () {
                       Navigator.pop(context, branch);

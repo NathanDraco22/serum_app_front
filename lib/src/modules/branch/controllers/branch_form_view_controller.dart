@@ -20,6 +20,7 @@ class BranchFormViewController extends ChangeNotifier {
   // Controladores de texto para información general
   late final TextEditingController nameController;
   late final TextEditingController addressController;
+  late final TextEditingController cityController;
   late final TextEditingController phoneController;
   late final TextEditingController emailController;
   late final TextEditingController facebookController;
@@ -60,6 +61,7 @@ class BranchFormViewController extends ChangeNotifier {
     nameController = TextEditingController(text: initialBranch?.name ?? '');
     addressController =
         TextEditingController(text: initialBranch?.address ?? '');
+    cityController = TextEditingController(text: initialBranch?.city ?? '');
     phoneController = TextEditingController(text: initialBranch?.phone ?? '');
     emailController = TextEditingController(text: initialBranch?.email ?? '');
     facebookController =
@@ -296,6 +298,7 @@ class BranchFormViewController extends ChangeNotifier {
     return CreateBranch(
       name: nameController.text.trim(),
       address: addressController.text.trim(),
+      city: cityController.text.trim(),
       phone: phoneController.text.trim(),
       email: emailText.isNotEmpty ? emailText : null,
       facebook: facebookText.isNotEmpty ? facebookText : null,
@@ -319,6 +322,7 @@ class BranchFormViewController extends ChangeNotifier {
     return UpdateBranch(
       name: nameController.text.trim(),
       address: addressController.text.trim(),
+      city: cityController.text.trim(),
       phone: phoneController.text.trim(),
       email: emailText.isNotEmpty ? emailText : null,
       facebook: facebookText.isNotEmpty ? facebookText : null,
@@ -335,6 +339,7 @@ class BranchFormViewController extends ChangeNotifier {
   void dispose() {
     nameController.dispose();
     addressController.dispose();
+    cityController.dispose();
     phoneController.dispose();
     emailController.dispose();
     facebookController.dispose();

@@ -19,7 +19,7 @@ import '../src/modules/order/view/create_order_screen.dart';
 import '../src/modules/quotation/view/quotation_screen.dart';
 import '../src/modules/quotation/view/create_quotation_screen.dart';
 import '../src/modules/cash_shift/view/cash_shifts_screen.dart';
-import '../src/modules/cash_transaction/view/cash_transaction_screen.dart';
+import '../src/modules/cash_shift/view/cash_shift_transactions_screen.dart';
 import '../src/modules/receipt/view/receipts_screen.dart';
 import '../src/modules/administration/view/administration_screen.dart';
 import '../src/modules/administration/view/app_settings/app_settings_screen.dart';
@@ -63,7 +63,9 @@ class AppRouter {
   static const String quotations = '/quotations';
   static const String createQuotation = '/quotations/new';
   static const String cashShifts = '/cash-shifts';
-  static const String cashTransactions = '/cash-transactions';
+  static const String cashShiftTransactions = '/cash-shifts/:shiftId/transactions';
+  static String cashShiftTransactionsPath(String shiftId) =>
+      cashShiftTransactions.replaceFirst(':shiftId', shiftId);
   static const String receipts = '/receipts';
   static const String reports = '/reports';
   static const String administration = '/admin';
@@ -76,33 +78,22 @@ class AppRouter {
 
   static String? _lastKnownLocation;
   static String? get lastKnownLocation => _lastKnownLocation;
-  static void setLastKnownLocation(String? location) =>
-      _lastKnownLocation = location;
+  static void setLastKnownLocation(String? location) => _lastKnownLocation = location;
 
   static GoRouter createRouter(
     AppSessionCubit sessionCubit, {
     String? initialLocation,
   }) {
     final rootNavigatorKey = GlobalKey<NavigatorState>();
-    final dashboardNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'dashboard');
-    final patientsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'patients');
-    final doctorsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'doctors');
-    final labTestsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'labTests');
+    final dashboardNavKey = GlobalKey<NavigatorState>(debugLabel: 'dashboard');
+    final patientsNavKey = GlobalKey<NavigatorState>(debugLabel: 'patients');
+    final doctorsNavKey = GlobalKey<NavigatorState>(debugLabel: 'doctors');
+    final labTestsNavKey = GlobalKey<NavigatorState>(debugLabel: 'labTests');
     final ordersNavKey = GlobalKey<NavigatorState>(debugLabel: 'orders');
-    final quotationsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'quotations');
-    final cashShiftsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
-    final cashTransactionsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'cashTransactions');
-    final receiptsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'receipts');
-    final reportsNavKey =
-        GlobalKey<NavigatorState>(debugLabel: 'reports');
+    final quotationsNavKey = GlobalKey<NavigatorState>(debugLabel: 'quotations');
+    final cashShiftsNavKey = GlobalKey<NavigatorState>(debugLabel: 'cashShifts');
+    final receiptsNavKey = GlobalKey<NavigatorState>(debugLabel: 'receipts');
+    final reportsNavKey = GlobalKey<NavigatorState>(debugLabel: 'reports');
     final adminNavKey = GlobalKey<NavigatorState>(debugLabel: 'admin');
 
     return GoRouter(
@@ -112,12 +103,11 @@ class AppRouter {
       redirect: (context, state) {
         final sessionState = sessionCubit.state;
 
-        final isInitial = sessionState.status == AppSessionStatus.initial ||
+        final isInitial =
+            sessionState.status == AppSessionStatus.initial ||
             sessionState.status == AppSessionStatus.authenticating;
-        final isUnactivated =
-            sessionState.status == AppSessionStatus.unactivated;
-        final isInstanceInactive =
-            sessionState.status == AppSessionStatus.instanceInactive;
+        final isUnactivated = sessionState.status == AppSessionStatus.unactivated;
+        final isInstanceInactive = sessionState.status == AppSessionStatus.instanceInactive;
         final isAuthenticated = sessionState.isAuthenticated;
 
         final isSplashing = state.matchedLocation == splash;
@@ -156,6 +146,8 @@ class AppRouter {
             _lastKnownLocation = orders;
           } else if (currentLoc == createQuotation) {
             _lastKnownLocation = quotations;
+          } else if (currentLoc.startsWith('$cashShifts/')) {
+            _lastKnownLocation = cashShifts;
           } else {
             _lastKnownLocation = currentLoc;
           }
@@ -311,6 +303,20 @@ class AppRouter {
                 GoRoute(
                   path: cashShifts,
                   builder: (context, state) => const CashShiftsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':shiftId/transactions',
+                      builder: (context, state) {
+                        final shift = state.extra is CashShiftInDb
+                            ? state.extra as CashShiftInDb
+                            : null;
+                        return CashShiftTransactionsScreen(
+                          shiftId: state.pathParameters['shiftId'] ?? '',
+                          shift: shift,
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: '/cash-registers',
@@ -318,17 +324,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 7: Transacciones de Caja
-            StatefulShellBranch(
-              navigatorKey: cashTransactionsNavKey,
-              routes: [
-                GoRoute(
-                  path: cashTransactions,
-                  builder: (context, state) => const CashTransactionsScreen(),
-                ),
-              ],
-            ),
-            // Branch 8: Recibos de Caja
+            // Branch 7: Recibos de Caja
             StatefulShellBranch(
               navigatorKey: receiptsNavKey,
               routes: [
@@ -338,7 +334,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 9: Reportes Analíticos
+            // Branch 8: Reportes Analíticos
             StatefulShellBranch(
               navigatorKey: reportsNavKey,
               routes: [
@@ -348,7 +344,7 @@ class AppRouter {
                 ),
               ],
             ),
-            // Branch 10: Administración
+            // Branch 9: Administración
             StatefulShellBranch(
               navigatorKey: adminNavKey,
               routes: [

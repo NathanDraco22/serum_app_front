@@ -161,6 +161,25 @@ class BranchesList extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
+                                Icons.location_city_outlined,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                branch.city.isNotEmpty
+                                    ? branch.city
+                                    : 'Sin localidad registrada',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
                                 Icons.location_on_outlined,
                                 size: 16,
                                 color: theme.colorScheme.onSurfaceVariant,

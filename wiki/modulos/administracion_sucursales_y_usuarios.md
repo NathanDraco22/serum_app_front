@@ -3,7 +3,7 @@ type: doc
 title: Módulo de Administración — Hub, Sucursales y Usuarios
 description: Documentación funcional del centro de administración, submenú en cuadrícula responsiva y consolas de gestión en pantalla completa para sucursales y colaboradores.
 tags: [frontend, admin, branches, users, security, roles, permissions]
-timestamp: 2026-10-03T16:25:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # ⚙️ Módulo de Administración, Sucursales y Usuarios
@@ -67,17 +67,17 @@ El módulo combina dos patrones de navegación mediante `go_router`:
 * **Widgets**: `widgets/branches_list.dart`, `widgets/branch_form_dialog.dart`, `widgets/aux_bioanalyst_dialog.dart`
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`
 * **Funciones Clave**:
-  1. **Supervisión de Sedes**: Tarjetas estilizadas en `BranchesList` con nombre, dirección completa, teléfono y distinción especial mediante badge temático para la sede matriz (`ORIGIN_BRANCH`).
+  1. **Supervisión de Sedes**: Tarjetas estilizadas en `BranchesList` con nombre, ciudad/localidad (o el texto `Sin localidad registrada` cuando aún no se captura), dirección completa, teléfono y distinción especial mediante badge temático para la sede matriz (`ORIGIN_BRANCH`).
   2. **Bioanalista Representante y Sello Digital**:
      - Cada sede permite registrar los datos del profesional que valida clínicamente los análisis: nombre completo, título profesional/especialidad y código o registro MINSA.
      - **Sello Físico de Tinta Digital (`sealUrl`)**: Permite subir la imagen del sello del profesional (PNG transparente o JPG/WEBP). Dispone de tarjeta interactiva con previsualización inclinada a -5° que simula el estampado físico sobre el papel.
      - En `BranchesList` se despliega el badge distintivo `SELLO` cuando la sede cuenta con sello de tinta configurado.
-  3. **Búsqueda en Tiempo Real**: Filtrado dinámico y sin peticiones innecesarias de red por nombre de sede, calle o teléfono.
+  3. **Búsqueda en Tiempo Real**: Filtrado dinámico y sin peticiones innecesarias de red por nombre de sede, ciudad/localidad, calle o teléfono.
   4. **Arquitectura ViewController + Mediator (OKF v0.2) en `BranchFormDialog`**:
      - El diálogo maestro fue descompuesto desde un archivo monolítico de ~1,311 líneas a un orquestador declarativo (< 250 líneas) y 4 subsecciones modulares desacopladas.
-     - **`BranchFormViewController` (`ChangeNotifier`)**: Administra 8 `TextEditingController`s con ciclo de vida `dispose()` riguroso, el estado reactivo de 3 activos binarios (Logo, IsoLogo y Sello), la lista en memoria `List<AuxBioanalyst>`, y genera DTOs inmutables (`CreateBranch` y `UpdateBranch`) con inyección de funciones de carga para pruebas unitarias sin red.
+     - **`BranchFormViewController` (`ChangeNotifier`)**: Administra 9 `TextEditingController`s con ciclo de vida `dispose()` riguroso (incluye `city` para Ciudad/Localidad), el estado reactivo de 3 activos binarios (Logo, IsoLogo y Sello), la lista en memoria `List<AuxBioanalyst>`, y genera DTOs inmutables (`CreateBranch` y `UpdateBranch`) con inyección de funciones de carga para pruebas unitarias sin red.
      - **`BranchFormMediator` (`InheritedWidget` mudo)**: Propaga el controlador sin prop-drilling y con `updateShouldNotify: false` para evitar redibujados globales involuntarios.
-     - **Subsecciones en `widgets/sections/`**: `BranchBrandingSection` (Logotipo e IsoLogo), `BranchGeneralInfoSection` (Nombre, Dirección, Contactos), `BranchBioanalystSection` (Bioanalista regente y sello) y `BranchAuxBioanalystsSection` (Auxiliares y modal).
+     - **Subsecciones en `widgets/sections/`**: `BranchBrandingSection` (Logotipo e IsoLogo), `BranchGeneralInfoSection` (Nombre, Dirección, Ciudad/Localidad, Contactos), `BranchBioanalystSection` (Bioanalista regente y sello) y `BranchAuxBioanalystsSection` (Auxiliares y modal).
   5. **Eliminación Segura**: Diálogo modal de confirmación con alerta visual roja antes de invocar `WriteBranchCubit.delete()`, con protección para impedir la eliminación accidental de la sede matriz inicial.
 
 ---

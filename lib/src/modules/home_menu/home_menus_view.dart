@@ -48,7 +48,6 @@ class _SideNav extends StatelessWidget {
     _NavItemData(icon: Icons.receipt_long, label: 'Órdenes Clínicas'),
     _NavItemData(icon: Icons.request_quote, label: 'Cotizaciones'),
     _NavItemData(icon: Icons.lock_clock_outlined, label: 'Turnos de Caja'),
-    _NavItemData(icon: Icons.payments, label: 'Transacciones de Caja'),
     _NavItemData(icon: Icons.receipt, label: 'Recibos de Caja'),
     _NavItemData(icon: Icons.analytics_outlined, label: 'Reportes'),
     _NavItemData(icon: Icons.admin_panel_settings, label: 'Administración'),
@@ -68,81 +67,277 @@ class _SideNav extends StatelessWidget {
       child: SizedBox(
         width: 260,
         child: Column(
-        children: [
-          // Logo / Header
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                _buildSidebarLogo(context, sessionState.currentBranch),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Serum LIS',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
+          children: [
+            // Logo / Header
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  _buildSidebarLogo(context, sessionState.currentBranch),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Serum LIS',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Sistema de Laboratorio',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        Text(
+                          'Sistema de Laboratorio',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          // Nav Items
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return _NavItem(
-                  icon: item.icon,
-                  label: item.label,
-                  isSelected: currentIndex == index,
-                  onTap: () => navigationShell.goBranch(
-                    index,
-                    initialLocation: index == navigationShell.currentIndex,
-                  ),
-                );
-              },
-            ),
-          ),
-          const Divider(height: 1),
-          // Footer / Sucursal, Caja & Sesión
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Active Branch Info
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.secondaryContainer.withAlpha(50),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: theme.colorScheme.secondaryContainer,
-                      width: 1,
+                      ],
                     ),
                   ),
-                  child: Row(
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Nav Items
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  final item = _items[index];
+                  return _NavItem(
+                    icon: item.icon,
+                    label: item.label,
+                    isSelected: currentIndex == index,
+                    onTap: () => navigationShell.goBranch(
+                      index,
+                      initialLocation: index == navigationShell.currentIndex,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 1),
+            // Footer / Sucursal, Caja & Sesión
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Active Branch Info
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer.withAlpha(50),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.secondaryContainer,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.store,
+                          size: 18,
+                          color: theme.colorScheme.secondary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                sessionState.currentBranch?.name ?? 'Sin sucursal',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'Sucursal Activa',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (sessionCubit.hasMultipleBranches)
+                          IconButton(
+                            icon: const Icon(Icons.swap_horiz, size: 18),
+                            tooltip: 'Cambiar Sucursal',
+                            onPressed: () async {
+                              if (sessionCubit.isRootUser) {
+                                await sessionCubit.refreshBranches();
+                              }
+                              if (!context.mounted) return;
+                              final filteredBranches = sessionCubit.branches
+                                  .where((b) => b.id != sessionCubit.currentBranchId)
+                                  .toList();
+                              final res = await showBranchSelectionDialog(
+                                context,
+                                filteredBranches,
+                              );
+                              if (res == null) return;
+                              if (!context.mounted) return;
+                              await sessionCubit.changeBranch(res.id);
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Active Cash Shift info
+                  Builder(
+                    builder: (context) {
+                      final hasMismatch = sessionState.hasShiftBranchMismatch;
+                      final isInBranch = sessionState.isShiftInCurrentBranch;
+
+                      Color bgColor;
+                      Color borderColor;
+                      IconData iconData;
+                      Color iconColor;
+                      String titleText;
+                      String subtitleText;
+                      Color titleColor;
+                      Color subtitleColor;
+                      Widget actionButton;
+
+                      if (activeShift != null && hasMismatch) {
+                        bgColor = Colors.amber.shade50;
+                        borderColor = Colors.amber.shade400;
+                        iconData = Icons.warning_amber_rounded;
+                        iconColor = Colors.amber.shade900;
+                        titleText = 'Turno en "${activeShift.branchName ?? 'otra sucursal'}"';
+                        subtitleText =
+                            '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} • Cambia de sucursal';
+                        titleColor = Colors.amber.shade900;
+                        subtitleColor = Colors.amber.shade800;
+                        actionButton = IconButton(
+                          icon: Icon(
+                            Icons.swap_horiz_rounded,
+                            size: 18,
+                            color: Colors.amber.shade900,
+                          ),
+                          tooltip: 'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                          onPressed: () {
+                            context.read<AppSessionCubit>().changeBranch(activeShift.branchId);
+                          },
+                        );
+                      } else if (activeShift != null && isInBranch) {
+                        bgColor = theme.colorScheme.primaryContainer.withAlpha(50);
+                        borderColor = theme.colorScheme.primary.withAlpha(80);
+                        iconData = Icons.point_of_sale;
+                        iconColor = theme.colorScheme.primary;
+                        titleText =
+                            '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en caja';
+                        subtitleText =
+                            'Turno Activo (Fondo: ${NumberFormatter.currencyFormat.format(activeShift.initialBalanceDouble)})';
+                        titleColor = theme.colorScheme.onSurface;
+                        subtitleColor = theme.colorScheme.onSurfaceVariant;
+                        actionButton = IconButton(
+                          icon: Icon(
+                            Icons.lock_clock_rounded,
+                            size: 18,
+                            color: theme.colorScheme.error,
+                          ),
+                          tooltip: 'Corte y Arqueo de Turno',
+                          onPressed: () async {
+                            final res = await CashShiftCloseDialog.show(context, activeShift);
+                            if (res != null && context.mounted) {
+                              showCashShiftViewerDialog(context, res);
+                            }
+                          },
+                        );
+                      } else {
+                        bgColor = theme.colorScheme.surfaceContainerHighest.withAlpha(40);
+                        borderColor = theme.colorScheme.outlineVariant.withAlpha(80);
+                        iconData = Icons.lock_open_rounded;
+                        iconColor = theme.colorScheme.onSurfaceVariant;
+                        titleText = 'Sin turno abierto';
+                        subtitleText = 'Abre turno para cobrar';
+                        titleColor = theme.colorScheme.onSurface;
+                        subtitleColor = theme.colorScheme.onSurfaceVariant;
+                        actionButton = IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          tooltip: 'Abrir Turno de Caja',
+                          onPressed: () {
+                            CashShiftOpenDialog.show(context);
+                          },
+                        );
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: borderColor,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              iconData,
+                              size: 18,
+                              color: iconColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    titleText,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: titleColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    subtitleText,
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: subtitleColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actionButton,
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // User Info & Logout
+                  Row(
                     children: [
-                      Icon(
-                        Icons.store,
-                        size: 18,
-                        color: theme.colorScheme.secondary,
+                      CircleAvatar(
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        foregroundColor: theme.colorScheme.onPrimaryContainer,
+                        radius: 16,
+                        child: Text(
+                          (user?.name.isNotEmpty == true)
+                              ? user!.name.substring(0, 1).toUpperCase()
+                              : 'U',
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -150,16 +345,15 @@ class _SideNav extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              sessionState.currentBranch?.name ?? 'Sin sucursal',
+                              user?.name ?? user?.username ?? 'Usuario',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onSurface,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              'Sucursal Activa',
+                              user?.role.toUpperCase() ?? 'SESIÓN ACTIVA',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -167,223 +361,20 @@ class _SideNav extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (sessionCubit.hasMultipleBranches)
-                        IconButton(
-                          icon: const Icon(Icons.swap_horiz, size: 18),
-                          tooltip: 'Cambiar Sucursal',
-                          onPressed: () async {
-                            if (sessionCubit.isRootUser) {
-                              await sessionCubit.refreshBranches();
-                            }
-                            if (!context.mounted) return;
-                            final filteredBranches = sessionCubit.branches
-                                .where((b) => b.id != sessionCubit.currentBranchId)
-                                .toList();
-                            final res = await showBranchSelectionDialog(
-                              context,
-                              filteredBranches,
-                            );
-                            if (res == null) return;
-                            if (!context.mounted) return;
-                            await sessionCubit.changeBranch(res.id);
-                          },
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, size: 18),
+                        tooltip: 'Cerrar Sesión',
+                        onPressed: () {
+                          context.read<AppSessionCubit>().logout();
+                        },
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 8),
-
-                // Active Cash Shift info
-                Builder(
-                  builder: (context) {
-                    final hasMismatch = sessionState.hasShiftBranchMismatch;
-                    final isInBranch = sessionState.isShiftInCurrentBranch;
-
-                    Color bgColor;
-                    Color borderColor;
-                    IconData iconData;
-                    Color iconColor;
-                    String titleText;
-                    String subtitleText;
-                    Color titleColor;
-                    Color subtitleColor;
-                    Widget actionButton;
-
-                    if (activeShift != null && hasMismatch) {
-                      bgColor = Colors.amber.shade50;
-                      borderColor = Colors.amber.shade400;
-                      iconData = Icons.warning_amber_rounded;
-                      iconColor = Colors.amber.shade900;
-                      titleText =
-                          'Turno en "${activeShift.branchName ?? 'otra sucursal'}"';
-                      subtitleText =
-                          '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} • Cambia de sucursal';
-                      titleColor = Colors.amber.shade900;
-                      subtitleColor = Colors.amber.shade800;
-                      actionButton = IconButton(
-                        icon: Icon(
-                          Icons.swap_horiz_rounded,
-                          size: 18,
-                          color: Colors.amber.shade900,
-                        ),
-                        tooltip:
-                            'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
-                        onPressed: () {
-                          context
-                              .read<AppSessionCubit>()
-                              .changeBranch(activeShift.branchId);
-                        },
-                      );
-                    } else if (activeShift != null && isInBranch) {
-                      bgColor =
-                          theme.colorScheme.primaryContainer.withAlpha(50);
-                      borderColor = theme.colorScheme.primary.withAlpha(80);
-                      iconData = Icons.point_of_sale;
-                      iconColor = theme.colorScheme.primary;
-                      titleText =
-                          '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en caja';
-                      subtitleText =
-                          'Turno Activo (Fondo: ${NumberFormatter.currencyFormat.format(activeShift.initialBalanceDouble)})';
-                      titleColor = theme.colorScheme.onSurface;
-                      subtitleColor = theme.colorScheme.onSurfaceVariant;
-                      actionButton = IconButton(
-                        icon: Icon(
-                          Icons.lock_clock_rounded,
-                          size: 18,
-                          color: theme.colorScheme.error,
-                        ),
-                        tooltip: 'Corte y Arqueo de Turno',
-                        onPressed: () async {
-                          final res = await CashShiftCloseDialog.show(
-                              context, activeShift);
-                          if (res != null && context.mounted) {
-                            showCashShiftViewerDialog(context, res);
-                          }
-                        },
-                      );
-                    } else {
-                      bgColor =
-                          theme.colorScheme.surfaceContainerHighest.withAlpha(40);
-                      borderColor =
-                          theme.colorScheme.outlineVariant.withAlpha(80);
-                      iconData = Icons.lock_open_rounded;
-                      iconColor = theme.colorScheme.onSurfaceVariant;
-                      titleText = 'Sin turno abierto';
-                      subtitleText = 'Abre turno para cobrar';
-                      titleColor = theme.colorScheme.onSurface;
-                      subtitleColor = theme.colorScheme.onSurfaceVariant;
-                      actionButton = IconButton(
-                        icon: Icon(
-                          Icons.add_circle_outline,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        tooltip: 'Abrir Turno de Caja',
-                        onPressed: () {
-                          CashShiftOpenDialog.show(context);
-                        },
-                      );
-                    }
-
-                    return Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            iconData,
-                            size: 18,
-                            color: iconColor,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  titleText,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: titleColor,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  subtitleText,
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: subtitleColor,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          actionButton,
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // User Info & Logout
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      radius: 16,
-                      child: Text(
-                        (user?.name.isNotEmpty == true)
-                            ? user!.name.substring(0, 1).toUpperCase()
-                            : 'U',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user?.name ?? user?.username ?? 'Usuario',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            user?.role.toUpperCase() ?? 'SESIÓN ACTIVA',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, size: 18),
-                      tooltip: 'Cerrar Sesión',
-                      onPressed: () {
-                        context.read<AppSessionCubit>().logout();
-                      },
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -464,17 +455,13 @@ class _NavItem extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurfaceVariant,
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
         ),
         title: Text(
           label,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface,
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
           ),
         ),
         selected: isSelected,

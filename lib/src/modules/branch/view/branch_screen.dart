@@ -185,7 +185,7 @@ class _BodyState extends State<_Body> {
                       });
                     },
                     decoration: InputDecoration(
-                      hintText: 'Buscar por nombre o dirección...',
+                      hintText: 'Buscar por nombre, ciudad o dirección...',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
@@ -242,6 +242,7 @@ class _BodyState extends State<_Body> {
                       ? readState.items
                       : readState.items.where((b) {
                           return b.name.toLowerCase().contains(_searchQuery) ||
+                              b.city.toLowerCase().contains(_searchQuery) ||
                               b.address.toLowerCase().contains(_searchQuery) ||
                               b.phone.toLowerCase().contains(_searchQuery);
                         }).toList();

@@ -253,5 +253,61 @@ void main() {
       final updateBranchNull = UpdateBranch();
       expect(updateBranchNull.toJson().containsKey('autoCalculateFormulas'), isFalse);
     });
+
+    test('Ciudad/Localidad: valor por defecto, retrocompatibilidad y serialización', () {
+      // 1. Valor por defecto vacío en el modelo en memoria
+      final branch = BranchInDb(
+        id: 'BR-CITY-EMPTY',
+        name: 'Sucursal Sin Ciudad',
+        address: 'Calle 1',
+        phone: '123',
+        createdAt: 1700000000000,
+      );
+      expect(branch.city, isEmpty);
+
+      // 2. Retrocompatibilidad: JSON legacy sin city
+      final legacyBranch = BranchInDb.fromJson({
+        'id': 'BR-CITY-LEGACY',
+        'name': 'Sucursal Antigua',
+        'address': 'Calle 2',
+        'phone': '456',
+        'createdAt': 1700000000000,
+      });
+      expect(legacyBranch.city, isEmpty);
+
+      // 3. Deserialización de city
+      final branchWithCity = BranchInDb.fromJson({
+        'id': 'BR-CITY-MATAGALPA',
+        'name': 'Sucursal Matagalpa',
+        'address': 'Calle 3',
+        'city': 'Matagalpa',
+        'phone': '789',
+        'createdAt': 1700000000000,
+      });
+      expect(branchWithCity.city, equals('Matagalpa'));
+
+      // 4. CreateBranch serializa city (incluido el valor vacío por defecto)
+      final createWithCity = CreateBranch(
+        name: 'Sucursal Estelí',
+        address: 'Calle 4',
+        city: 'Estelí',
+        phone: '111',
+      );
+      expect(createWithCity.toJson()['city'], equals('Estelí'));
+
+      final createWithoutCity = CreateBranch(
+        name: 'Sucursal Sin Ciudad',
+        address: 'Calle 5',
+        phone: '222',
+      );
+      expect(createWithoutCity.toJson()['city'], isEmpty);
+
+      // 5. UpdateBranch incluye city solo si no es nulo
+      final updateWithCity = UpdateBranch(city: 'Matagalpa');
+      expect(updateWithCity.toJson()['city'], equals('Matagalpa'));
+
+      final updateWithoutCity = UpdateBranch();
+      expect(updateWithoutCity.toJson().containsKey('city'), isFalse);
+    });
   });
 }
