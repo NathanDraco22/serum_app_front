@@ -197,7 +197,7 @@ class _CreateQuotationContentState extends State<_CreateQuotationContent> {
     }
 
     final sessionCubit = context.watch<AppSessionCubit>();
-    final branchName = sessionCubit.currentBranchName;
+    final branchName = sessionCubit.currentBranchDisplayName;
 
     return CreateQuotationMediator(
       viewController: viewController,
@@ -294,12 +294,17 @@ class _CreateQuotationContentState extends State<_CreateQuotationContent> {
                     children: [
                       const Icon(Icons.point_of_sale, size: 16, color: Colors.white),
                       const SizedBox(width: 6),
-                      Text(
-                        branchName,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 260),
+                        child: Text(
+                          branchName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],

@@ -309,5 +309,46 @@ void main() {
       final updateWithoutCity = UpdateBranch();
       expect(updateWithoutCity.toJson().containsKey('city'), isFalse);
     });
+
+    test('displayName integra la ciudad sin duplicarla', () {
+      final branchWithCity = BranchInDb(
+        id: 'BR-DISPLAY-1',
+        name: 'Sucursal Central',
+        address: 'Calle 1',
+        city: 'Matagalpa',
+        phone: '123',
+        createdAt: 1700000000000,
+      );
+      expect(branchWithCity.displayName, equals('Sucursal Central - Matagalpa'));
+
+      final branchWithoutCity = BranchInDb(
+        id: 'BR-DISPLAY-2',
+        name: 'Sucursal Central',
+        address: 'Calle 2',
+        phone: '456',
+        createdAt: 1700000000000,
+      );
+      expect(branchWithoutCity.displayName, equals('Sucursal Central'));
+
+      final branchCityAlreadyInName = BranchInDb(
+        id: 'BR-DISPLAY-3',
+        name: 'Sucursal Matagalpa',
+        address: 'Calle 3',
+        city: 'Matagalpa',
+        phone: '789',
+        createdAt: 1700000000000,
+      );
+      expect(branchCityAlreadyInName.displayName, equals('Sucursal Matagalpa'));
+
+      final branchWithBlankCity = BranchInDb(
+        id: 'BR-DISPLAY-4',
+        name: 'Sucursal Estelí',
+        address: 'Calle 4',
+        city: '   ',
+        phone: '000',
+        createdAt: 1700000000000,
+      );
+      expect(branchWithBlankCity.displayName, equals('Sucursal Estelí'));
+    });
   });
 }

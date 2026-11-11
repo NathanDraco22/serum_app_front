@@ -152,7 +152,11 @@ class ReportsFilterBar extends StatelessWidget {
                         ...sessionBranches.map(
                           (branch) => DropdownMenuItem<String?>(
                             value: branch.id,
-                            child: Text(branch.name),
+                            child: Text(
+                              branch.displayName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
                       ],

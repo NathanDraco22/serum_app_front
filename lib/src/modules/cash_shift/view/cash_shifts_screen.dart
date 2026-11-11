@@ -58,7 +58,8 @@ class _BodyState extends State<_Body> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final sessionState = context.watch<AppSessionCubit>().state;
+    final sessionCubit = context.watch<AppSessionCubit>();
+    final sessionState = sessionCubit.state;
     final user = sessionState.currentUser;
     final activeShift = sessionState.activeShift;
     final isShiftInCurrentBranch = sessionState.isShiftInCurrentBranch;
@@ -178,7 +179,7 @@ class _BodyState extends State<_Body> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Tienes el turno abierto #${activeShift.id} en "${activeShift.branchName ?? 'otra sucursal'}". No puedes registrar cobros, movimientos de caja ni abrir otro turno mientras navegues en "${sessionState.currentBranch?.name ?? 'esta sucursal'}".',
+                        'Tienes el turno abierto #${activeShift.id} en "${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}". No puedes registrar cobros, movimientos de caja ni abrir otro turno mientras navegues en "${sessionState.currentBranch?.displayName ?? 'esta sucursal'}".',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.amber.shade900,
                         ),
@@ -193,7 +194,9 @@ class _BodyState extends State<_Body> {
                     foregroundColor: Colors.amber.shade900,
                   ),
                   icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                  label: Text('Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}'),
+                  label: Text(
+                    'Cambiar a ${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}',
+                  ),
                   onPressed: () {
                     context.read<AppSessionCubit>().changeBranch(activeShift.branchId);
                   },
@@ -267,7 +270,7 @@ class _BodyState extends State<_Body> {
                       Text(
                         isShiftInCurrentBranch
                             ? 'Tienes un turno activo: ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} en efectivo'
-                            : 'Turno en "${activeShift.branchName ?? 'otra sucursal'}": ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)}',
+                            : 'Turno en "${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}": ${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)}',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: isShiftInCurrentBranch

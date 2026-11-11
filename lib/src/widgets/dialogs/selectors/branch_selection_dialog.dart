@@ -51,7 +51,7 @@ class BranchSelectionDialog extends StatelessWidget {
                     if (branch.address.isNotEmpty) branch.address,
                   ];
                   final subtitle = locationParts.isNotEmpty
-                      ? locationParts.join(' · ')
+                      ? locationParts.join(' - ')
                       : (branch.phone.isNotEmpty
                           ? 'Tel: ${branch.phone}'
                           : 'Sin dirección');

@@ -46,7 +46,7 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ya tienes un turno abierto (#${activeShift.id}) en "${activeShift.branchName ?? 'otra sucursal'}". No puedes abrir más de un turno simultáneo.',
+            'Ya tienes un turno abierto (#${activeShift.id}) en "${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}". No puedes abrir más de un turno simultáneo.',
           ),
           backgroundColor: Colors.red.shade700,
         ),
@@ -155,7 +155,7 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
                   border: Border.all(color: Colors.amber.shade400),
                 ),
                 child: Text(
-                  'Actualmente tienes el turno abierto #${activeShift.id} en la sucursal "${activeShift.branchName ?? 'otra sucursal'}".\n\nEl sistema permite únicamente un turno activo por custodio. Para operar una caja en "${session.currentBranchName}", debes cerrar previamente tu turno en "${activeShift.branchName ?? 'la sucursal correspondiente'}".',
+                  'Actualmente tienes el turno abierto #${activeShift.id} en la sucursal "${session.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}".\n\nEl sistema permite únicamente un turno activo por custodio. Para operar una caja en "${session.currentBranchDisplayName}", debes cerrar previamente tu turno en "${session.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}".',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.amber.shade900,
                   ),
@@ -178,7 +178,7 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
                     ),
                     icon: const Icon(Icons.swap_horiz_rounded, size: 18),
                     label: Text(
-                      'Ir a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                      'Ir a ${session.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}',
                     ),
                     onPressed: () {
                       session.changeBranch(activeShift.branchId);
@@ -274,7 +274,7 @@ class _CashShiftOpenDialogState extends State<CashShiftOpenDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Custodio: ${session.user?.name ?? 'Usuario'} • ${session.currentBranchName}',
+                          'Custodio: ${session.user?.name ?? 'Usuario'} • ${session.currentBranchDisplayName}',
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w600,

@@ -2,7 +2,7 @@
 title: Módulos — Impresión de Sobres Físicos de Laboratorio
 description: Guía y especificación técnica para la generación, previsualización e impresión de sobres físicos (#10 / Oficio) con alimentación vertical y diseño fiel a muestra física.
 tags: [envelope, printing, pdf, orders, clinical, physical_printer]
-timestamp: 2026-10-15T13:20:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # ✉️ Impresión de Sobres Físicos de Laboratorio Clínico
@@ -78,7 +78,7 @@ El diseño está optimizado para ser sobrio, elegante y despejado, modelado dire
 1. **Esquina Superior Izquierda (Logo y Razón Social):**
    - Logotipo oficial de la sucursal (descargado de forma asíncrona y segura).
    - Rótulo estilizado en cursiva: *"Laboratorio Clínico"*.
-   - Nombre de la sucursal en negrita (`branch.name.toUpperCase()`).
+   - Nombre de la sucursal con su ciudad/localidad en negrita (`branch.displayName.toUpperCase()`).
    - El resto de la zona superior permanece completamente despejada.
 2. **Zona Central (Recuadro Delimitado con Línea Negra Fina):**
    - Recuadro geométrico de $290\text{ pt}$ de ancho con borde negro continuo delgado ($0.75\text{ pt}$).

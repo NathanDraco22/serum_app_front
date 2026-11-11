@@ -31,6 +31,21 @@ class _TestAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
   String get currentBranchName => state.currentBranch?.name ?? 'Sucursal Matriz';
 
   @override
+  String get currentBranchDisplayName =>
+      state.currentBranch?.displayName ?? 'Sucursal Matriz';
+
+  @override
+  String displayNameForBranch(String branchId, {String? fallbackName}) {
+    if (branchId == state.currentBranch?.id) {
+      return state.currentBranch!.displayName;
+    }
+    if (fallbackName != null && fallbackName.trim().isNotEmpty) {
+      return fallbackName;
+    }
+    return branchId;
+  }
+
+  @override
   CashShiftInDb? get activeShift => state.activeShift;
 
   @override

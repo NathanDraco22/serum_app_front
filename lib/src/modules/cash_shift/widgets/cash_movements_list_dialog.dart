@@ -358,7 +358,7 @@ class _CashMovementsListDialogState extends State<CashMovementsListDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Este turno pertenece a "${widget.shift.branchName ?? widget.shift.branchId}". Estás en "${session.currentBranchName}". Los nuevos movimientos y cancelaciones están deshabilitados hasta que cambies a la sucursal del turno.',
+                          'Este turno pertenece a "${session.displayNameForBranch(widget.shift.branchId, fallbackName: widget.shift.branchName)}". Estás en "${session.currentBranchDisplayName}". Los nuevos movimientos y cancelaciones están deshabilitados hasta que cambies a la sucursal del turno.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.amber.shade900,

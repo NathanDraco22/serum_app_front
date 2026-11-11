@@ -50,6 +50,9 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
   String get currentBranchName => 'Sucursal Central';
 
   @override
+  String get currentBranchDisplayName => 'Sucursal Central';
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 

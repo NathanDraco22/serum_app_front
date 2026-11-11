@@ -323,7 +323,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`, `ReadUserCubit`, `WriteUserCubit`
 * **Funciones Clave**:
   1. **Apertura a Pantalla Completa (`parentNavigatorKey: _rootNavigatorKey`)**: Oculta la barra lateral para otorgar máxima amplitud y concentración operativa, con botón de retroceso (`Icons.arrow_back`) para volver al hub.
-  2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con ciudad/localidad (`city`), buscador reactivo por nombre, ciudad o dirección y protección para la sede matriz (`ORIGIN_BRANCH`).
+  2. **CRUD Completo de Sucursales**: Alta, edición y eliminación de sedes con ciudad/localidad (`city`), nombre de presentación `displayName` (`Nombre - Ciudad`), buscador reactivo por nombre, ciudad o dirección y protección para la sede matriz (`ORIGIN_BRANCH`).
   3. **CRUD Completo de Usuarios**: Control de credenciales, roles (`Admin`, `Cashier`, `Bioanalyst`, `Doctor`), asignación dinámica de sucursales autorizadas (`FilterChip`), switch de usuario activo y blindaje de la cuenta `root`.
 
 ---

@@ -114,7 +114,7 @@ class SingleQuotationTemplate implements PdfTemplate {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                branch.name.toUpperCase(),
+                branch.displayName.toUpperCase(),
                 style: pw.TextStyle(
                   fontSize: 16,
                   fontWeight: pw.FontWeight.bold,

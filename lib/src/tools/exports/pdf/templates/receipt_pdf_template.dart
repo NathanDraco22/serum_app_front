@@ -144,7 +144,7 @@ class ReceiptPdfTemplate implements PdfTemplate {
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
                           pw.Text(
-                            branch.name.toUpperCase(),
+                            branch.displayName.toUpperCase(),
                             style: pw.TextStyle(
                               fontSize: 14,
                               fontWeight: pw.FontWeight.bold,

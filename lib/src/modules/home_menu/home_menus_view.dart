@@ -149,7 +149,7 @@ class _SideNav extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                sessionState.currentBranch?.name ?? 'Sin sucursal',
+                                sessionState.currentBranch?.displayName ?? 'Sin sucursal',
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: theme.colorScheme.onSurface,
@@ -213,7 +213,8 @@ class _SideNav extends StatelessWidget {
                         borderColor = Colors.amber.shade400;
                         iconData = Icons.warning_amber_rounded;
                         iconColor = Colors.amber.shade900;
-                        titleText = 'Turno en "${activeShift.branchName ?? 'otra sucursal'}"';
+                        titleText =
+                            'Turno en "${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}"';
                         subtitleText =
                             '${NumberFormatter.currencyFormat.format(activeShift.totalCashExpectedDouble)} • Cambia de sucursal';
                         titleColor = Colors.amber.shade900;
@@ -224,7 +225,8 @@ class _SideNav extends StatelessWidget {
                             size: 18,
                             color: Colors.amber.shade900,
                           ),
-                          tooltip: 'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                          tooltip:
+                              'Cambiar a ${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}',
                           onPressed: () {
                             context.read<AppSessionCubit>().changeBranch(activeShift.branchId);
                           },

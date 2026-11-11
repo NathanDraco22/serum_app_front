@@ -120,7 +120,7 @@ class ReceiptDetailDialog extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      sessionBranch?.name ?? 'Laboratorio Clínico Serum',
+                      sessionBranch?.displayName ?? 'Laboratorio Clínico Serum',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     if (sessionBranch?.address != null && sessionBranch!.address.isNotEmpty)

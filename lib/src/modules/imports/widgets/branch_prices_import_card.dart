@@ -111,7 +111,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                           const Text('Sede Origen: ', style: TextStyle(fontWeight: FontWeight.w600)),
                           Expanded(
                             child: Text(
-                              sourceBranch.name,
+                              sourceBranch.displayName,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -126,7 +126,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                           const Text('Sede Destino: ', style: TextStyle(fontWeight: FontWeight.w600)),
                           Expanded(
                             child: Text(
-                              targetBranch.name,
+                              targetBranch.displayName,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -525,7 +525,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
             return DropdownMenuItem<String>(
               value: branch.id,
               child: Text(
-                branch.name,
+                branch.displayName,
                 overflow: TextOverflow.ellipsis,
               ),
             );
@@ -567,7 +567,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
             return DropdownMenuItem<String>(
               value: branch.id,
               child: Text(
-                branch.name,
+                branch.displayName,
                 overflow: TextOverflow.ellipsis,
               ),
             );

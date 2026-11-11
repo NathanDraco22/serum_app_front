@@ -113,7 +113,8 @@ class _ReportExportButtonState extends State<ReportExportButton> {
 
     if (reportState.branchId != null) {
       final branch = sessionCubit.getBranchById(reportState.branchId!);
-      branchName = branch?.name ?? 'Sucursal #${reportState.branchId}';
+      branchName =
+          branch?.displayName ?? 'Sucursal #${reportState.branchId}';
       branchAddress = branch?.address;
       branchPhone = branch?.phone;
     }

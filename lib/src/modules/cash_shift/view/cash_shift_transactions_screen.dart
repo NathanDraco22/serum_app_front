@@ -106,6 +106,7 @@ class _RootScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sessionCubit = context.read<AppSessionCubit>();
 
     return Scaffold(
       appBar: AppBar(
@@ -121,7 +122,7 @@ class _RootScaffold extends StatelessWidget {
             ),
             if (shift != null)
               Text(
-                '${shift!.userName ?? 'Custodio'} • ${shift!.branchName ?? shift!.branchId}',
+                '${shift!.userName ?? 'Custodio'} • ${sessionCubit.displayNameForBranch(shift!.branchId, fallbackName: shift!.branchName)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -277,6 +278,7 @@ class _ShiftSummaryHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final sessionCubit = context.read<AppSessionCubit>();
     final isOpen = shift.isOpen;
 
     return Container(
@@ -335,7 +337,7 @@ class _ShiftSummaryHeader extends StatelessWidget {
               _InfoItem(
                 icon: Icons.store_outlined,
                 label: 'Sucursal',
-                value: shift.branchName?.isNotEmpty == true ? shift.branchName! : shift.branchId,
+                value: sessionCubit.displayNameForBranch(shift.branchId, fallbackName: shift.branchName),
               ),
               _InfoItem(
                 icon: Icons.login_rounded,

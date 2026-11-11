@@ -73,8 +73,9 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
       if (_searchFilter.isEmpty) return true;
       final query = _searchFilter.toLowerCase();
       final nameMatches = b.name.toLowerCase().contains(query);
+      final cityMatches = b.city.toLowerCase().contains(query);
       final addressMatches = b.address.toLowerCase().contains(query);
-      return nameMatches || addressMatches;
+      return nameMatches || cityMatches || addressMatches;
     }).toList();
 
     return Container(
@@ -448,7 +449,7 @@ class _UserBranchSelectorState extends State<UserBranchSelector> {
                                   runSpacing: 4,
                                   children: [
                                     Text(
-                                      branch.name,
+                                      branch.displayName,
                                       style: theme.textTheme.bodyMedium?.copyWith(
                                         fontWeight: isSelected
                                             ? FontWeight.bold

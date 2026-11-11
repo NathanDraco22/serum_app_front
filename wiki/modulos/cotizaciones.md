@@ -3,7 +3,7 @@ type: doc
 title: Módulos — Cotizaciones y Presupuestos Rápidos
 description: Especificación funcional y de interfaz del módulo quotation para presupuestos de venta con dos columnas, datos opcionales, y exportación e impresión a PDF de carácter estrictamente informativo.
 tags: [quotations, pricing, sales, ui, pdf]
-timestamp: 2026-10-06T18:00:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # 📝 Cotizaciones y Presupuestos Rápidos (`quotation`)
@@ -60,7 +60,7 @@ El módulo `quotation` (`lib/src/modules/quotation/`) está diseñado para el mo
 ### A. Plantilla de Presupuesto (`SingleQuotationTemplate`)
 * **Ubicación**: `lib/src/tools/exports/pdf/templates/quotation_pdf_template.dart`
 * **Especificaciones**:
-  - Formato de página A4 con membrete institucional de la sucursal activa (`branch.name`, dirección y teléfonos).
+  - Formato de página A4 con membrete institucional de la sucursal activa (`branch.displayName`, dirección y teléfonos).
   - Folio único de presupuesto y fecha formateada (`dd/MM/yy HH:mm`).
   - Datos de cliente casual o paciente (edad, sexo, identificación, contacto).
   - Datos del médico referente (o leyenda *"Venta directa / Solicitud particular"*).

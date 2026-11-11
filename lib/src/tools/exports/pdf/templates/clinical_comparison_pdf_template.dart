@@ -354,7 +354,7 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
                           pw.Image(headerImage, height: 42, fit: pw.BoxFit.contain)
                         else
                           pw.Text(
-                            branch.name.toUpperCase(),
+                            branch.displayName.toUpperCase(),
                             style: pw.TextStyle(
                               fontSize: 14,
                               fontWeight: pw.FontWeight.bold,

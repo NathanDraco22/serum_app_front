@@ -149,7 +149,7 @@ class ClinicalOrderEnvelopePdfTemplate implements PdfTemplate {
                 ),
               ),
               pw.Text(
-                branch.name.toUpperCase(),
+                branch.displayName.toUpperCase(),
                 style: pw.TextStyle(
                   fontSize: 15,
                   fontWeight: pw.FontWeight.bold,

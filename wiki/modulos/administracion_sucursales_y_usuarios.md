@@ -68,6 +68,7 @@ El módulo combina dos patrones de navegación mediante `go_router`:
 * **Cubits Asociados**: `ReadBranchCubit`, `WriteBranchCubit`
 * **Funciones Clave**:
   1. **Supervisión de Sedes**: Tarjetas estilizadas en `BranchesList` con nombre, ciudad/localidad (o el texto `Sin localidad registrada` cuando aún no se captura), dirección completa, teléfono y distinción especial mediante badge temático para la sede matriz (`ORIGIN_BRANCH`).
+     - **Nombre de presentación**: `BranchInDb.displayName` compone `Nombre - Ciudad` y se reutiliza en el Dashboard, menú de Sucursal Activa, selectores, reportes y documentos PDF. Si la ciudad está vacía o ya está contenida en el nombre, se muestra solo el nombre.
   2. **Bioanalista Representante y Sello Digital**:
      - Cada sede permite registrar los datos del profesional que valida clínicamente los análisis: nombre completo, título profesional/especialidad y código o registro MINSA.
      - **Sello Físico de Tinta Digital (`sealUrl`)**: Permite subir la imagen del sello del profesional (PNG transparente o JPG/WEBP). Dispone de tarjeta interactiva con previsualización inclinada a -5° que simula el estampado físico sobre el papel.

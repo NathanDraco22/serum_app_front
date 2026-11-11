@@ -77,7 +77,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Tu turno activo (#${activeShift.id}) pertenece a "${activeShift.branchName ?? 'otra sucursal'}". No puedes cobrar en "${sessionCubit.currentBranchName}".',
+            'Tu turno activo (#${activeShift.id}) pertenece a "${sessionCubit.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}". No puedes cobrar en "${sessionCubit.currentBranchDisplayName}".',
           ),
           backgroundColor: Colors.orange.shade800,
         ),
@@ -327,7 +327,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Tu turno activo (#${activeShift.id}) pertenece a "${activeShift.branchName ?? 'otra sucursal'}". No puedes cobrar órdenes en "${session.currentBranchName}". Cambia a la sucursal de tu turno para continuar.',
+                          'Tu turno activo (#${activeShift.id}) pertenece a "${session.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}". No puedes cobrar órdenes en "${session.currentBranchDisplayName}". Cambia a la sucursal de tu turno para continuar.',
                           style: TextStyle(
                             color: Colors.amber.shade900,
                             fontSize: 12,
@@ -343,7 +343,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
                             ),
                             icon: const Icon(Icons.swap_horiz_rounded, size: 16),
                             label: Text(
-                              'Cambiar a ${activeShift.branchName ?? 'Sucursal del Turno'}',
+                              'Cambiar a ${session.displayNameForBranch(activeShift.branchId, fallbackName: activeShift.branchName)}',
                             ),
                             onPressed: () {
                               session.changeBranch(activeShift.branchId);

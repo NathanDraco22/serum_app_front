@@ -476,7 +476,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                           fit: BoxFit.contain,
                           alignment: Alignment.centerLeft,
                           fallbackWidget: Text(
-                            branch.name.toUpperCase(),
+                            branch.displayName.toUpperCase(),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -538,7 +538,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  branch.name.toUpperCase(),
+                                  branch.displayName.toUpperCase(),
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

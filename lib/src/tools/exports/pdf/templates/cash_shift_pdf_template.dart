@@ -194,7 +194,7 @@ class CashShiftPdfTemplate implements PdfTemplate {
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                                 children: [
                                   pw.Text(
-                                    branch.name.toUpperCase(),
+                                    branch.displayName.toUpperCase(),
                                     style: pw.TextStyle(
                                       fontSize: 14,
                                       fontWeight: pw.FontWeight.bold,
@@ -310,9 +310,7 @@ class CashShiftPdfTemplate implements PdfTemplate {
               ? shift.userName!
               : (shift.userId.isNotEmpty ? shift.userId : 'Operador');
 
-          final branchName = shift.branchName?.isNotEmpty == true
-              ? shift.branchName!
-              : branch.name;
+          final branchName = branch.displayName;
 
           return [
             pw.Divider(color: PdfColors.grey800, thickness: 0.8),

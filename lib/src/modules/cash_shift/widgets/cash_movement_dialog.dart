@@ -95,7 +95,7 @@ class _CashMovementDialogState extends State<CashMovementDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Este turno pertenece a "${widget.shift.branchName ?? widget.shift.branchId}". Debes estar en esa sucursal para registrar movimientos.',
+            'Este turno pertenece a "${sessionCubit.displayNameForBranch(widget.shift.branchId, fallbackName: widget.shift.branchName)}". Debes estar en esa sucursal para registrar movimientos.',
           ),
           backgroundColor: Colors.orange.shade800,
         ),

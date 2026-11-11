@@ -44,6 +44,9 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
   String get currentBranchName => 'Sucursal Central';
 
   @override
+  String get currentBranchDisplayName => 'Sucursal Central';
+
+  @override
   UserInDb? get user => UserInDb(
         id: 'u_admin',
         name: 'Administrador',

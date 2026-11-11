@@ -3,7 +3,7 @@ type: doc
 title: Frontend — Módulo de Reportes Analíticos con Gráficos (fl_chart)
 description: Documentación de la capa visual y de estado para métricas de facturación, demanda de estudios clínicos, cuentas por cobrar y arqueos de turnos de caja.
 tags: [frontend, reports, fl_chart, analytics, cubit, permission_gate]
-timestamp: 2026-10-04T15:30:00Z
+timestamp: 2026-11-10T12:00:00Z
 ---
 
 # 📊 Módulo de Reportes Analíticos (`report`)
@@ -66,7 +66,7 @@ Las pestañas del módulo se dividen por su nivel de sensibilidad:
 - **KPIs**: Total Facturado, Total Cobrado Real en Caja (Kardex), Cartera Pendiente por Cobrar y Ratio de Cumplimiento de Cobro.
 - **`BarChart` Comparativo**: Facturado vs Cobrado Real vs Pendiente con tooltips formateados en moneda.
 - **`PieChart` de Métodos de Pago**: Distribución porcentual entre Efectivo (`cash`), Tarjeta (`card`) y Transferencia (`transfer`).
-- **Tabla Desglosada por Sucursal**: Comparativa multi-sucursal cuando se consulta a nivel global.
+- **Tabla Desglosada por Sucursal**: Comparativa multi-sucursal cuando se consulta a nivel global, con nombres de sede en formato `Nombre - Ciudad` provistos por el backend.
 
 ### 3.2 Top Médicos Referentes (`TopDoctorsReportView`)
 - **KPIs**: Cantidad de médicos activos con órdenes derivadas e ingresos generados.
@@ -99,7 +99,7 @@ Las pestañas del módulo se dividen por su nivel de sensibilidad:
 
 El cubit gestiona filtros y almacena en caché los reportes cargados:
 - **Rango de Fechas**: Normaliza timestamps a inicio del día (`00:00:00`) y fin del día (`23:59:59.999`).
-- **Sucursal**: Permite seleccionar una sede específica o consultar el consolidado (`branchId = null`).
+- **Sucursal**: Permite seleccionar una sede específica (mostrada con `BranchInDb.displayName`, `Nombre - Ciudad`) o consultar el consolidado (`branchId = null`).
 - **Caché Reactiva**: Si el usuario ya cargó un reporte y alterna entre pestañas con los mismos filtros, no se re-consulta la red innecesariamente a menos que invoque `refresh()` o modifique fechas/sucursal.
 
 ---

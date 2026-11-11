@@ -40,10 +40,11 @@ class CashShiftCard extends StatelessWidget {
     final isOpen = shift.isOpen;
     final shortId = shift.id.length >= 8 ? shift.id.substring(0, 8) : shift.id;
 
-    final branchName = shift.branchName?.isNotEmpty == true
-        ? shift.branchName!
-        : (sessionCubit.getBranchById(shift.branchId)?.name ??
-              (shift.branchId.isNotEmpty ? shift.branchId : 'Sucursal'));
+    final resolvedBranch = sessionCubit.getBranchById(shift.branchId);
+    final branchName = resolvedBranch?.displayName ??
+        (shift.branchName?.isNotEmpty == true
+            ? shift.branchName!
+            : (shift.branchId.isNotEmpty ? shift.branchId : 'Sucursal'));
 
     final custodianName = shift.userName?.isNotEmpty == true
         ? shift.userName!

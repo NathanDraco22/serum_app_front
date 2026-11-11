@@ -75,6 +75,20 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   List<BranchInDb> get branches => state.branches;
   String get currentBranchName =>
       state.currentBranch?.name ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
+  String get currentBranchDisplayName =>
+      state.currentBranch?.displayName ?? 'Sucursal Matriz (ORIGIN_BRANCH)';
+
+  /// Nombre visible de una sucursal resuelto desde el catálogo de la sesión.
+  /// Si la sede no está cargada, conserva el nombre histórico recibido.
+  String displayNameForBranch(String branchId, {String? fallbackName}) {
+    final branch = getBranchById(branchId);
+    if (branch != null) return branch.displayName;
+    if (fallbackName != null && fallbackName.trim().isNotEmpty) {
+      return fallbackName;
+    }
+    return branchId.isNotEmpty ? branchId : 'Sucursal';
+  }
+
   UserInDb? get user => state.currentUser;
   Servin? get servin => state.servin;
   CashShiftInDb? get activeShift => state.activeShift;

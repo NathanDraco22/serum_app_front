@@ -26,7 +26,7 @@ class DashboardScreen extends StatelessWidget {
               const SizedBox(height: 28),
               Text(
                 currentBranch != null
-                    ? 'Bienvenido a ${currentBranch.name}'
+                    ? 'Bienvenido a ${currentBranch.displayName}'
                     : 'Bienvenido a Serum LIS',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineMedium?.copyWith(

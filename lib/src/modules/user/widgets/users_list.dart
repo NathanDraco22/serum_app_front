@@ -51,7 +51,7 @@ class UsersList extends StatelessWidget {
     final branchesMap = <String, String>{};
     if (branchesState is ReadBranchSuccess) {
       for (final b in branchesState.items) {
-        branchesMap[b.id] = b.name;
+        branchesMap[b.id] = b.displayName;
       }
     }
 
