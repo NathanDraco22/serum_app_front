@@ -5,6 +5,7 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../../cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
 import '../../../cubits/order_cubit/write_orders_cubit.dart';
 import '../../cash_shift/widgets/cash_shift_open_dialog.dart';
 import 'order_receipts_history_dialog.dart';
@@ -117,6 +118,10 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
       if (writeCubit.state is OrderPaid) {
         // Actualizar también el turno activo de la sesión para reflejar el nuevo cobro
         sessionCubit.fetchActiveShift();
+        // Refrescar el listado global de turnos para que refleje el cobro
+        context.read<ReadCashShiftCubit>().getAll(
+              branchId: sessionCubit.currentBranchId,
+            );
         if (Navigator.of(context).canPop()) {
           Navigator.pop(context, true);
         }
