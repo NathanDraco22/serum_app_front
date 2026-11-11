@@ -35,7 +35,6 @@ class OrdersList extends StatelessWidget {
     BuildContext context,
     OrderInDb order,
     bool isCompleted,
-    bool isFullyPaid,
     String patientName,
   ) async {
     if (!isCompleted) {
@@ -76,12 +75,9 @@ class OrdersList extends StatelessWidget {
         isDestructive: false,
       );
       if (confirmed && context.mounted) {
-        final revertedStatus = isFullyPaid
-            ? 'paid'
-            : (order.paidAmount > 0 ? 'partiallyPaid' : 'pending');
         await context.read<WriteOrderCubit>().update(
           order.id,
-          UpdateOrder(status: revertedStatus),
+          UpdateOrder(status: 'pending'),
         );
         if (context.mounted) {
           context.read<ReadOrderCubit>().getAll();
@@ -111,21 +107,23 @@ class OrdersList extends StatelessWidget {
         final isBlocked = order.isBlocked;
         final patientName = order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
         final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-        final isFullyPaid =
-            order.status == 'paid' ||
-            order.status == 'completed' ||
-            (totalPrice > 0 && order.paidAmount >= totalPrice);
+        final isFullyPaid = order.isFullyPaid;
         final hasResults =
             order.results.isNotEmpty &&
             order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
-        final isCompleted = order.status == 'completed';
-        final isPartiallyPaid = order.paidAmount > 0 && !isFullyPaid;
+        final hasAnyResult = order.results.any(
+          (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
+        );
+        final isCompleted = order.status == 'completed' ||
+            (order.isFullyPaid && hasResults);
+        final isPartiallyPaid = order.isPartiallyPaid;
         final showPayButton =
             !isFullyPaid &&
-            order.status != 'completed' &&
-            order.status != 'paid' &&
             order.status != 'cancelled';
-        final canDelete = (order.status == 'pending' || isBlocked) && order.paidAmount == 0;
+        final canDelete = (order.status == 'pending' || isBlocked) &&
+            order.status != 'completed' &&
+            order.paidAmount == 0 &&
+            !hasAnyResult;
         final canEditOrder = order.paidAmount == 0 && !isCompleted && order.status != 'cancelled';
 
         return Card(
@@ -154,7 +152,6 @@ class OrdersList extends StatelessWidget {
                             context,
                             order,
                             isCompleted,
-                            isFullyPaid,
                             patientName,
                           ),
                     child: CircleAvatar(
@@ -423,7 +420,6 @@ class OrdersList extends StatelessWidget {
                                       context,
                                       order,
                                       isCompleted,
-                                      isFullyPaid,
                                       patientName,
                                     ),
                               child: Container(

@@ -448,9 +448,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
         : order.id.toUpperCase();
 
     final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-    final isFullyPaid = order.status == 'paid' ||
-        order.status == 'completed' ||
-        (totalPrice > 0 && order.paidAmount >= totalPrice);
+    final isFullyPaid = order.isFullyPaid;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -953,29 +953,16 @@ class OrderResultsViewController extends ChangeNotifier {
     }).toList();
   }
 
-  /// Genera el DTO inmutable [UpdateOrder] calculando el nuevo estado de la orden
-  /// de acuerdo a su estado actual y saldo pagado.
+  /// Genera el DTO inmutable [UpdateOrder] para guardar los resultados.
+  ///
+  /// El estado financiero ya no se envía: el backend lo calcula a partir de
+  /// `paidAmount`. El estado clínico solo cambia si la orden ya estaba
+  /// completada o si el backend detecta que todos los resultados están listos
+  /// y la orden está pagada.
   UpdateOrder generateUpdateOrder() {
     final updatedResults = generateUpdatedResults();
 
-    final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-    final isFullyPaid = totalPrice > 0
-        ? (order.paidAmount >= totalPrice)
-        : (order.status == 'paid');
-
-    final String newStatus;
-    if (order.status == 'completed') {
-      newStatus = 'completed';
-    } else if (isFullyPaid) {
-      newStatus = 'paid';
-    } else if (order.paidAmount > 0) {
-      newStatus = 'partiallyPaid';
-    } else {
-      newStatus = 'pending';
-    }
-
     return UpdateOrder(
-      status: newStatus,
       results: updatedResults,
       notes: notesController.text.trim(),
     );

@@ -31,7 +31,10 @@ class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
   }
 
   @override
-  Future<Map<String, dynamic>?> deleteOrderById(String orderId) async {
+  Future<Map<String, dynamic>?> deleteOrderById(
+    String orderId, {
+    String? reason,
+  }) async {
     lastDeletedId = orderId;
     return _storage.remove(orderId);
   }

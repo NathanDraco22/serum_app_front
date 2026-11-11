@@ -18,6 +18,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
   final CashShiftsRepository? cashShiftsRepository;
   final UsersDataSource usersDataSource;
   StreamSubscription<RepoEvent<BranchInDb>>? _branchesSubscription;
+  Timer? _tokenRefreshTimer;
 
   AppSessionCubit({
     required this.authRepository,
@@ -306,6 +307,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   /// Desvincula la instancia localmente y limpia la sesión completa para reconfigurar la app
   Future<void> exitBusiness() async {
+    _tokenRefreshTimer?.cancel();
     await servinRepository.clearCurrentServin();
     await authRepository.logout();
     await AppConfigManager().clearSelectedBranchId();
@@ -384,6 +386,7 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
   /// Cierra la sesión activa y limpia los tokens guardados (permaneciendo en el mismo negocio)
   Future<void> logout() async {
+    _tokenRefreshTimer?.cancel();
     await authRepository.logout();
     AppSerumConfig().setBranchId(null);
     if (sl.isRegistered<AppSettingsCubit>()) {
@@ -555,10 +558,23 @@ class AppSessionCubit extends Cubit<AppSessionState> {
 
     // Consultar turno activo tras configurar usuario
     await fetchActiveShift();
+    _startTokenRefreshTimer();
+  }
+
+  void _startTokenRefreshTimer() {
+    _tokenRefreshTimer?.cancel();
+    _tokenRefreshTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      try {
+        await authRepository.ensureValidToken();
+      } catch (_) {
+        // Si falla, el próximo intento o el checkUser de la sesión lo resolverá.
+      }
+    });
   }
 
   @override
   Future<void> close() {
+    _tokenRefreshTimer?.cancel();
     _branchesSubscription?.cancel();
     return super.close();
   }

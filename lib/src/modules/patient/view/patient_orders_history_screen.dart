@@ -129,8 +129,15 @@ class _PatientOrdersHistoryScreenState
         return sum + (pending > 0 ? pending : 0);
       });
 
-  int get _completedOrdersCount =>
-      _orders.where((o) => o.status == 'completed' || o.status == 'published').length;
+  int get _completedOrdersCount => _orders.where((o) {
+        final hasResults = o.results.isNotEmpty &&
+            o.results.every(
+              (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
+            );
+        return o.status == 'completed' ||
+            o.status == 'published' ||
+            (o.isFullyPaid && hasResults);
+      }).length;
 
   List<OrderInDb> get _biometryOrders =>
       _orders.where(PatientHistoryHelpers.isBiometryOrder).toList();

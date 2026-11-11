@@ -136,36 +136,43 @@ class _BodyState extends State<_Body> {
     });
   }
 
+  bool _hasAllResults(OrderInDb order) {
+    return order.results.isNotEmpty &&
+        order.results.every(
+          (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
+        );
+  }
+
+  bool _isCompleted(OrderInDb order) {
+    return order.status == 'completed' ||
+        (order.isFullyPaid && _hasAllResults(order));
+  }
+
+  bool _isPaidAwaitingResults(OrderInDb order) {
+    return order.isFullyPaid && !_hasAllResults(order);
+  }
+
   List<OrderInDb> _applyFilters(List<OrderInDb> baseList, Map<String, String> patientNames) {
     final query = _searchController.text.trim().toLowerCase();
 
     return baseList.where((order) {
       // 1. Filtro por Estado
-      final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
-      final isFullyPaid =
-          order.status == 'paid' ||
-          order.status == 'completed' ||
-          (totalPrice > 0 && order.paidAmount >= totalPrice);
-      final hasAllResults =
-          order.results.isNotEmpty &&
-          order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
+      final isCompleted = _isCompleted(order);
+      final isPaidAwaitingResults = _isPaidAwaitingResults(order);
 
       if (_filterStatus == 'pending') {
         // Aún pendiente de pago o en proceso sin completarse
-        if (order.status == 'completed' || (isFullyPaid && hasAllResults)) {
+        if (isCompleted || isPaidAwaitingResults) {
           return false;
-        }
-        if (order.status == 'paid' && !hasAllResults) {
-          return false; // está en 'paid' adelantada
         }
       } else if (_filterStatus == 'paid') {
         // Pagada por adelantado pero pendiente de resultados completos
-        if (order.status != 'paid' && !(isFullyPaid && !hasAllResults)) {
+        if (!isPaidAwaitingResults) {
           return false;
         }
       } else if (_filterStatus == 'completed') {
-        // Completada: 100% pagada y con resultados listos
-        if (order.status != 'completed' && !(isFullyPaid && hasAllResults)) {
+        // Completada: resultados listos
+        if (!isCompleted) {
           return false;
         }
       }
@@ -238,30 +245,8 @@ class _BodyState extends State<_Body> {
               : <OrderInDb>[];
 
           final totalCount = allOrders.length;
-          final completedCount = allOrders.where((o) {
-            final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
-            final isFullyPaid =
-                o.status == 'paid' ||
-                o.status == 'completed' ||
-                (total > 0 && o.paidAmount >= total);
-            final hasResults =
-                o.results.isNotEmpty &&
-                o.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
-            return o.status == 'completed' || (isFullyPaid && hasResults);
-          }).length;
-
-          final paidCount = allOrders.where((o) {
-            final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
-            final isFullyPaid =
-                o.status == 'paid' ||
-                o.status == 'completed' ||
-                (total > 0 && o.paidAmount >= total);
-            final hasResults =
-                o.results.isNotEmpty &&
-                o.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
-            return (o.status == 'paid' || isFullyPaid) && !hasResults && o.status != 'completed';
-          }).length;
-
+          final completedCount = allOrders.where(_isCompleted).length;
+          final paidCount = allOrders.where(_isPaidAwaitingResults).length;
           final pendingCount = totalCount - completedCount - paidCount;
 
           final filteredOrders = _applyFilters(allOrders, patientNames);

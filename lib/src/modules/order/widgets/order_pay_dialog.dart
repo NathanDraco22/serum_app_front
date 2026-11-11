@@ -34,9 +34,7 @@ class _OrderPayDialogState extends State<OrderPayDialog> {
     'AVANZ',
   ];
 
-  int get _totalPrice => widget.order.totalPrice > 0
-      ? widget.order.totalPrice
-      : widget.order.salePriceApplied;
+  int get _totalPrice => widget.order.effectiveTotalPrice;
 
   int get _remainingBalance => max(0, _totalPrice - widget.order.paidAmount);
 
