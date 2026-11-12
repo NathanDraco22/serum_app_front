@@ -149,11 +149,24 @@ class ParameterCard extends StatelessWidget {
                   resolvedAlert == 'LOW' ||
                   resolvedAlert == 'ABNORMAL'));
     final isNumeric = result.dataType == 'numeric';
+    final resolution = activeController?.findReferenceResolutionForPatient(result);
+    final resolvedReference =
+        resolution?.value ?? (activeController == null ? _fallbackGeneralReference() : null);
     final resolvedHasReference = isNumeric
-        ? (activeController != null
-              ? activeController.findReferenceResolutionForPatient(result).hasValue
-              : _fallbackGeneralReference() != null)
+        ? resolvedReference != null
         : result.referenceText.trim().isNotEmpty;
+
+    final referenceCriteria = <String>[];
+    if (isNumeric && resolvedReference != null) {
+      if (resolvedReference.useGender) {
+        referenceCriteria.add(_formatGenderCriterion(resolvedReference.gender));
+      }
+      if (resolvedReference.useAge) {
+        referenceCriteria.add(
+          ReferenceValueResolver.formatReferenceAge(resolvedReference),
+        );
+      }
+    }
 
     final hasVal = _computeHasValue(
       resolvedController: resolvedController,
@@ -365,6 +378,23 @@ class ParameterCard extends StatelessWidget {
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
+                        if (referenceCriteria.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          ...referenceCriteria.map(
+                            (criterion) => Padding(
+                              padding: const EdgeInsets.only(top: 1),
+                              child: Text(
+                                criterion,
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -470,6 +500,20 @@ class ParameterCard extends StatelessWidget {
       textColor: theme.colorScheme.onSurfaceVariant,
       borderColor: theme.colorScheme.outlineVariant,
     );
+  }
+
+  String _formatGenderCriterion(String gender) {
+    switch (ReferenceValueResolver.normalizeGender(gender)) {
+      case 'male':
+        return 'MASCULINO';
+      case 'female':
+        return 'FEMENINO';
+      case 'both':
+        return 'AMBOS';
+      default:
+        final value = gender.trim();
+        return value.isEmpty ? 'NO ESPECIFICADO' : value.toUpperCase();
+    }
   }
 
   String _getReferenceText(OrderResultsViewController? activeController) {

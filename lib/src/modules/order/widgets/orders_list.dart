@@ -492,7 +492,7 @@ class OrdersList extends StatelessWidget {
                             ),
                           ),
                           if (isInReview && !isBlocked && canManageClinical)
-                            FilledButton.tonalIcon(
+                            FilledButton.icon(
                               onPressed: () =>
                                   _handleFinalizeOrder(context, order, patientName),
                               icon: const Icon(Icons.task_alt_rounded, size: 14),
@@ -507,8 +507,12 @@ class OrdersList extends StatelessWidget {
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
-                                backgroundColor: Colors.green.shade50,
-                                foregroundColor: Colors.green.shade800,
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           // Badge Financiero
