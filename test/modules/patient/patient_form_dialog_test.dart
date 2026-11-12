@@ -6,8 +6,7 @@ import 'package:serum_app_front/src/cubits/patient_cubit/write_patients_cubit.da
 import 'package:serum_app_front/src/modules/patient/widgets/patient_form_dialog.dart';
 import 'package:serum_business/serum_business.dart';
 
-class MockWritePatientCubit extends Cubit<WritePatientState>
-    implements WritePatientCubit {
+class MockWritePatientCubit extends Cubit<WritePatientState> implements WritePatientCubit {
   MockWritePatientCubit() : super(WritePatientInitial());
 
   CreatePatient? lastCreatedPatient;
@@ -57,27 +56,26 @@ class MockWritePatientCubit extends Cubit<WritePatientState>
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockAppSessionCubit extends Cubit<AppSessionState>
-    implements AppSessionCubit {
+class MockAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCubit {
   MockAppSessionCubit()
-      : super(
-          AppSessionState(
-            currentBranch: BranchInDb(
-              id: 'branch-central',
-              name: 'Central',
-              address: 'Central',
-              phone: '8888',
-              createdAt: 100,
-            ),
-            currentUser: UserInDb(
-              id: 'user-1',
-              username: 'admin',
-              name: 'Admin User',
-              role: 'Admin',
-              createdAt: 100,
-            ),
+    : super(
+        AppSessionState(
+          currentBranch: BranchInDb(
+            id: 'branch-central',
+            name: 'Central',
+            address: 'Central',
+            phone: '8888',
+            createdAt: 100,
           ),
-        );
+          currentUser: UserInDb(
+            id: 'user-1',
+            username: 'admin',
+            name: 'Admin User',
+            role: 'Admin',
+            createdAt: 100,
+          ),
+        ),
+      );
 
   @override
   String get currentBranchId => 'branch-central';
@@ -116,12 +114,14 @@ void main() {
 
       expect(find.text('Nuevo Paciente'), findsOneWidget);
       expect(find.text('Edad (años) *'), findsOneWidget);
-      expect(find.text('Fecha de Nacimiento'), findsOneWidget);
+      expect(find.text('Fecha de Nacimiento *'), findsOneWidget);
       expect(find.byIcon(Icons.cake_outlined), findsOneWidget);
       expect(find.byIcon(Icons.calendar_month), findsOneWidget);
     });
 
-    testWidgets('Formateador solo permite números enteros (bloquea letras y símbolos)', (tester) async {
+    testWidgets('Formateador solo permite números enteros (bloquea letras y símbolos)', (
+      tester,
+    ) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
@@ -137,7 +137,9 @@ void main() {
       expect(ageField.controller?.text, equals('355'));
     });
 
-    testWidgets('Al ingresar edad se calcula dateOfBirth y se guarda CreatePatient con age', (tester) async {
+    testWidgets('Al ingresar edad se calcula dateOfBirth y se guarda CreatePatient con age', (
+      tester,
+    ) async {
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
 
@@ -172,7 +174,9 @@ void main() {
       expect(calculatedBirth.year, equals(expectedYear));
     });
 
-    testWidgets('Modo edición pre-llena la edad calculada a partir del paciente existente', (tester) async {
+    testWidgets('Modo edición pre-llena la edad calculada a partir del paciente existente', (
+      tester,
+    ) async {
       final now = DateTime.now();
       final birthDate = DateTime(now.year - 42, now.month, now.day);
 

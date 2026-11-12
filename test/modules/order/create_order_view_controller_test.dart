@@ -108,6 +108,29 @@ void main() {
       expect(notifications, 4);
     });
 
+    test('updateSelectedPatientData refresca demografía sin cambiar identidad', () {
+      controller.selectPatient(samplePatient);
+
+      final updated = PatientInDb(
+        id: samplePatient.id,
+        name: samplePatient.name,
+        originBranch: samplePatient.originBranch,
+        dateOfBirth: 123,
+        gender: samplePatient.gender,
+        phone: samplePatient.phone,
+        createdAt: samplePatient.createdAt,
+      );
+
+      int notifications = 0;
+      controller.addListener(() => notifications++);
+
+      controller.updateSelectedPatientData(updated);
+
+      expect(controller.selectedPatient?.id, samplePatient.id);
+      expect(controller.selectedPatient?.dateOfBirth, 123);
+      expect(notifications, 1);
+    });
+
     test('Manejo de ítems: toggle, remoción y cálculos de subtotales', () {
       controller.toggleItem(test1);
       expect(controller.selectedItems.length, 1);

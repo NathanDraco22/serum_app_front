@@ -67,8 +67,8 @@ class _BodyState extends State<_Body> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ReadLabTestCubit>().loadIfNotLoaded(
-              branchId: context.read<AppSessionCubit>().currentBranchId,
-            );
+          branchId: context.read<AppSessionCubit>().currentBranchId,
+        );
       }
     });
   }
@@ -335,7 +335,9 @@ class _BodyState extends State<_Body> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: (readState is ReadLabTestRefreshing || readState is ReadLabTestLoading)
+                          onPressed:
+                              (readState is ReadLabTestRefreshing ||
+                                  readState is ReadLabTestLoading)
                               ? null
                               : () {
                                   final branchId = context.read<AppSessionCubit>().currentBranchId;
@@ -595,8 +597,7 @@ class _BodyState extends State<_Body> {
                         ),
 
                         // Botón de Limpiar Filtros
-                        if (_selectedCategory != 'Todas' ||
-                            _selectedSubclassification != 'Todas')
+                        if (_selectedCategory != 'Todas' || _selectedSubclassification != 'Todas')
                           TextButton.icon(
                             onPressed: () {
                               setState(() {

@@ -19,7 +19,8 @@ Future<void> showQuotationViewerDialog(
   SystemChannels.textInput.invokeMethod('TextInput.hide');
 
   final appSession = sl<AppSessionCubit>();
-  final branch = appSession.currentBranch ??
+  final branch =
+      appSession.currentBranch ??
       BranchInDb(
         id: quotation.branchId.isNotEmpty ? quotation.branchId : 'BRANCH_DEFAULT',
         name: 'Laboratorio Clínico Serum',
@@ -95,14 +96,10 @@ class _QuotationViewerState extends State<_QuotationViewer> {
     _doctorInfo = widget.doctorInfo ?? widget.quotation.doctorInfo;
 
     // Si tiene patientId pero no se guardó snapshot, intentar resolver en background sin bloquear
-    if (_clientInfo == null &&
-        _quotation.patientId != null &&
-        _quotation.patientId!.isNotEmpty) {
+    if (_clientInfo == null && _quotation.patientId != null && _quotation.patientId!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _resolveMissingPatient());
     }
-    if (_doctorInfo == null &&
-        _quotation.doctorId != null &&
-        _quotation.doctorId!.isNotEmpty) {
+    if (_doctorInfo == null && _quotation.doctorId != null && _quotation.doctorId!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _resolveMissingDoctor());
     }
   }
@@ -121,7 +118,7 @@ class _QuotationViewerState extends State<_QuotationViewer> {
             address: p.address ?? '',
             cardId: p.cardId,
             email: p.email,
-            age: p.age,
+            age: p.explicitAge,
           );
         });
       }
@@ -316,7 +313,11 @@ class QuotationViewerContent extends StatelessWidget {
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Icon(Icons.request_quote_outlined, size: 28, color: Colors.blue.shade800),
+                        child: Icon(
+                          Icons.request_quote_outlined,
+                          size: 28,
+                          color: Colors.blue.shade800,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

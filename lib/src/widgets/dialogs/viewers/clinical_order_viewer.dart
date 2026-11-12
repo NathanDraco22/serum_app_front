@@ -25,7 +25,8 @@ Future<void> showClinicalOrderViewerDialog(
 
   // Obtener sucursal actual
   final appSession = sl<AppSessionCubit>();
-  final branch = appSession.currentBranch ??
+  final branch =
+      appSession.currentBranch ??
       BranchInDb(
         id: order.branchId.isNotEmpty ? order.branchId : 'BRANCH_DEFAULT',
         name: 'Laboratorio Clínico Serum',
@@ -130,16 +131,14 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
               address: p.address ?? '',
               cardId: p.cardId,
               email: p.email,
-              age: p.age,
+              age: p.explicitAge,
             );
           });
         }
       } catch (_) {}
     }
 
-    if (_doctorInfo == null &&
-        widget.order.doctorId != null &&
-        widget.order.doctorId!.isNotEmpty) {
+    if (_doctorInfo == null && widget.order.doctorId != null && widget.order.doctorId!.isNotEmpty) {
       try {
         final d = await doctorsRepo.getDoctorById(widget.order.doctorId!);
         if (d != null && mounted) {
@@ -209,11 +208,12 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
         ? widget.order.id.substring(widget.order.id.length - 8).toUpperCase()
         : widget.order.id.toUpperCase();
 
-    final resolvedPatient = _patientInfo ??
+    final resolvedPatient =
+        _patientInfo ??
         PatientInfo(
           name: 'Paciente #${widget.order.patientId}',
           dateOfBirth: 0,
-          gender: 'M',
+          gender: '',
         );
 
     final auxBioList = widget.branch.auxBio ?? [];
@@ -239,14 +239,12 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                     value: widget.branch.bioanalyst,
                     child: Row(
                       children: [
-                        Icon(Icons.verified_user_outlined,
-                            size: 18, color: Colors.teal.shade700),
+                        Icon(Icons.verified_user_outlined, size: 18, color: Colors.teal.shade700),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '${widget.branch.bioanalyst!.name} (Titular)',
-                            style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -258,8 +256,7 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                     value: aux.bioanalyst,
                     child: Row(
                       children: [
-                        Icon(Icons.badge_outlined,
-                            size: 18, color: Colors.blue.shade700),
+                        Icon(Icons.badge_outlined, size: 18, color: Colors.blue.shade700),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -279,14 +276,12 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.draw_outlined,
-                        size: 16, color: theme.colorScheme.primary),
+                    Icon(Icons.draw_outlined, size: 16, color: theme.colorScheme.primary),
                     const SizedBox(width: 6),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 160),
@@ -303,8 +298,7 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.arrow_drop_down,
-                        size: 18, color: theme.colorScheme.primary),
+                    Icon(Icons.arrow_drop_down, size: 18, color: theme.colorScheme.primary),
                   ],
                 ),
               ),
@@ -356,8 +350,8 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                   children: [
                     Builder(
                       builder: (context) {
-                        final watermarkImg = widget.branch.effectiveLogo ??
-                            widget.branch.effectiveIsoLogo;
+                        final watermarkImg =
+                            widget.branch.effectiveLogo ?? widget.branch.effectiveIsoLogo;
                         if (watermarkImg == null || watermarkImg.isEmpty) {
                           return const SizedBox();
                         }
@@ -435,14 +429,37 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     return gender;
   }
 
+  String _finalizationLabel(OrderInDb order) {
+    final name = order.finalizedBy?.name.trim();
+    if (order.finalizedAt == null) {
+      return 'Estado: Finalizada';
+    }
+    final date = DateTime.fromMillisecondsSinceEpoch(order.finalizedAt!);
+    final formatted = '${DateTimeTool.formatddMMyy(date)} ${DateTimeTool.formatHHmm(date)}';
+    if (name != null && name.isNotEmpty) {
+      return 'Finalizado por: $name — $formatted';
+    }
+    return 'Finalizada — $formatted';
+  }
+
   @override
   Widget build(BuildContext context) {
     final orderDate = DateTime.fromMillisecondsSinceEpoch(order.createdAt);
     final formattedDate =
         '${DateTimeTool.formatddMMyy(orderDate)} ${DateTimeTool.formatHHmm(orderDate)}';
-    final patientAge =
-        patientInfo.age > 0 ? patientInfo.age : _calculateAge(patientInfo.dateOfBirth);
+    final patientAge = patientInfo.age > 0
+        ? patientInfo.age
+        : _calculateAge(patientInfo.dateOfBirth);
+    final patientAgeInDays = ReferenceValueResolver.tryAgeInDaysAt(
+      dateOfBirthMs: patientInfo.dateOfBirth,
+      referenceDateMs: order.createdAt,
+      fallbackAgeYears: patientInfo.explicitAge,
+    );
+    final hasDemographics = patientInfo.dateOfBirth > 0 || patientInfo.explicitAge != null;
     final genderStr = _formatGender(patientInfo.gender);
+    final patientAgeLabel = hasDemographics && patientAgeInDays == 0
+        ? '0 días'
+        : (patientAge > 0 ? '$patientAge años' : (hasDemographics ? '0 días' : 'N/D'));
     final shortId = order.id.length > 8
         ? order.id.substring(order.id.length - 8).toUpperCase()
         : order.id.toUpperCase();
@@ -462,8 +479,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               flex: 6,
               child: Builder(
                 builder: (context) {
-                  final isIsoLogo =
-                      branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
+                  final isIsoLogo = branch.isoLogoUrl != null && branch.isoLogoUrl!.isNotEmpty;
                   final headerImg = branch.effectiveIsoLogo;
 
                   if (isIsoLogo && headerImg != null && headerImg.isNotEmpty) {
@@ -486,23 +502,23 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         if (branch.address.isNotEmpty)
-                          Text('Dirección: ${branch.address}',
-                              style: TextStyle(
-                                  fontSize: 11, color: Colors.grey.shade800)),
+                          Text(
+                            'Dirección: ${branch.address}',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade800),
+                          ),
                         Wrap(
                           spacing: 12,
                           children: [
                             if (branch.phone.isNotEmpty)
-                              Text('Tel: ${branch.phone}',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade800)),
-                            if (branch.email != null &&
-                                branch.email!.isNotEmpty)
-                              Text('Email: ${branch.email!}',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade800)),
+                              Text(
+                                'Tel: ${branch.phone}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade800),
+                              ),
+                            if (branch.email != null && branch.email!.isNotEmpty)
+                              Text(
+                                'Email: ${branch.email!}',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade800),
+                              ),
                           ],
                         ),
                       ],
@@ -528,8 +544,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                                   : null,
                             ),
                             child: headerImg == null || headerImg.isEmpty
-                                ? Icon(Icons.biotech,
-                                    size: 28, color: Colors.blue.shade800)
+                                ? Icon(Icons.biotech, size: 28, color: Colors.blue.shade800)
                                 : null,
                           ),
                           const SizedBox(width: 12),
@@ -547,9 +562,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                                 ),
                                 Text(
                                   'Laboratorio Clínico y Diagnóstico Especializado',
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade600),
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                 ),
                               ],
                             ),
@@ -558,23 +571,23 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       if (branch.address.isNotEmpty)
-                        Text('Dirección: ${branch.address}',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade800)),
+                        Text(
+                          'Dirección: ${branch.address}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+                        ),
                       Wrap(
                         spacing: 12,
                         children: [
                           if (branch.phone.isNotEmpty)
-                            Text('Teléfono: ${branch.phone}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade800)),
-                          if (branch.email != null &&
-                              branch.email!.isNotEmpty)
-                            Text('Email: ${branch.email!}',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade800)),
+                            Text(
+                              'Teléfono: ${branch.phone}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+                            ),
+                          if (branch.email != null && branch.email!.isNotEmpty)
+                            Text(
+                              'Email: ${branch.email!}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
+                            ),
                         ],
                       ),
                     ],
@@ -628,7 +641,13 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       ),
                     ),
                     child: Text(
-                      order.status.toUpperCase(),
+                      order.isInReview
+                          ? 'EN REVISIÓN'
+                          : order.status == 'completed'
+                          ? 'FINALIZADA'
+                          : order.status == 'cancelled'
+                          ? 'CANCELADA'
+                          : 'PENDIENTE',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -638,6 +657,17 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (order.isInReview || order.status == 'completed') ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      order.isInReview ? 'Estado: En revisión' : _finalizationLabel(order),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -685,12 +715,11 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                     _buildDataRow('Nombre:', patientInfo.name, isBold: true),
                     _buildDataRow(
                       'Edad / Sexo:',
-                      '${patientAge > 0 ? '$patientAge años' : 'N/D'} | $genderStr',
+                      '$patientAgeLabel | $genderStr',
                     ),
                     if (patientInfo.cardId != null && patientInfo.cardId!.isNotEmpty)
                       _buildDataRow('Identificación:', patientInfo.cardId!),
-                    if (patientInfo.phone.isNotEmpty)
-                      _buildDataRow('Teléfono:', patientInfo.phone),
+                    if (patientInfo.phone.isNotEmpty) _buildDataRow('Teléfono:', patientInfo.phone),
                     if (patientInfo.address.isNotEmpty)
                       _buildDataRow('Dirección:', patientInfo.address),
                   ],
@@ -707,8 +736,11 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.medical_services_outlined,
-                            size: 16, color: Colors.blue.shade900),
+                        Icon(
+                          Icons.medical_services_outlined,
+                          size: 16,
+                          color: Colors.blue.shade900,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'MÉDICO REFERENTE',
@@ -729,9 +761,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       if (doctorInfo!.phone.isNotEmpty)
                         _buildDataRow('Contacto:', doctorInfo!.phone),
                     ] else ...[
-                      _buildDataRow(
-                          'Médico:', 'Particular / Sin médico asignado',
-                          isBold: true),
+                      _buildDataRow('Médico:', 'Particular / Sin médico asignado', isBold: true),
                       _buildDataRow('Atención:', 'Directa en ventanilla'),
                     ],
                   ],
@@ -747,55 +777,51 @@ class ClinicalOrderViewerContent extends StatelessWidget {
         Builder(
           builder: (context) {
             final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
-            final overallArea =
-                ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
+            final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
             TableRow buildTableRow(OrderTestResult r, bool hasGroupHeader) {
               final isNumeric = r.dataType == 'numeric';
-              final numVal = isNumeric && r.resultValue != null
-                  ? ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue)
-                  : null;
 
-              String? alertFlag = r.alertFlag;
-              if (alertFlag == null &&
-                  numVal != null &&
-                  r.referenceValues.isNotEmpty) {
-                final ref = r.referenceValues.first;
-                if (numVal > ref.maxValue) {
-                  alertFlag = 'H';
-                } else if (numVal < ref.minValue) {
-                  alertFlag = 'L';
-                }
-              } else if (alertFlag != null) {
-                final f = alertFlag.toUpperCase();
-                if (f == 'HIGH' || f == 'ALTO') alertFlag = 'H';
-                if (f == 'LOW' || f == 'BAJO') alertFlag = 'L';
-                if (f == 'ABNORMAL' || f == 'ANORMAL') alertFlag = '*';
-              }
+              final resolvedRef = ReferenceValueResolver.resolve(
+                values: r.referenceValues,
+                ageInDays: patientAgeInDays,
+                gender: patientInfo.gender,
+              );
 
-              final hasAlert =
-                  alertFlag != null && alertFlag.isNotEmpty;
+              final computedFlag = ClinicalAlertEvaluator.evaluateResult(
+                dataType: r.dataType,
+                resultValue: r.resultValue,
+                expectedQualitativeValue: r.expectedQualitativeValue,
+                reference: isNumeric ? resolvedRef : null,
+              );
+              final alertFlag = computedFlag == 'ABNORMAL' ? '*' : computedFlag;
+              final hasAlert = alertFlag != null;
 
+              final customReference = r.referenceText.trim();
               String referenceText = '—';
-              if (r.referenceText.trim().isNotEmpty) {
-                referenceText = r.referenceText.trim();
-              } else if (isNumeric && r.referenceValues.isNotEmpty) {
-                final ref = r.referenceValues.first;
-                final unit = r.unitOfMeasure.isNotEmpty
-                    ? ' ${r.unitOfMeasure}'
-                    : '';
-                referenceText =
-                    '${ref.minValue} - ${ref.maxValue}$unit';
-              } else if (r.dataType == 'boolean' &&
-                  r.expectedQualitativeValue != null) {
-                referenceText =
-                    'Esperado: ${r.expectedQualitativeValue}';
+              if (isNumeric) {
+                if (resolvedRef == null) {
+                  final message = hasDemographics
+                      ? 'Sin rango para esta edad/género'
+                      : 'Sin datos demográficos';
+                  referenceText = customReference.isNotEmpty
+                      ? '$message\n$customReference'
+                      : message;
+                } else if (customReference.isNotEmpty) {
+                  referenceText = customReference;
+                } else {
+                  final unit = r.unitOfMeasure.isNotEmpty ? ' ${r.unitOfMeasure}' : '';
+                  referenceText = '${resolvedRef.minValue} - ${resolvedRef.maxValue}$unit';
+                }
+              } else if (customReference.isNotEmpty) {
+                referenceText = customReference;
+              } else if (r.dataType == 'boolean' && r.expectedQualitativeValue != null) {
+                referenceText = 'Esperado: ${r.expectedQualitativeValue}';
               } else if (r.expectedQualitativeValue != null) {
                 referenceText = r.expectedQualitativeValue!;
               }
 
-              final isTotalRow =
-                  r.parameterName.trim().toUpperCase() == 'TOTAL';
+              final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
               final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
               final double leftIndent = isSubParam
                   ? (hasGroupHeader ? 28.0 : 20.0)
@@ -805,9 +831,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 decoration: isTotalRow
                     ? BoxDecoration(
                         border: Border(
-                          top: BorderSide(
-                              color: Colors.grey.shade300,
-                              width: 0.8),
+                          top: BorderSide(color: Colors.grey.shade300, width: 0.8),
                         ),
                       )
                     : null,
@@ -823,16 +847,13 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       r.parameterName,
                       style: TextStyle(
                         fontSize: 12.5,
-                        fontWeight: isTotalRow
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+                        fontWeight: isTotalRow ? FontWeight.bold : FontWeight.normal,
                         color: isSubParam ? Colors.grey.shade900 : Colors.black87,
                       ),
                     ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
                       children: [
                         Expanded(
@@ -865,12 +886,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
-                      r.unitOfMeasure.isNotEmpty
-                          ? r.unitOfMeasure
-                          : '',
+                      r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade700,
@@ -878,18 +896,13 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
                       referenceText,
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        fontSize: referenceText.contains('\n')
-                            ? 11.5
-                            : 12,
-                        height: referenceText.contains('\n')
-                            ? 1.25
-                            : null,
+                        fontSize: referenceText.contains('\n') ? 11.5 : 12,
+                        height: referenceText.contains('\n') ? 1.25 : null,
                         color: Colors.grey.shade700,
                       ),
                     ),
@@ -899,8 +912,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
             }
 
             Widget buildTextResultBlock(OrderTestResult r, bool hasGroupHeader) {
-              final hasContent =
-                  r.resultValue != null && r.resultValue!.trim().isNotEmpty;
+              final hasContent = r.resultValue != null && r.resultValue!.trim().isNotEmpty;
               final displayValue = hasContent ? r.resultValue!.trim() : '—';
               final refText = r.referenceText.trim();
               final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
@@ -1069,7 +1081,8 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               for (final entry in study.subclassificationGroups.entries) {
                 final groupTitle = entry.key;
                 final items = entry.value;
-                final bool hasGroupHeader = groupTitle.isNotEmpty &&
+                final bool hasGroupHeader =
+                    groupTitle.isNotEmpty &&
                     groupTitle != study.studyTitle &&
                     groupTitle != overallArea;
 
@@ -1088,9 +1101,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         2: FlexColumnWidth(1.3),
                         3: FlexColumnWidth(2.7),
                       },
-                      children: chunk
-                          .map((r) => buildTableRow(r, hasGroupHeader))
-                          .toList(),
+                      children: chunk.map((r) => buildTableRow(r, hasGroupHeader)).toList(),
                     ),
                   );
                 }
@@ -1112,8 +1123,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                       if (hasGroupHeader) ...[
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 4, horizontal: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                           margin: const EdgeInsets.only(top: 6, bottom: 4),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
@@ -1225,15 +1235,12 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isFullyPaid
-                      ? Colors.green.shade800
-                      : Colors.orange.shade800,
+                  color: isFullyPaid ? Colors.green.shade800 : Colors.orange.shade800,
                 ),
               ),
               Text(
                 'Total Orden: ${NumberFormatter.convertToMoneyLike(totalPrice)}',
-                style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1271,8 +1278,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                     color: Colors.black87,
                   ),
                   const SizedBox(height: 6),
-                  if (effectiveSigner != null &&
-                      effectiveSigner.name.trim().isNotEmpty) ...[
+                  if (effectiveSigner != null && effectiveSigner.name.trim().isNotEmpty) ...[
                     Text(
                       effectiveSigner.name.trim(),
                       style: const TextStyle(

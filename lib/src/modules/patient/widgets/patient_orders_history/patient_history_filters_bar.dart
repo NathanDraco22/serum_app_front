@@ -85,9 +85,9 @@ class PatientHistoryFiltersBar extends StatelessWidget {
               children: [
                 _buildStatusChip(context, 'ALL', 'Todas'),
                 const SizedBox(width: 6),
-                _buildStatusChip(context, 'completed', 'Completadas'),
+                _buildStatusChip(context, 'completed', 'Finalizadas'),
                 const SizedBox(width: 6),
-                _buildStatusChip(context, 'in_process', 'En Proceso'),
+                _buildStatusChip(context, 'in_review', 'En revisión'),
                 const SizedBox(width: 6),
                 _buildStatusChip(context, 'pending', 'Pendientes'),
               ],

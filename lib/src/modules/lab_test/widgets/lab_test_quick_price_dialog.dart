@@ -22,8 +22,7 @@ class LabTestQuickPriceDialog extends StatefulWidget {
     String? branchId,
   }) {
     final writeCubit = context.read<WriteLabTestCubit>();
-    final resolvedBranchId =
-        branchId ?? context.read<AppSessionCubit>().currentBranchId;
+    final resolvedBranchId = branchId ?? context.read<AppSessionCubit>().currentBranchId;
 
     return showDialog<bool>(
       context: context,
@@ -40,8 +39,7 @@ class LabTestQuickPriceDialog extends StatefulWidget {
   }
 
   @override
-  State<LabTestQuickPriceDialog> createState() =>
-      _LabTestQuickPriceDialogState();
+  State<LabTestQuickPriceDialog> createState() => _LabTestQuickPriceDialogState();
 }
 
 class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
@@ -95,9 +93,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
     final salePrice2Cents = _parseCents(_price2Controller.text);
 
     // Si es un pack y se ingresa un precio manual, desactivamos la suma automática
-    final bool resolvedUseChildSum = widget.labTest.isPack
-        ? _useChildTestsPriceSum
-        : true;
+    final bool resolvedUseChildSum = widget.labTest.isPack ? _useChildTestsPriceSum : true;
 
     setState(() => _isSaving = true);
 
@@ -229,8 +225,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                           spacing: 8,
                           runSpacing: 4,
                           children: [
-                            if (widget.labTest.code != null &&
-                                widget.labTest.code!.isNotEmpty)
+                            if (widget.labTest.code != null && widget.labTest.code!.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
@@ -362,14 +357,12 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                   // Campo Precio 1 (Regular)
                   TextFormField(
                     controller: _priceController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                     ],
                     autofocus: true,
-                    enabled: !_isSaving &&
-                        (!isPack || !_useChildTestsPriceSum),
+                    enabled: !_isSaving && (!isPack || !_useChildTestsPriceSum),
                     decoration: InputDecoration(
                       labelText: isPack && _useChildTestsPriceSum
                           ? 'Precio 1 (Calculado por suma de hijos)'
@@ -398,8 +391,7 @@ class _LabTestQuickPriceDialogState extends State<LabTestQuickPriceDialog> {
                   // Campo Precio 2 (Especial / Convenio)
                   TextFormField(
                     controller: _price2Controller,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                     ],

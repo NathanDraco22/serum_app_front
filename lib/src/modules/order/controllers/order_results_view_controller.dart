@@ -237,25 +237,34 @@ class OrderResultsViewController extends ChangeNotifier {
   // Evaluación Clínica de Rangos y Alertas Demográficas
   // ---------------------------------------------------------------------------
 
-  /// Busca el valor de referencia apropiado según el sexo y demografía del paciente.
-  ReferenceValue? findReferenceValueForPatient(OrderTestResult r) {
-    if (r.referenceValues.isEmpty) return null;
+  /// Edad del paciente en días a la fecha de la orden.
+  ///
+  /// Devuelve `null` cuando no hay fecha de nacimiento ni edad explícita.
+  int? get patientAgeInDays {
     final patientInfo = order.patientInfo;
-    if (patientInfo == null || r.referenceValues.length == 1) {
-      return r.referenceValues.first;
-    }
-    final normalizedGender = (patientInfo.gender).toLowerCase();
-    for (final ref in r.referenceValues) {
-      final refGender = ref.gender.toLowerCase();
-      final matchesGender =
-          refGender.isEmpty ||
-          refGender == 'both' ||
-          refGender == 'todos' ||
-          (refGender.startsWith('m') && normalizedGender.startsWith('m')) ||
-          (refGender.startsWith('f') && normalizedGender.startsWith('f'));
-      if (matchesGender) return ref;
-    }
-    return r.referenceValues.first;
+    if (patientInfo == null) return null;
+    return ReferenceValueResolver.tryAgeInDaysAt(
+      dateOfBirthMs: patientInfo.dateOfBirth,
+      referenceDateMs: order.createdAt,
+      fallbackAgeYears: patientInfo.explicitAge,
+    );
+  }
+
+  /// Resuelve el rango de referencia aplicable según edad y género.
+  ReferenceResolution findReferenceResolutionForPatient(OrderTestResult r) {
+    if (r.referenceValues.isEmpty) return const ReferenceResolution.none();
+
+    final patientInfo = order.patientInfo;
+    return ReferenceValueResolver.resolveWithMetadata(
+      values: r.referenceValues,
+      ageInDays: patientAgeInDays,
+      gender: patientInfo?.gender ?? '',
+    );
+  }
+
+  /// Busca el valor de referencia apropiado según la demografía del paciente.
+  ReferenceValue? findReferenceValueForPatient(OrderTestResult r) {
+    return findReferenceResolutionForPatient(r).value;
   }
 
   /// Evalúa el flag de alerta médica de un resultado en tiempo real (H, L, ABNORMAL o null).

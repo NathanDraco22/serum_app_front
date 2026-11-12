@@ -30,7 +30,9 @@ void main() {
     });
 
     test('Retorna General para categoría desconocida', () {
-      final subs = ClinicalClassificationRegistry.getSubclassificationsFor('Otra Categoría Desconocida');
+      final subs = ClinicalClassificationRegistry.getSubclassificationsFor(
+        'Otra Categoría Desconocida',
+      );
       expect(subs, ['General']);
     });
   });

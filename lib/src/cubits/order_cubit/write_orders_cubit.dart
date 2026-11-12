@@ -6,8 +6,20 @@ part 'write_orders_state.dart';
 class WriteOrderCubit extends Cubit<WriteOrderState> {
   final OrdersRepository ordersRepository;
 
-  WriteOrderCubit({required this.ordersRepository})
-      : super(WriteOrderInitial());
+  WriteOrderCubit({required this.ordersRepository}) : super(WriteOrderInitial());
+
+  String _humanizeError(Object error) {
+    final message = error.toString();
+    if (message.contains('INVALID_PATIENT_DEMOGRAPHICS')) {
+      return 'El paciente no tiene fecha de nacimiento ni edad registrada. '
+          'Actualice sus datos antes de guardar la orden.';
+    }
+    if (message.contains('ORDER_HAS_CLINICAL_RESULTS')) {
+      return 'No se puede cambiar el paciente porque la orden ya tiene '
+          'resultados capturados.';
+    }
+    return message;
+  }
 
   Future<void> create(CreateOrder createOrder) async {
     emit(WritingOrder());
@@ -15,7 +27,7 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
       final item = await ordersRepository.createOrder(createOrder);
       emit(OrderCreated(item));
     } catch (e) {
-      emit(WriteOrderError(e.toString()));
+      emit(WriteOrderError(_humanizeError(e)));
     }
   }
 
@@ -29,7 +41,7 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
         emit(WriteOrderError('Not found'));
       }
     } catch (e) {
-      emit(WriteOrderError(e.toString()));
+      emit(WriteOrderError(_humanizeError(e)));
     }
   }
 
@@ -62,6 +74,26 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
     try {
       final item = await ordersRepository.approveOrder(orderId, request);
       emit(OrderApproved(item));
+    } catch (e) {
+      emit(WriteOrderError(e.toString()));
+    }
+  }
+
+  Future<void> finalizeOrder(String orderId) async {
+    emit(WritingOrder());
+    try {
+      final item = await ordersRepository.finalizeOrder(orderId);
+      emit(OrderFinalized(item));
+    } catch (e) {
+      emit(WriteOrderError(e.toString()));
+    }
+  }
+
+  Future<void> reopenOrder(String orderId, OrderReopenRequest request) async {
+    emit(WritingOrder());
+    try {
+      final item = await ordersRepository.reopenOrder(orderId, request);
+      emit(OrderReopened(item));
     } catch (e) {
       emit(WriteOrderError(e.toString()));
     }

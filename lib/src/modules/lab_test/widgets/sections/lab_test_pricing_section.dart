@@ -70,8 +70,8 @@ class LabTestPricingSection extends StatelessWidget {
                           helperText: isAutoSum
                               ? 'Sumatoria automática de análisis'
                               : (controller.isPack
-                                  ? 'Tarifa personalizada (debe ser mayor a 0)'
-                                  : null),
+                                    ? 'Tarifa personalizada (debe ser mayor a 0)'
+                                    : null),
                           filled: isAutoSum,
                           fillColor: isAutoSum
                               ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
@@ -106,7 +106,8 @@ class LabTestPricingSection extends StatelessWidget {
                       child: TextFormField(
                         controller: controller.price2Controller,
                         decoration: InputDecoration(
-                          labelText: 'Precio Convenios / Nivel 2 (${NumberFormatter.currencySymbol})',
+                          labelText:
+                              'Precio Convenios / Nivel 2 (${NumberFormatter.currencySymbol})',
                           hintText: 'ej. 12.00',
                           prefixIcon: const Icon(Icons.handshake_outlined, size: 20),
                           helperText: 'Opcional (para aseguradoras o tarifas corporativas)',

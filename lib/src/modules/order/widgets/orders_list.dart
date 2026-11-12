@@ -11,6 +11,7 @@ import '../../../widgets/dialogs/viewers/patient_info_dialog.dart';
 import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 import '../../../widgets/dialogs/selectors/doctor_selection_dialog.dart';
 import 'supervisor_auth_dialog.dart';
+import 'reopen_order_dialog.dart';
 
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
@@ -31,64 +32,55 @@ class OrdersList extends StatelessWidget {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  Future<void> _handleOrderStatusToggle(
+  Future<void> _handleReopenOrder(
     BuildContext context,
     OrderInDb order,
-    bool isCompleted,
     String patientName,
   ) async {
-    if (!isCompleted) {
-      final confirmed = await ConfirmDeleteDialog.show(
-        context,
-        title: 'Completar Orden Médica',
-        message:
-            '¿Desea marcar esta orden como completada? Esta acción confirmará los resultados analíticos para su entrega.',
-        itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
-        confirmLabel: 'Marcar como Completada',
-        cancelLabel: 'Cancelar',
-        countdownSeconds: 5,
-        icon: Icons.task_alt_rounded,
-        confirmIcon: Icons.check_circle_rounded,
-        isDestructive: false,
-      );
-      if (confirmed && context.mounted) {
-        await context.read<WriteOrderCubit>().update(
-          order.id,
-          UpdateOrder(status: 'completed'),
-        );
-        if (context.mounted) {
-          context.read<ReadOrderCubit>().getAll();
-        }
-      }
-    } else {
-      final confirmed = await ConfirmDeleteDialog.show(
-        context,
-        title: 'Reabrir Orden Médica',
-        message:
-            '¿Desea reabrir esta orden? Pasará a estado de edición para permitir continuar registrando o corrigiendo resultados.',
-        itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
-        confirmLabel: 'Reabrir Orden',
-        cancelLabel: 'Cancelar',
-        countdownSeconds: 5,
-        icon: Icons.history_rounded,
-        confirmIcon: Icons.refresh_rounded,
-        isDestructive: false,
-      );
-      if (confirmed && context.mounted) {
-        await context.read<WriteOrderCubit>().update(
-          order.id,
-          UpdateOrder(status: 'pending'),
-        );
-        if (context.mounted) {
-          context.read<ReadOrderCubit>().getAll();
-        }
-      }
+    final reason = await ReopenOrderDialog.show(context, order);
+    if (reason == null || reason.trim().isEmpty || !context.mounted) return;
+
+    await context.read<WriteOrderCubit>().reopenOrder(
+      order.id,
+      OrderReopenRequest(reason: reason.trim()),
+    );
+    if (context.mounted) {
+      context.read<ReadOrderCubit>().getAll();
+    }
+  }
+
+  Future<void> _handleFinalizeOrder(
+    BuildContext context,
+    OrderInDb order,
+    String patientName,
+  ) async {
+    final confirmed = await ConfirmDeleteDialog.show(
+      context,
+      title: 'Finalizar Orden Médica',
+      message:
+          '¿Desea finalizar esta orden? Los resultados quedarán validados y la orden pasará a completada.',
+      itemName: 'Orden #${order.id} ($patientName - ${order.examName})',
+      confirmLabel: 'Finalizar Orden',
+      cancelLabel: 'Cancelar',
+      countdownSeconds: 0,
+      icon: Icons.task_alt_rounded,
+      confirmIcon: Icons.check_circle_rounded,
+      isDestructive: false,
+    );
+    if (!confirmed || !context.mounted) return;
+
+    await context.read<WriteOrderCubit>().finalizeOrder(order.id);
+    if (context.mounted) {
+      context.read<ReadOrderCubit>().getAll();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final session = context.read<AppSessionCubit?>();
+    final canManageClinical =
+        (session?.state.currentUser?.accessLevel ?? 0) >= 3;
 
     // Obtener pacientes para mapear los nombres si es posible
     final patientsState = context.watch<ReadPatientCubit>().state;
@@ -108,23 +100,29 @@ class OrdersList extends StatelessWidget {
         final patientName = order.patientInfo?.name ?? patientNames[order.patientId] ?? 'Paciente';
         final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
         final isFullyPaid = order.isFullyPaid;
-        final hasResults =
-            order.results.isNotEmpty &&
-            order.results.every((r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty);
+        final hasResults = order.hasAllResults;
         final hasAnyResult = order.results.any(
           (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
         );
-        final isCompleted = order.status == 'completed' ||
-            (order.isFullyPaid && hasResults);
+        final isInReview = order.isInReview;
+        final isCompleted = order.isCompleted;
+        final canReopen = isCompleted &&
+            order.results.isNotEmpty &&
+            !isBlocked &&
+            canManageClinical;
         final isPartiallyPaid = order.isPartiallyPaid;
         final showPayButton =
             !isFullyPaid &&
             order.status != 'cancelled';
         final canDelete = (order.status == 'pending' || isBlocked) &&
             order.status != 'completed' &&
+            !isInReview &&
             order.paidAmount == 0 &&
             !hasAnyResult;
-        final canEditOrder = order.paidAmount == 0 && !isCompleted && order.status != 'cancelled';
+        final canEditOrder = order.paidAmount == 0 &&
+            !isCompleted &&
+            !isInReview &&
+            order.status != 'cancelled';
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -141,48 +139,53 @@ class OrdersList extends StatelessWidget {
                 Tooltip(
                   message: isBlocked
                       ? 'Orden bloqueada'
-                      : (isCompleted
-                            ? 'Orden completada (clic para reabrir)'
-                            : 'Clic para marcar como completada'),
+                      : canReopen
+                      ? 'Orden completada (clic para reabrir)'
+                      : isCompleted
+                      ? 'Orden completada'
+                      : isInReview
+                      ? 'Orden en revisión: usa Finalizar Orden'
+                      : 'Pendiente de resultados',
                   child: InkWell(
                     borderRadius: BorderRadius.circular(24),
-                    onTap: isBlocked
-                        ? null
-                        : () => _handleOrderStatusToggle(
-                            context,
-                            order,
-                            isCompleted,
-                            patientName,
-                          ),
+                    onTap: canReopen
+                        ? () => _handleReopenOrder(context, order, patientName)
+                        : null,
                     child: CircleAvatar(
                       backgroundColor: isBlocked
                           ? Colors.red.shade100
-                          : (isCompleted
-                                ? Colors.green.shade100
-                                : isFullyPaid
-                                ? Colors.blue.shade100
-                                : hasResults
-                                ? Colors.amber.shade100
-                                : theme.colorScheme.primaryContainer),
+                          : isCompleted
+                          ? Colors.green.shade100
+                          : isInReview
+                          ? Colors.amber.shade100
+                          : isFullyPaid
+                          ? Colors.blue.shade100
+                          : hasResults
+                          ? Colors.purple.shade100
+                          : theme.colorScheme.primaryContainer,
                       foregroundColor: isBlocked
                           ? Colors.red.shade800
-                          : (isCompleted
-                                ? Colors.green.shade800
-                                : isFullyPaid
-                                ? Colors.blue.shade800
-                                : hasResults
-                                ? Colors.amber.shade900
-                                : theme.colorScheme.onPrimaryContainer),
+                          : isCompleted
+                          ? Colors.green.shade800
+                          : isInReview
+                          ? Colors.amber.shade900
+                          : isFullyPaid
+                          ? Colors.blue.shade800
+                          : hasResults
+                          ? Colors.purple.shade800
+                          : theme.colorScheme.onPrimaryContainer,
                       child: Icon(
                         isBlocked
                             ? Icons.lock
-                            : (isCompleted
-                                  ? Icons.check_circle
-                                  : isFullyPaid
-                                  ? Icons.paid
-                                  : hasResults
-                                  ? Icons.assignment_turned_in
-                                  : Icons.pending_actions),
+                            : isCompleted
+                            ? Icons.check_circle
+                            : isInReview
+                            ? Icons.fact_check_outlined
+                            : isFullyPaid
+                            ? Icons.paid
+                            : hasResults
+                            ? Icons.assignment_turned_in
+                            : Icons.pending_actions,
                       ),
                     ),
                   ),
@@ -409,34 +412,37 @@ class OrdersList extends StatelessWidget {
                           Tooltip(
                             message: isBlocked
                                 ? 'Orden bloqueada'
-                                : (isCompleted
-                                      ? 'Completada (clic para reabrir)'
-                                      : 'Clic para marcar como completada'),
+                                : canReopen
+                                ? 'Completada (clic para reabrir)'
+                                : isCompleted
+                                ? 'Completada'
+                                : isInReview
+                                ? 'En revisión: usa Finalizar Orden'
+                                : 'Pendiente de resultados',
                             child: InkWell(
                               borderRadius: BorderRadius.circular(4),
-                              onTap: isBlocked
-                                  ? null
-                                  : () => _handleOrderStatusToggle(
-                                      context,
-                                      order,
-                                      isCompleted,
-                                      patientName,
-                                    ),
+                              onTap: canReopen
+                                  ? () => _handleReopenOrder(context, order, patientName)
+                                  : null,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
                                   color: isCompleted
                                       ? Colors.green.shade50
-                                      : (hasResults
-                                            ? Colors.purple.shade50
-                                            : Colors.orange.shade50),
+                                      : isInReview
+                                      ? Colors.amber.shade50
+                                      : hasResults
+                                      ? Colors.purple.shade50
+                                      : Colors.orange.shade50,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: isCompleted
                                         ? Colors.green.shade200
-                                        : (hasResults
-                                              ? Colors.purple.shade200
-                                              : Colors.orange.shade200),
+                                        : isInReview
+                                        ? Colors.amber.shade300
+                                        : hasResults
+                                        ? Colors.purple.shade200
+                                        : Colors.orange.shade200,
                                   ),
                                 ),
                                 child: Row(
@@ -445,29 +451,39 @@ class OrdersList extends StatelessWidget {
                                     Icon(
                                       isCompleted
                                           ? Icons.check_circle
-                                          : (hasResults
-                                                ? Icons.check_circle_outline
-                                                : Icons.hourglass_top),
+                                          : isInReview
+                                          ? Icons.fact_check_outlined
+                                          : hasResults
+                                          ? Icons.check_circle_outline
+                                          : Icons.hourglass_top,
                                       size: 11,
                                       color: isCompleted
                                           ? Colors.green.shade800
-                                          : (hasResults
-                                                ? Colors.purple.shade800
-                                                : Colors.orange.shade900),
+                                          : isInReview
+                                          ? Colors.amber.shade900
+                                          : hasResults
+                                          ? Colors.purple.shade800
+                                          : Colors.orange.shade900,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       isCompleted
                                           ? 'ORDEN COMPLETADA'
-                                          : (hasResults ? 'RESULTADOS LISTOS' : 'PEND. RESULTADOS'),
+                                          : isInReview
+                                          ? 'EN REVISIÓN'
+                                          : hasResults
+                                          ? 'RESULTADOS LISTOS'
+                                          : 'PEND. RESULTADOS',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                         color: isCompleted
                                             ? Colors.green.shade800
-                                            : (hasResults
-                                                  ? Colors.purple.shade800
-                                                  : Colors.orange.shade900),
+                                            : isInReview
+                                            ? Colors.amber.shade900
+                                            : hasResults
+                                            ? Colors.purple.shade800
+                                            : Colors.orange.shade900,
                                       ),
                                     ),
                                   ],
@@ -475,6 +491,26 @@ class OrdersList extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (isInReview && !isBlocked && canManageClinical)
+                            FilledButton.tonalIcon(
+                              onPressed: () =>
+                                  _handleFinalizeOrder(context, order, patientName),
+                              icon: const Icon(Icons.task_alt_rounded, size: 14),
+                              label: const Text('Finalizar Orden'),
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                textStyle: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                backgroundColor: Colors.green.shade50,
+                                foregroundColor: Colors.green.shade800,
+                              ),
+                            ),
                           // Badge Financiero
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

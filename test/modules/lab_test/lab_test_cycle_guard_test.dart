@@ -114,16 +114,19 @@ void main() {
       );
     });
 
-    test('Ciclo indirecto transitivo: Pack C contiene a Pack B que contiene a Pack A; al editar Pack A, Pack C es bloqueado', () {
-      expect(
-        wouldCreateCycle(
-          currentPackId: 'pack_a',
-          candidate: packC,
-          testsById: testsById,
-        ),
-        isTrue,
-      );
-    });
+    test(
+      'Ciclo indirecto transitivo: Pack C contiene a Pack B que contiene a Pack A; al editar Pack A, Pack C es bloqueado',
+      () {
+        expect(
+          wouldCreateCycle(
+            currentPackId: 'pack_a',
+            candidate: packC,
+            testsById: testsById,
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('filterAvailableTestsForPack excluye Pack A, Pack B y Pack C al editar Pack A', () {
       final available = filterAvailableTestsForPack(

@@ -23,6 +23,7 @@ void main() {
       expect(controller.referenceValues.length, 1);
       expect(controller.referenceValues.first.minValue, 70.0);
       expect(controller.referenceValues.first.maxValue, 100.0);
+      expect(controller.referenceValues.first.ageUnit, 'years');
       expect(controller.qualitativeOptions, ['Negativo', 'Positivo']);
       expect(controller.expectedQualitativeValue, 'Negativo');
 
@@ -53,6 +54,9 @@ void main() {
             maxAgeDays: 36500,
             minValue: 74.0,
             maxValue: 106.0,
+            ageUnit: 'months',
+            useAge: true,
+            useGender: true,
           ),
         ],
         qualitativeOptions: [],
@@ -79,6 +83,11 @@ void main() {
       expect(controller.referenceText, 'Valores en ayunas');
       expect(controller.referenceValues.first.minValue, 74.0);
       expect(controller.referenceValues.first.maxValue, 106.0);
+      expect(controller.usesAge, isTrue);
+      expect(controller.usesGender, isTrue);
+      expect(controller.referenceValues.first.useAge, isTrue);
+      expect(controller.referenceValues.first.useGender, isTrue);
+      expect(controller.referenceValues.first.ageUnit, 'months');
 
       controller.dispose();
     });
@@ -216,6 +225,100 @@ void main() {
       controller.removeReferenceValueAt(0);
       expect(controller.referenceValues.length, 1);
       expect(controller.referenceValues[0].minValue, 65.0);
+
+      controller.dispose();
+    });
+
+    test('Activa y desactiva la evaluación por edad y género en todos los rangos', () {
+      final controller = LabTestFormViewController();
+      controller.addReferenceValue();
+
+      expect(controller.usesAge, isFalse);
+      expect(controller.usesGender, isFalse);
+
+      controller.setUseAge(true);
+      controller.setUseGender(true);
+
+      expect(controller.usesAge, isTrue);
+      expect(controller.usesGender, isTrue);
+      expect(
+        controller.referenceValues.every((ref) => ref.useAge && ref.useGender),
+        isTrue,
+      );
+
+      controller.setUseAge(false);
+      expect(controller.usesAge, isFalse);
+
+      controller.dispose();
+    });
+
+    test('setReferenceValues reemplaza la lista y addReferenceValue hereda flags', () {
+      final controller = LabTestFormViewController();
+
+      controller.setReferenceValues([
+        ReferenceValue(
+          patientType: 'general',
+          gender: 'both',
+          minAgeDays: 365,
+          maxAgeDays: 3650,
+          minValue: 10.0,
+          maxValue: 20.0,
+          ageUnit: 'years',
+          useAge: true,
+          useGender: true,
+        ),
+      ]);
+
+      expect(controller.referenceValues.length, 1);
+      expect(controller.referenceValues.first.minAgeDays, 365);
+      expect(controller.referenceValues.first.ageUnit, 'years');
+      expect(controller.usesAge, isTrue);
+      expect(controller.usesGender, isTrue);
+
+      controller.addReferenceValue();
+
+      expect(controller.referenceValues.length, 2);
+      expect(controller.referenceValues.last.ageUnit, 'years');
+      expect(controller.referenceValues.last.useAge, isTrue);
+      expect(controller.referenceValues.last.useGender, isTrue);
+      expect(controller.referenceValues.last.minAgeDays, 0);
+      expect(controller.referenceValues.last.maxAgeDays, 36500);
+
+      controller.dispose();
+    });
+
+    test('Detecta errores y advertencias en la configuración de rangos', () {
+      final controller = LabTestFormViewController();
+      controller.addReferenceValue();
+
+      controller.updateReferenceValue(
+        0,
+        controller.referenceValues[0].copyWith(
+          useAge: true,
+          minAgeDays: 365,
+          maxAgeDays: 100,
+        ),
+      );
+      expect(controller.referenceRangesError, isNotNull);
+
+      controller.updateReferenceValue(
+        0,
+        controller.referenceValues[0].copyWith(
+          useAge: false,
+          minAgeDays: 0,
+          maxAgeDays: 365,
+        ),
+      );
+      controller.updateReferenceValue(
+        1,
+        controller.referenceValues[1].copyWith(
+          useAge: false,
+          minAgeDays: 365,
+          maxAgeDays: 730,
+        ),
+      );
+      expect(controller.referenceRangesError, isNull);
+      expect(controller.referenceRangesWarning, isNotNull);
 
       controller.dispose();
     });

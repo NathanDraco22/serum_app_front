@@ -35,12 +35,15 @@ class PatientHistoryOrderCard extends StatelessWidget {
     switch (status.toLowerCase()) {
       case 'completed':
         return Colors.teal;
+      case 'in_review':
+        return Colors.amber.shade800;
       case 'published':
         return Colors.blue;
       case 'in_process':
         return Colors.orange;
       case 'paid':
-        return Colors.green;
+      case 'partiallypaid':
+      case 'partially_paid':
       case 'pending':
       default:
         return Colors.grey.shade700;
@@ -50,13 +53,16 @@ class PatientHistoryOrderCard extends StatelessWidget {
   String _getStatusLabel(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'Completada';
+        return 'Finalizada';
+      case 'in_review':
+        return 'En revisión';
       case 'published':
         return 'Publicada';
       case 'in_process':
         return 'En Proceso';
       case 'paid':
-        return 'Pagada';
+      case 'partiallypaid':
+      case 'partially_paid':
       case 'pending':
         return 'Pendiente';
       default:

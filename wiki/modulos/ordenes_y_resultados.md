@@ -2,7 +2,7 @@
 title: Módulos — Órdenes Médicas, Pagos y Resultados
 description: Especificación funcional del flujo clínico de órdenes de laboratorio, cobros en caja registradora y captura de resultados analíticos.
 tags: [orders, payments, clinical_results, pos, ui]
-timestamp: 2026-11-09T12:00:00Z
+timestamp: 2026-11-12T12:00:00Z
 ---
 
 # 📦 Órdenes Médicas, Pagos y Resultados (`order`)
@@ -115,6 +115,15 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
   - $\text{Resultado} < \text{minValue} \to$ Flag **`L`** (`BAJO ▼ (L)`).
   - Dentro de rango normal $\to$ Sin flag (`null` / badge verde `NORMAL`).
   - Pruebas cualitativas que difieren del esperado $\to$ Flag **`ABNORMAL`** (`ANORMAL`).
+- **Resolución demográfica centralizada (`ReferenceValueResolver`)**:
+  - La edad se calcula en **días exactos** desde `dateOfBirth`; para órdenes históricas se usa `order.createdAt` como fecha de referencia. Si no hay fecha de nacimiento, se usa `explicitAge * 365`.
+  - Solo se evalúan las dimensiones marcadas en cada `ReferenceValue`: `useAge` y `useGender`. Si `useAge = false` se ignora la edad; si `useGender = false` se ignora el género.
+  - Si varios rangos coinciden, gana el más específico (ambos flags > solo edad > solo género > rango general), con desempate por género exacto, mayor `minAgeDays` y rango más angosto.
+  - Si no hay rango aplicable, la tarjeta muestra **“Sin rango para esta edad/género”** y el badge pasa a **`SIN RANGO`**; no se calcula `H`/`L`.
+  - El mismo resolvedor se usa en el visor clínico, los PDFs y la app móvil para evitar inconsistencias entre pantalla e impresión.
+   - El visor y los PDFs recalculan la alerta con `ClinicalAlertEvaluator` a partir del valor actual y del rango resuelto; ignoran el `alertFlag` guardado y normalizan `NORMAL` como ausencia de alerta.
+   - Para pacientes con `dateOfBirth > 0` o `explicitAge != null`, la edad exacta en días se usa incluso cuando es `0` (recién nacidos). El respaldo `patientAge * 365` solo aplica cuando no existe ningún dato demográfico. La UI muestra `0 días` cuando corresponde.
+   - En resultados numéricos sin rango aplicable, la etiqueta principal es `Sin rango para esta edad/género`; si existe `referenceText`, se conserva como segunda línea explicativa en visor y PDF individual, sin sustituir la advertencia.
 
 #### 4. Captura de Parámetros de Texto Libre y Atajos Rápidos
 - **Campo Multilínea Amplio**: Para análisis descriptivos (`dataType: 'text'`), `ParameterCard` despliega un `TextFormField` multilínea (`minLines: 3`, `maxLines: null`, `textInputAction: TextInputAction.newline`) que ocupa el ancho completo disponible si no hay escala referencial.
@@ -127,6 +136,19 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
 - Las pruebas cualitativas inician con la primera opción de `qualitativeOptions` (normalmente `Negativo` o `No reactivo`) y se guardan con ese valor si el bioanalista no lo cambia. Es un comportamiento esperado para agilizar la captura de resultados negativos.
 - El bioanalista debe cambiar explícitamente la opción cuando el resultado sea positivo o anormal.
 - Si la primera opción no coincide con `expectedQualitativeValue`, la tarjeta puede mostrar `ANORMAL` desde el inicio; en ese caso se recomienda revisar el orden de `qualitativeOptions` o el valor esperado en el catálogo, no el flujo de captura.
+
+### C.2. Revisión y Finalización Explícita de la Orden (`in_review` → `completed`)
+
+Cuando el bioanalista guarda el último resultado pendiente, la orden **no se cierra automáticamente**: pasa al estado clínico `in_review`.
+
+- **Badge `EN REVISIÓN`**: se muestra en `OrdersList` con color ámbar.
+- **Botón `Finalizar Orden`**: aparece en la tarjeta de la orden cuando el estado es `in_review`, el usuario tiene `accessLevel >= 3` y la orden no está bloqueada. Abre una confirmación y llama a `POST /api/v1/orders/{id}/finalize`.
+- **Filtro `En revisión`**: disponible en `OrdersScreen` y en el historial del paciente.
+- **Edición**: mientras está en `in_review`, el botón de resultados abre el diálogo editable. Si se vacía un resultado y se guarda, la orden vuelve a `pending`.
+- **Reapertura**: en una orden `completed`, el avatar o badge de estado abre `ReopenOrderDialog`, que exige un motivo y llama a `POST /api/v1/orders/{id}/reopen`. La orden vuelve a `in_review` conservando pagos e historial.
+- **Permisos**: finalizar y reabrir requieren `accessLevel >= 3` (operador/bioanalista o superior).
+- **Independencia del pago**: el PDF clínico está disponible con resultados completos, esté pagada o no. El pago solo actualiza el badge financiero, el recibo y el Kardex.
+- **PDF clínico**: muestra `Estado: En revisión` mientras está en `in_review` y `Finalizado por: [nombre] — [fecha]` cuando está `completed`, tanto en el visor como en la plantilla PDF.
 
 ### D. Informes Clínicos y Sobres Físicos de Entrega
 - **Informe Clínico PDF y Visor en Pantalla (`ClinicalOrderViewer`, `SingleClinicalOrderTemplate` y `ClinicalOrderGrouper`)**:

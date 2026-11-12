@@ -64,7 +64,9 @@ class ParameterCard extends StatelessWidget {
     final presets = <String>[...defaultTextPresets];
     if (result.expectedQualitativeValue != null &&
         result.expectedQualitativeValue!.trim().isNotEmpty &&
-        !presets.any((p) => p.toLowerCase() == result.expectedQualitativeValue!.trim().toLowerCase())) {
+        !presets.any(
+          (p) => p.toLowerCase() == result.expectedQualitativeValue!.trim().toLowerCase(),
+        )) {
       presets.add(result.expectedQualitativeValue!.trim());
     }
     return presets;
@@ -128,12 +130,30 @@ class ParameterCard extends StatelessWidget {
 
     // Resolución de dependencias: se priorizan los valores explícitos o se consultan del controller
     final resolvedController = controller ?? activeController?.getController(result.labTestId);
-    final resolvedQualitativeValue = qualitativeValue ?? activeController?.getQualitativeValue(result.labTestId);
-    final resolvedShowInPrint = showInPrint ?? activeController?.isVisible(result.labTestId) ?? true;
-    final resolvedIsAutoCalculated = isAutoCalculated ?? activeController?.isAutoCalculated(result.labTestId) ?? false;
-    final resolvedFormulaDisplay = formulaDisplay ?? activeController?.getFormulaDisplay(result.labTestId);
+    final resolvedQualitativeValue =
+        qualitativeValue ?? activeController?.getQualitativeValue(result.labTestId);
+    final resolvedShowInPrint =
+        showInPrint ?? activeController?.isVisible(result.labTestId) ?? true;
+    final resolvedIsAutoCalculated =
+        isAutoCalculated ?? activeController?.isAutoCalculated(result.labTestId) ?? false;
+    final resolvedFormulaDisplay =
+        formulaDisplay ?? activeController?.getFormulaDisplay(result.labTestId);
     final resolvedAlert = alert ?? activeController?.getAlertFlag(result);
-    final resolvedIsAlert = isAlert ?? (activeController != null ? activeController.isAlert(result) : (resolvedAlert == 'H' || resolvedAlert == 'HIGH' || resolvedAlert == 'L' || resolvedAlert == 'LOW' || resolvedAlert == 'ABNORMAL'));
+    final resolvedIsAlert =
+        isAlert ??
+        (activeController != null
+            ? activeController.isAlert(result)
+            : (resolvedAlert == 'H' ||
+                  resolvedAlert == 'HIGH' ||
+                  resolvedAlert == 'L' ||
+                  resolvedAlert == 'LOW' ||
+                  resolvedAlert == 'ABNORMAL'));
+    final isNumeric = result.dataType == 'numeric';
+    final resolvedHasReference = isNumeric
+        ? (activeController != null
+              ? activeController.findReferenceResolutionForPatient(result).hasValue
+              : _fallbackGeneralReference() != null)
+        : result.referenceText.trim().isNotEmpty;
 
     final hasVal = _computeHasValue(
       resolvedController: resolvedController,
@@ -147,21 +167,20 @@ class ParameterCard extends StatelessWidget {
     final borderColor = !resolvedShowInPrint
         ? theme.colorScheme.outlineVariant.withValues(alpha: 0.5)
         : (resolvedIsAlert
-            ? Colors.red.shade300
-            : (isFocused
-                ? theme.colorScheme.primary.withValues(alpha: 0.85)
-                : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant)));
+              ? Colors.red.shade300
+              : (isFocused
+                    ? theme.colorScheme.primary.withValues(alpha: 0.85)
+                    : (isNormal ? Colors.green.shade200 : theme.colorScheme.outlineVariant)));
 
     final cardBg = !resolvedShowInPrint
         ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25)
         : (resolvedIsAlert
-            ? Colors.red.shade50.withValues(alpha: 0.3)
-            : (isFocused
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.12)
-                : theme.colorScheme.surfaceContainerLowest));
+              ? Colors.red.shade50.withValues(alpha: 0.3)
+              : (isFocused
+                    ? theme.colorScheme.primaryContainer.withValues(alpha: 0.12)
+                    : theme.colorScheme.surfaceContainerLowest));
 
-    final borderWidth =
-        (resolvedIsAlert && resolvedShowInPrint) || isFocused ? 1.4 : 1.0;
+    final borderWidth = (resolvedIsAlert && resolvedShowInPrint) || isFocused ? 1.4 : 1.0;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -186,7 +205,9 @@ class ParameterCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: !resolvedShowInPrint
                               ? theme.colorScheme.onSurfaceVariant
-                              : (resolvedIsAlert ? Colors.red.shade900 : theme.colorScheme.onSurface),
+                              : (resolvedIsAlert
+                                    ? Colors.red.shade900
+                                    : theme.colorScheme.onSurface),
                         ),
                       ),
                     ),
@@ -264,7 +285,13 @@ class ParameterCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              _buildStatusBadge(theme, resolvedAlert, hasVal),
+              _buildStatusBadge(
+                theme,
+                resolvedAlert,
+                hasVal,
+                isNumeric: isNumeric,
+                hasReference: resolvedHasReference,
+              ),
               const SizedBox(width: 4),
               IconButton(
                 visualDensity: VisualDensity.compact,
@@ -273,7 +300,9 @@ class ParameterCard extends StatelessWidget {
                 icon: Icon(
                   resolvedShowInPrint ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   size: 19,
-                  color: resolvedShowInPrint ? theme.colorScheme.primary : theme.colorScheme.outline,
+                  color: resolvedShowInPrint
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.outline,
                 ),
                 tooltip: resolvedShowInPrint
                     ? 'Visible en informe (clic para ocultar)'
@@ -304,7 +333,9 @@ class ParameterCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +344,9 @@ class ParameterCard extends StatelessWidget {
                         Text(
                           result.referenceText.isNotEmpty
                               ? 'ESCALA REFERENCIAL'
-                              : (result.dataType == 'numeric' ? 'VALOR REFERENCIAL' : 'VALOR ESPERADO'),
+                              : (result.dataType == 'numeric'
+                                    ? 'VALOR REFERENCIAL'
+                                    : 'VALOR ESPERADO'),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -378,7 +411,13 @@ class ParameterCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(ThemeData theme, String? resolvedAlert, bool hasVal) {
+  Widget _buildStatusBadge(
+    ThemeData theme,
+    String? resolvedAlert,
+    bool hasVal, {
+    required bool isNumeric,
+    required bool hasReference,
+  }) {
     if (resolvedAlert == 'HIGH' || resolvedAlert == 'H') {
       return ParameterBadgePill(
         label: 'ALTO ▲ (H)',
@@ -399,6 +438,18 @@ class ParameterCard extends StatelessWidget {
         bgColor: Colors.orange.shade50,
         textColor: Colors.orange.shade900,
         borderColor: Colors.orange.shade200,
+      );
+    } else if (hasVal && isNumeric && !hasReference && resolvedAlert == null) {
+      return ParameterBadgePill(
+        label: 'SIN RANGO',
+        icon: Icon(
+          Icons.help_outline_rounded,
+          size: 11,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        bgColor: theme.colorScheme.surfaceContainerHigh,
+        textColor: theme.colorScheme.onSurfaceVariant,
+        borderColor: theme.colorScheme.outlineVariant,
       );
     } else if (resolvedAlert == 'NORMAL' || hasVal) {
       return ParameterBadgePill(
@@ -422,26 +473,41 @@ class ParameterCard extends StatelessWidget {
   }
 
   String _getReferenceText(OrderResultsViewController? activeController) {
-    if (result.referenceText.isNotEmpty) {
-      return result.referenceText;
-    }
     if (result.dataType == 'numeric') {
-      final ref = activeController?.findReferenceValueForPatient(result) ??
-          (result.referenceValues.isNotEmpty ? result.referenceValues.first : null);
+      final resolution = activeController?.findReferenceResolutionForPatient(result);
+      final ref = activeController != null ? resolution?.value : _fallbackGeneralReference();
       if (ref != null) {
         final unit = result.unitOfMeasure.isNotEmpty ? ' ${result.unitOfMeasure}' : '';
         return '${ref.minValue} - ${ref.maxValue}$unit';
       }
-      return 'Sin rango definido';
-    } else if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
+
+      final message = activeController != null
+          ? (activeController.patientAgeInDays == null
+                ? 'Sin datos demográficos'
+                : 'Sin rango para esta edad/género')
+          : (result.referenceValues.isEmpty ? 'Sin rango definido' : 'Sin datos demográficos');
+      return result.referenceText.isNotEmpty ? '$message\n${result.referenceText}' : message;
+    }
+
+    if (result.referenceText.isNotEmpty) {
+      return result.referenceText;
+    }
+
+    if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
       return result.expectedQualitativeValue ?? 'No aplica';
     }
     return 'Texto descriptivo';
   }
 
+  ReferenceValue? _fallbackGeneralReference() {
+    if (result.referenceValues.isEmpty) return null;
+    final general = result.referenceValues.where((ref) => !ref.useAge && !ref.useGender).toList();
+    return general.length == 1 ? general.first : null;
+  }
+
   String _getAlertExplanation(String? resolvedAlert, OrderResultsViewController? activeController) {
-    final ref = activeController?.findReferenceValueForPatient(result) ??
-        (result.referenceValues.isNotEmpty ? result.referenceValues.first : null);
+    final resolution = activeController?.findReferenceResolutionForPatient(result);
+    final ref = activeController != null ? resolution?.value : _fallbackGeneralReference();
 
     if (resolvedAlert == 'HIGH' || resolvedAlert == 'H') {
       if (ref != null) {
@@ -487,7 +553,8 @@ class ParameterCard extends StatelessWidget {
           ),
         ),
         items: options.map((opt) {
-          final isAlertOpt = result.expectedQualitativeValue != null &&
+          final isAlertOpt =
+              result.expectedQualitativeValue != null &&
               result.expectedQualitativeValue!.isNotEmpty &&
               opt != result.expectedQualitativeValue;
 
@@ -604,9 +671,7 @@ class ParameterCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface,
+                        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
                       ),
                     ),
                     backgroundColor: isSelected
@@ -622,11 +687,11 @@ class ParameterCard extends StatelessWidget {
                     onPressed: isReadOnly
                         ? null
                         : () => _handlePresetText(
-                              preset: preset,
-                              resolvedController: resolvedController,
-                              resolvedOnNumericChanged: onNumericChanged,
-                              activeController: activeController,
-                            ),
+                            preset: preset,
+                            resolvedController: resolvedController,
+                            resolvedOnNumericChanged: onNumericChanged,
+                            activeController: activeController,
+                          ),
                   );
                 }),
               ],
@@ -655,7 +720,9 @@ class ParameterCard extends StatelessWidget {
         style: TextStyle(
           fontSize: 15.5,
           fontWeight: FontWeight.bold,
-          color: resolvedIsAlert && resolvedShowInPrint ? Colors.red.shade900 : theme.colorScheme.onSurface,
+          color: resolvedIsAlert && resolvedShowInPrint
+              ? Colors.red.shade900
+              : theme.colorScheme.onSurface,
         ),
         decoration: InputDecoration(
           hintText: '0.00',

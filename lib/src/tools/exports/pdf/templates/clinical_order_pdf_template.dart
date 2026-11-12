@@ -20,9 +20,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     PatientInfo? patientInfo,
     DoctorInfo? doctorInfo,
     BioanalystInfo? signer,
-  })  : patientInfo = patientInfo ?? order.patientInfo,
-        doctorInfo = doctorInfo ?? order.doctorInfo,
-        signer = signer ?? branch.bioanalyst;
+  }) : patientInfo = patientInfo ?? order.patientInfo,
+       doctorInfo = doctorInfo ?? order.doctorInfo,
+       signer = signer ?? branch.bioanalyst;
 
   int _calculateAge(int birthDateMs) {
     if (birthDateMs <= 0) return 0;
@@ -43,94 +43,143 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return gender;
   }
 
-  String _resolveReferenceText(OrderTestResult r, int patientAge, String gender) {
-    if (r.referenceText.trim().isNotEmpty) {
-      return r.referenceText.trim();
+  String _finalizationLabel() {
+    final name = order.finalizedBy?.name.trim();
+    if (order.finalizedAt == null) return 'Estado: Finalizada';
+    final date = DateTime.fromMillisecondsSinceEpoch(order.finalizedAt!);
+    final formatted = '${DateTimeTool.formatddMMyy(date)} ${DateTimeTool.formatHHmm(date)}';
+    if (name != null && name.isNotEmpty) {
+      return 'Finalizado por: $name — $formatted';
     }
-    if (r.dataType == 'numeric') {
-      if (r.referenceValues.isNotEmpty) {
-        final normalizedGender = gender.toLowerCase();
-        ReferenceValue? matchedRef;
-        for (final ref in r.referenceValues) {
-          final refGender = ref.gender.toLowerCase();
-          final matchesGender = refGender.isEmpty ||
-              refGender == 'both' ||
-              refGender == 'todos' ||
-              (refGender.startsWith('m') && normalizedGender.startsWith('m')) ||
-              (refGender.startsWith('f') && normalizedGender.startsWith('f'));
-
-          final ageDays = patientAge * 365;
-          final matchesAge = (ref.minAgeDays <= 0 || ageDays >= ref.minAgeDays) &&
-              (ref.maxAgeDays <= 0 || ageDays <= ref.maxAgeDays);
-
-          if (matchesGender && matchesAge) {
-            matchedRef = ref;
-            break;
-          }
-        }
-        matchedRef ??= r.referenceValues.first;
-        final unitSuffix = r.unitOfMeasure.isNotEmpty ? ' ${r.unitOfMeasure}' : '';
-        return '${matchedRef.minValue} - ${matchedRef.maxValue}$unitSuffix';
-      }
-      return '-';
-    } else if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
-      if (r.expectedQualitativeValue != null &&
-          r.expectedQualitativeValue!.isNotEmpty) {
-        return 'Esperado: ${r.expectedQualitativeValue}';
-      }
-      return 'Negativo';
-    } else {
-      if (r.expectedQualitativeValue != null &&
-          r.expectedQualitativeValue!.isNotEmpty) {
-        return r.expectedQualitativeValue!;
-      }
-      return '-';
-    }
+    return 'Finalizada — $formatted';
   }
 
-  String? _resolveAlertFlag(OrderTestResult r, int patientAge, String gender) {
-    if (r.alertFlag != null && r.alertFlag!.isNotEmpty) {
-      final flag = r.alertFlag!.toUpperCase();
-      if (flag == 'HIGH' || flag == 'ALTO' || flag == 'H') return 'H';
-      if (flag == 'LOW' || flag == 'BAJO' || flag == 'L') return 'L';
-      if (flag == 'ABNORMAL' || flag == 'ANORMAL') return '*';
-      return flag;
-    }
+  int? get _patientAgeInDays {
+    final patient =
+        patientInfo ??
+        PatientInfo(
+          name: 'Paciente #${order.patientId}',
+          dateOfBirth: 0,
+          gender: '',
+        );
+    return ReferenceValueResolver.tryAgeInDaysAt(
+      dateOfBirthMs: patient.dateOfBirth,
+      referenceDateMs: order.createdAt,
+      fallbackAgeYears: patient.explicitAge,
+    );
+  }
 
-    if (r.dataType == 'numeric' &&
-        r.resultValue != null &&
-        r.referenceValues.isNotEmpty) {
-      final numVal = ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue);
-      if (numVal != null) {
-        final normalizedGender = gender.toLowerCase();
-        ReferenceValue? matchedRef;
-        for (final ref in r.referenceValues) {
-          final refGender = ref.gender.toLowerCase();
-          final matchesGender = refGender.isEmpty ||
-              refGender == 'both' ||
-              refGender == 'todos' ||
-              (refGender.startsWith('m') && normalizedGender.startsWith('m')) ||
-              (refGender.startsWith('f') && normalizedGender.startsWith('f'));
+  /// Resuelve la edad en días usada para elegir el rango de referencia.
+  ///
+  /// Si el paciente no tiene fecha de nacimiento ni edad explícita, devuelve
+  /// `null`: no se debe asumir una edad ni aplicar rangos por edad/género.
+  static int? resolveReferenceAgeInDays({
+    required PatientInfo? patient,
+    required int? exactAgeInDays,
+  }) {
+    final hasAgeData = patient != null && (patient.dateOfBirth > 0 || patient.explicitAge != null);
+    return hasAgeData ? exactAgeInDays : null;
+  }
 
-          final ageDays = patientAge * 365;
-          final matchesAge = (ref.minAgeDays <= 0 || ageDays >= ref.minAgeDays) &&
-              (ref.maxAgeDays <= 0 || ageDays <= ref.maxAgeDays);
+  int? _referenceAgeInDays() {
+    return resolveReferenceAgeInDays(
+      patient: patientInfo,
+      exactAgeInDays: _patientAgeInDays,
+    );
+  }
 
-          if (matchesGender && matchesAge) {
-            matchedRef = ref;
-            break;
-          }
-        }
-        matchedRef ??= r.referenceValues.first;
-        if (numVal > matchedRef.maxValue) {
-          return 'H';
-        }
-        if (numVal < matchedRef.minValue) {
-          return 'L';
-        }
+  /// Construye la etiqueta principal de referencia para un resultado.
+  ///
+  /// En numéricos sin rango aplicable la advertencia tiene prioridad sobre
+  /// cualquier `referenceText`; el texto explicativo se conserva como segunda
+  /// línea para no perder la escala del catálogo.
+  static String resolveReferenceLabel({
+    required String dataType,
+    required String referenceText,
+    required String unitOfMeasure,
+    required String? expectedQualitativeValue,
+    required ReferenceValue? reference,
+    bool hasDemographics = true,
+  }) {
+    final customReference = referenceText.trim();
+
+    if (dataType == 'numeric') {
+      if (reference == null) {
+        final message = hasDemographics
+            ? 'Sin rango para esta edad/género'
+            : 'Sin datos demográficos';
+        return customReference.isNotEmpty ? '$message\n$customReference' : message;
       }
+      if (customReference.isNotEmpty) return customReference;
+      final unitSuffix = unitOfMeasure.isNotEmpty ? ' $unitOfMeasure' : '';
+      return '${reference.minValue} - ${reference.maxValue}$unitSuffix';
     }
-    return null;
+
+    if (customReference.isNotEmpty) return customReference;
+
+    if (dataType == 'qualitative' || dataType == 'boolean') {
+      if (expectedQualitativeValue != null && expectedQualitativeValue.isNotEmpty) {
+        return 'Esperado: $expectedQualitativeValue';
+      }
+      return 'Negativo';
+    }
+
+    if (expectedQualitativeValue != null && expectedQualitativeValue.isNotEmpty) {
+      return expectedQualitativeValue;
+    }
+    return '-';
+  }
+
+  bool get _hasDemographics =>
+      patientInfo != null && (patientInfo!.dateOfBirth > 0 || patientInfo!.explicitAge != null);
+
+  String _resolveReferenceText(OrderTestResult r, String gender) {
+    final reference = r.dataType == 'numeric'
+        ? ReferenceValueResolver.resolve(
+            values: r.referenceValues,
+            ageInDays: _referenceAgeInDays(),
+            gender: gender,
+          )
+        : null;
+
+    return resolveReferenceLabel(
+      dataType: r.dataType,
+      referenceText: r.referenceText,
+      unitOfMeasure: r.unitOfMeasure,
+      expectedQualitativeValue: r.expectedQualitativeValue,
+      reference: reference,
+      hasDemographics: _hasDemographics,
+    );
+  }
+
+  /// Evalúa la alerta de un resultado para el informe impreso.
+  ///
+  /// No consulta `result.alertFlag`: la alerta se recalcula con el valor actual
+  /// y el rango resuelto. `ABNORMAL` se representa con `*` en el PDF.
+  static String? resolveResultAlert({
+    required OrderTestResult result,
+    required ReferenceValue? reference,
+  }) {
+    final flag = ClinicalAlertEvaluator.evaluateResult(
+      dataType: result.dataType,
+      resultValue: result.resultValue,
+      expectedQualitativeValue: result.expectedQualitativeValue,
+      reference: reference,
+    );
+
+    return flag == 'ABNORMAL' ? '*' : flag;
+  }
+
+  String? _resolveAlertFlag(OrderTestResult r, String gender) {
+    final reference = r.dataType == 'numeric'
+        ? ReferenceValueResolver.resolve(
+            values: r.referenceValues,
+            ageInDays: _referenceAgeInDays(),
+            gender: gender,
+          )
+        : null;
+
+    return resolveResultAlert(result: r, reference: reference);
   }
 
   @override
@@ -199,14 +248,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       },
     );
 
-    final patient = patientInfo ??
+    final patient =
+        patientInfo ??
         PatientInfo(
           name: 'Paciente #${order.patientId}',
           dateOfBirth: 0,
-          gender: 'M',
+          gender: '',
         );
-    final patientAge =
-        patient.age > 0 ? patient.age : _calculateAge(patient.dateOfBirth);
+    final patientAge = patient.age > 0 ? patient.age : _calculateAge(patient.dateOfBirth);
     final genderStr = _formatGender(patient.gender);
 
     doc.addPage(
@@ -225,7 +274,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           return [
             _buildPatientAndDoctorInfo(patient, patientAge, genderStr),
             pw.SizedBox(height: 14),
-            _buildClinicalResultsSection(patientAge, patient.gender),
+            _buildClinicalResultsSection(patient.gender),
             pw.SizedBox(height: 20),
             _buildSignatureAndNotes(sealImage),
           ];
@@ -236,8 +285,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return doc;
   }
 
-  pw.Widget _buildHeader(
-      String formattedDate, pw.MemoryImage? headerImage, bool isIsoLogo) {
+  pw.Widget _buildHeader(String formattedDate, pw.MemoryImage? headerImage, bool isIsoLogo) {
     final shortId = order.id.length > 8
         ? order.id.substring(order.id.length - 8).toUpperCase()
         : order.id.toUpperCase();
@@ -260,30 +308,26 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                     if (branch.address.isNotEmpty)
                       pw.Text(
                         branch.address,
-                        style: const pw.TextStyle(
-                            fontSize: 8.5, color: PdfColors.grey700),
+                        style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                       ),
                     pw.Row(
                       children: [
                         if (branch.phone.isNotEmpty)
                           pw.Text(
                             'Tel: ${branch.phone}',
-                            style: const pw.TextStyle(
-                                fontSize: 8.5, color: PdfColors.grey700),
+                            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                           ),
                         if (branch.phone.isNotEmpty &&
                             branch.email != null &&
                             branch.email!.isNotEmpty)
                           pw.Text(
                             ' | ',
-                            style: const pw.TextStyle(
-                                fontSize: 8.5, color: PdfColors.grey500),
+                            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey500),
                           ),
                         if (branch.email != null && branch.email!.isNotEmpty)
                           pw.Text(
                             branch.email!,
-                            style: const pw.TextStyle(
-                                fontSize: 8.5, color: PdfColors.grey700),
+                            style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                           ),
                       ],
                     ),
@@ -315,20 +359,17 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                           if (branch.address.isNotEmpty)
                             pw.Text(
                               branch.address,
-                              style: const pw.TextStyle(
-                                  fontSize: 8.5, color: PdfColors.grey700),
+                              style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                             ),
                           if (branch.phone.isNotEmpty)
                             pw.Text(
                               'Teléfono: ${branch.phone}',
-                              style: const pw.TextStyle(
-                                  fontSize: 8.5, color: PdfColors.grey700),
+                              style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                             ),
                           if (branch.email != null && branch.email!.isNotEmpty)
                             pw.Text(
                               'Email: ${branch.email!}',
-                              style: const pw.TextStyle(
-                                  fontSize: 8.5, color: PdfColors.grey700),
+                              style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
                             ),
                         ],
                       ),
@@ -358,6 +399,16 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 'Fecha: $formattedDate',
                 style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
               ),
+              if (order.isInReview || order.status == 'completed') ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  order.isInReview ? 'Estado: En revisión' : _finalizationLabel(),
+                  style: const pw.TextStyle(
+                    fontSize: 8.5,
+                    color: PdfColors.grey700,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -371,6 +422,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     String genderStr,
   ) {
     final doctor = doctorInfo;
+    final patientAgeLabel = _hasDemographics && _patientAgeInDays == 0
+        ? '0 días'
+        : (patientAge > 0 ? '$patientAge años' : (_hasDemographics ? '0 días' : 'N/D'));
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -394,7 +448,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 _buildCompactInfoLine('Paciente:', patient.name, isBold: true),
                 _buildCompactInfoLine(
                   'Edad / Sexo:',
-                  '${patientAge > 0 ? '$patientAge años' : 'N/D'} | $genderStr',
+                  '$patientAgeLabel | $genderStr',
                 ),
                 if (patient.cardId != null && patient.cardId!.isNotEmpty)
                   _buildCompactInfoLine('Identificación:', patient.cardId!),
@@ -415,9 +469,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 ),
                 if (doctor != null && doctor.specialty.isNotEmpty)
                   _buildCompactInfoLine('Especialidad:', doctor.specialty),
-                if (doctor != null &&
-                    doctor.cardId != null &&
-                    doctor.cardId!.isNotEmpty)
+                if (doctor != null && doctor.cardId != null && doctor.cardId!.isNotEmpty)
                   _buildCompactInfoLine('Colegiatura:', doctor.cardId!),
               ],
             ),
@@ -427,8 +479,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     );
   }
 
-  pw.Widget _buildCompactInfoLine(String label, String value,
-      {bool isBold = false}) {
+  pw.Widget _buildCompactInfoLine(String label, String value, {bool isBold = false}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
       child: pw.Row(
@@ -455,15 +506,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     );
   }
 
-  pw.Widget _buildClinicalResultsSection(int patientAge, String gender) {
+  pw.Widget _buildClinicalResultsSection(String gender) {
     final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
-    final overallArea =
-        ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
+    final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
     pw.TableRow buildPdfTableRow(OrderTestResult r, bool hasGroupHeader) {
-      final alertFlag = _resolveAlertFlag(r, patientAge, gender);
+      final alertFlag = _resolveAlertFlag(r, gender);
       final hasAlert = alertFlag != null && alertFlag.isNotEmpty;
-      final refText = _resolveReferenceText(r, patientAge, gender);
+      final refText = _resolveReferenceText(r, gender);
       final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
       final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
       final double leftIndent = isSubParam
@@ -562,10 +612,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     }
 
     pw.Widget buildPdfTextResultBlock(OrderTestResult r, bool hasGroupHeader) {
-      final hasContent =
-          r.resultValue != null && r.resultValue!.trim().isNotEmpty;
+      final hasContent = r.resultValue != null && r.resultValue!.trim().isNotEmpty;
       final displayValue = hasContent ? r.resultValue!.trim() : '-';
-      final refText = _resolveReferenceText(r, patientAge, gender);
+      final refText = _resolveReferenceText(r, gender);
       final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
       final double leftIndent = isSubParam
           ? (hasGroupHeader ? 22.0 : 14.0)
@@ -591,12 +640,10 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             pw.SizedBox(height: 2),
             pw.Container(
               width: double.infinity,
-              padding:
-                  const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 6),
               decoration: pw.BoxDecoration(
                 color: PdfColor.fromHex('#F9FAFB'),
-                borderRadius:
-                    const pw.BorderRadius.all(pw.Radius.circular(2)),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
                 border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
               ),
               child: pw.Text(
@@ -736,9 +783,8 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
       for (final entry in study.subclassificationGroups.entries) {
         final groupTitle = entry.key;
         final items = entry.value;
-        final bool hasGroupHeader = groupTitle.isNotEmpty &&
-            groupTitle != study.studyTitle &&
-            groupTitle != overallArea;
+        final bool hasGroupHeader =
+            groupTitle.isNotEmpty && groupTitle != study.studyTitle && groupTitle != overallArea;
 
         final List<pw.Widget> groupWidgets = [];
         List<OrderTestResult> currentTabularChunk = [];
@@ -755,9 +801,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 2: const pw.FlexColumnWidth(1.3),
                 3: const pw.FlexColumnWidth(2.7),
               },
-              children: chunk
-                  .map((r) => buildPdfTableRow(r, hasGroupHeader))
-                  .toList(),
+              children: chunk.map((r) => buildPdfTableRow(r, hasGroupHeader)).toList(),
             ),
           );
         }
@@ -779,8 +823,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               if (hasGroupHeader) ...[
                 pw.Container(
                   width: double.infinity,
-                  padding:
-                      const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 5),
+                  padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 5),
                   margin: const pw.EdgeInsets.only(top: 4, bottom: 2),
                   decoration: pw.BoxDecoration(
                     color: PdfColor.fromHex('#F4F6F6'),
@@ -898,8 +941,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 color: PdfColors.black,
               ),
               pw.SizedBox(height: 4),
-              if (effectiveSigner != null &&
-                  effectiveSigner.name.trim().isNotEmpty) ...[
+              if (effectiveSigner != null && effectiveSigner.name.trim().isNotEmpty) ...[
                 pw.Text(
                   effectiveSigner.name.trim(),
                   style: pw.TextStyle(
@@ -927,13 +969,11 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
               ] else ...[
                 pw.Text(
                   'Responsable de Laboratorio',
-                  style: pw.TextStyle(
-                      fontSize: 9, fontWeight: pw.FontWeight.bold),
+                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.Text(
                   'Firma y Sello de Validación',
-                  style: const pw.TextStyle(
-                      fontSize: 8, color: PdfColors.grey600),
+                  style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
                 ),
               ],
             ],

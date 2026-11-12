@@ -2,7 +2,7 @@
 title: Módulos — Pruebas de Laboratorio y Packs
 description: Especificación funcional del catálogo unificado de análisis clínicos individuales y paquetes comerciales.
 tags: [lab_tests, packs, clinical, catalog, ui]
-timestamp: 2026-09-28T19:46:00Z
+timestamp: 2026-11-12T12:00:00Z
 ---
 
 # 🧪 Pruebas de Laboratorio y Packs (`lab_test`)
@@ -22,6 +22,7 @@ El módulo `lab_test` (`lib/src/modules/lab_test/`) gestiona el catálogo unific
   - `QuickCreateParameterDialog` (`widgets/quick_create_parameter_dialog.dart`): Diálogo modal ligero para registrar parámetros técnicos directamente dentro de un perfil en edición sin salir al catálogo comercial.
   - `PackTestSelector` (`widgets/pack_test_selector.dart`): Selector clínico ordenado alfabéticamente (A-Z) para configurar los análisis de un pack con comparador de precios y visor de subseries.
   - `ClinicalClassificationRegistry` (`widgets/clinical_classification_registry.dart`): Catálogo unificado de especialidades médicas (*Hematología*, *Química Sanguínea*, *Uroanálisis*, *Coprología*, etc.) y subseries mapeadas en cascada con soporte de personalización (+ Otra...).
+  - `ReferenceValuesEditor` (`widgets/reference_values_editor.dart`): Editor reutilizable de rangos de referencia numéricos, con switches de edad/género a nivel de prueba, unidad de edad única por rango (Días/Meses/Años) y validaciones compartidas.
 - **Cubits**:
   - `ReadLabTestCubit`: Estado de catálogo general.
   - `WriteLabTestCubit`: Creación y actualización de análisis/packs.
@@ -56,6 +57,14 @@ El diálogo permite configurar los tipos de resultados admitidos para cada anál
 1. **Numérico**: Con rangos mínimos y máximos clasificados por género (`male`, `female`, `both`) y grupos de edad.
 2. **Cualitativo**: Lista de opciones predefinidas (ej. "Negativo", "Positivo", "Indeterminado").
 3. **Texto Libre**: Para reportes patológicos o interpretaciones descriptivas.
+
+#### Evaluación por edad y género (`useAge` / `useGender`)
+- En la sección de rangos numéricos se muestran dos switches a nivel de prueba: **“Rangos por edad”** y **“Rangos por género”**. Ambos nacen apagados.
+- Al activarlos, todos los rangos de la prueba reciben `useAge = true` y/o `useGender = true`; el dato se guarda por cada `ReferenceValue` para que viaje en el snapshot de la orden.
+- **Edad**: cada rango selecciona una única unidad (**Días / Meses / Años**) que aplica a ambos límites y se almacena internamente en días (`minAgeDays` / `maxAgeDays`). Cambiar la unidad solo cambia la representación de los campos, nunca los días almacenados. Si el switch está apagado, los campos se ocultan y se muestra “Todas las edades”.
+- **Género**: si el switch está apagado, el dropdown se deshabilita y se muestra “Ambos”.
+- **Validaciones**: edad mínima ≤ edad máxima. Si la prueba tiene varios rangos y se desactiva “Rangos por edad” o “Rangos por género”, se muestra una advertencia de ambigüedad porque los rangos podrían entrar en conflicto.
+- **Detalle de la prueba**: los rangos se muestran con etiquetas legibles (“0 días - 1 mes”, “18 años - 120 años”, “Todas las edades”, “Ambos”).
 
 ### E. Orden Alfabético Estricto (A-Z)
 Todas las listas de pruebas, categorías, subclasificaciones y selectores de perfiles se ordenan alfabéticamente (A-Z) garantizando rapidez y predictibilidad al buscar estudios.
@@ -124,6 +133,10 @@ Dentro del módulo de importaciones del sistema (`ImportsScreen`), se dispone de
 - **Control de Sobrescritura de Precios (`overridePrice`)**:
   - Por defecto desactivado (`false`), garantizando que **las tarifas y precios de venta/costo configurados por el usuario se conserven 100% inalterados**.
   - Si el usuario activa el interruptor a `true`, la UI muestra un distintivo de advertencia (`PRECAUCIÓN`) y el diálogo modal de confirmación resalta en color ámbar que se aplicarán los precios base del archivo estático.
+- **Preservación de Rangos de Referencia (`preserveReferenceValues`)**:
+  - Activo por defecto (`true`). La sincronización actualiza nombres, categorías, subclasificaciones, opciones cualitativas y relaciones de packs, pero **no toca los `referenceValues` de las pruebas existentes**.
+  - Protege los rangos de edad/género, sus flags `useAge`/`useGender` y cualquier ajuste hecho desde la app.
+  - Si se desactiva, la UI muestra el distintivo `SOBRESCRIBE` y advierte que los rangos existentes serán reemplazados por los del archivo maestro.
 - **Entidades Actualizadas (`updateLabTest`)**:
   - Sincroniza metadatos clínicos (nombres, subclasificaciones, categorías analíticas, tipos de datos, opciones cualitativas, valores de referencia demográficos) y re-resuelve las dependencias hijas de los perfiles (`childTestIds`).
   - Pruebas o packs nuevos ausentes en la base de datos se crean limpiamente con sus cuentas comerciales asociadas (`LabTestAccount`).

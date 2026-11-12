@@ -12,14 +12,17 @@ class _FakeImportsDataSource extends Fake implements ImportsDataSource {
   UpdateImportResult? stubbedUpdateResult;
   bool? lastOverridePrice;
   bool? lastUpdateLabTest;
+  bool? lastPreserveReferenceValues;
 
   @override
   Future<Map<String, dynamic>> updateCatalog({
     bool overridePrice = false,
     bool updateLabTest = true,
+    bool preserveReferenceValues = true,
   }) async {
     lastOverridePrice = overridePrice;
     lastUpdateLabTest = updateLabTest;
+    lastPreserveReferenceValues = preserveReferenceValues;
 
     return stubbedUpdateResult?.toJson() ??
         {
@@ -31,6 +34,7 @@ class _FakeImportsDataSource extends Fake implements ImportsDataSource {
           'updatedAccountsCount': 10,
           'createdAccountsCount': 5,
           'skippedPricesCount': 230,
+          'preservedReferenceValuesCount': 230,
         };
   }
 
@@ -62,10 +66,10 @@ class _FakeBranchesDataSource extends Fake implements BranchesDataSource {
   }
 }
 
-class _MockAppSessionCubit extends Cubit<AppSessionState>
-    implements AppSessionCubit {
+class _MockAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCubit {
   _MockAppSessionCubit()
-      : super(AppSessionState(
+    : super(
+        AppSessionState(
           status: AppSessionStatus.authenticated,
           currentUser: UserInDb(
             id: 'admin-1',
@@ -76,7 +80,8 @@ class _MockAppSessionCubit extends Cubit<AppSessionState>
             branches: const ['ORIGIN_BRANCH'],
             createdAt: 1000,
           ),
-        ));
+        ),
+      );
 
   @override
   String get currentBranchId => 'ORIGIN_BRANCH';
@@ -99,41 +104,42 @@ void main() {
   });
 
   group('ImportsCubit - Actualización y Sincronización de Catálogo', () {
-    test('updateCatalog emite ImportsLoading y luego ImportsUpdateSuccess con precios preservados',
-        () async {
-      final cubit = ImportsCubit(importsRepository: importsRepo);
+    test(
+      'updateCatalog emite ImportsLoading y luego ImportsUpdateSuccess con precios preservados',
+      () async {
+        final cubit = ImportsCubit(importsRepository: importsRepo);
 
-      final futureExpect = expectLater(
-        cubit.stream,
-        emitsInOrder([
-          isA<ImportsLoading>(),
-          isA<ImportsUpdateSuccess>(),
-        ]),
-      );
+        final futureExpect = expectLater(
+          cubit.stream,
+          emitsInOrder([
+            isA<ImportsLoading>(),
+            isA<ImportsUpdateSuccess>(),
+          ]),
+        );
 
-      final result = await cubit.updateCatalog(
-        overridePrice: false,
-        updateLabTest: true,
-      );
+        final result = await cubit.updateCatalog(
+          overridePrice: false,
+          updateLabTest: true,
+        );
 
-      await futureExpect;
+        await futureExpect;
 
-      expect(result, isNotNull);
-      expect(result!.success, isTrue);
-      expect(result.totalProcessed, equals(254));
-      expect(result.updatedTestsCount, equals(230));
-      expect(result.skippedPricesCount, equals(230));
-      expect(fakeImportsDs.lastOverridePrice, isFalse);
-      expect(fakeImportsDs.lastUpdateLabTest, isTrue);
+        expect(result, isNotNull);
+        expect(result!.success, isTrue);
+        expect(result.totalProcessed, equals(254));
+        expect(result.updatedTestsCount, equals(230));
+        expect(result.skippedPricesCount, equals(230));
+        expect(fakeImportsDs.lastOverridePrice, isFalse);
+        expect(fakeImportsDs.lastUpdateLabTest, isTrue);
 
-      expect(cubit.state, isA<ImportsUpdateSuccess>());
-      expect((cubit.state as ImportsUpdateSuccess).result.updatedTestsCount, equals(230));
+        expect(cubit.state, isA<ImportsUpdateSuccess>());
+        expect((cubit.state as ImportsUpdateSuccess).result.updatedTestsCount, equals(230));
 
-      await cubit.close();
-    });
+        await cubit.close();
+      },
+    );
 
-    test('updateCatalog propaga overridePrice: true cuando se solicita',
-        () async {
+    test('updateCatalog propaga overridePrice: true cuando se solicita', () async {
       final cubit = ImportsCubit(importsRepository: importsRepo);
 
       await cubit.updateCatalog(
@@ -149,8 +155,9 @@ void main() {
   });
 
   group('CatalogUpdateCard Widget Tests', () {
-    testWidgets('Renderiza switches de configuración y ejecuta diálogo de confirmación',
-        (tester) async {
+    testWidgets('Renderiza switches de configuración y ejecuta diálogo de confirmación', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
 
       await tester.pumpWidget(
@@ -194,7 +201,10 @@ void main() {
 
       // Debe abrirse el diálogo de confirmación
       expect(find.text('Confirmar Sincronización'), findsOneWidget);
-      expect(find.textContaining('ADVERTENCIA: Has seleccionado sobrescribir precios'), findsOneWidget);
+      expect(
+        find.textContaining('ADVERTENCIA: Has seleccionado sobrescribir precios'),
+        findsOneWidget,
+      );
 
       // Confirmar en el diálogo
       final confirmBtn = find.widgetWithText(FilledButton, 'Iniciar Sincronización');
@@ -208,8 +218,7 @@ void main() {
   });
 
   group('ImportsScreen Integration with CatalogUpdateCard and Results', () {
-    testWidgets('Muestra KPIs detallados cuando el estado es ImportsUpdateSuccess',
-        (tester) async {
+    testWidgets('Muestra KPIs detallados cuando el estado es ImportsUpdateSuccess', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1000));
 
       final cubit = ImportsCubit(importsRepository: importsRepo);
@@ -236,17 +245,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Emular emisión de resultado de actualización
-      cubit.emit(const ImportsUpdateSuccess(
-        UpdateImportResult(
-          success: true,
-          message: 'Sincronización completada exitosamente',
-          totalProcessed: 254,
-          updatedTestsCount: 230,
-          createdTestsCount: 24,
-          updatedAccountsCount: 15,
-          skippedPricesCount: 230,
+      cubit.emit(
+        const ImportsUpdateSuccess(
+          UpdateImportResult(
+            success: true,
+            message: 'Sincronización completada exitosamente',
+            totalProcessed: 254,
+            updatedTestsCount: 230,
+            createdTestsCount: 24,
+            updatedAccountsCount: 15,
+            skippedPricesCount: 230,
+          ),
         ),
-      ));
+      );
 
       await tester.pumpAndSettle();
 

@@ -120,28 +120,31 @@ void main() {
       expect(repo.getAllCallsCount, 2);
     });
 
-    testWidgets('Muestra CircularProgressIndicator y queda deshabilitado en ReadLabTestRefreshing', (tester) async {
-      final refreshingState = ReadLabTestRefreshing.fromSuccess(ReadLabTestSuccess([sampleTest]));
+    testWidgets(
+      'Muestra CircularProgressIndicator y queda deshabilitado en ReadLabTestRefreshing',
+      (tester) async {
+        final refreshingState = ReadLabTestRefreshing.fromSuccess(ReadLabTestSuccess([sampleTest]));
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: MultiBlocProvider(
-              providers: [
-                BlocProvider<AppSessionCubit>.value(value: sessionCubit),
-                BlocProvider<ReadLabTestCubit>.value(value: readCubit),
-              ],
-              child: buildRefreshButton(refreshingState),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: MultiBlocProvider(
+                providers: [
+                  BlocProvider<AppSessionCubit>.value(value: sessionCubit),
+                  BlocProvider<ReadLabTestCubit>.value(value: readCubit),
+                ],
+                child: buildRefreshButton(refreshingState),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.byIcon(Icons.refresh_rounded), findsNothing);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byIcon(Icons.refresh_rounded), findsNothing);
 
-      final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-      expect(iconButton.onPressed, isNull);
-    });
+        final iconButton = tester.widget<IconButton>(find.byType(IconButton));
+        expect(iconButton.onPressed, isNull);
+      },
+    );
   });
 }

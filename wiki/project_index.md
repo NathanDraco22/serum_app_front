@@ -3,7 +3,7 @@ type: index
 title: Frontend — Mapa del Proyecto (Project Index)
 description: Mapa maestro y exhaustivo de la arquitectura de la aplicación Flutter, módulos, cubits, widgets, flujo de capas y responsabilidades funcionales.
 tags: [frontend, architecture, flutter, dart, bloc, cubit, index, map]
-timestamp: 2026-11-10T12:00:00Z
+timestamp: 2026-11-12T12:00:00Z
 ---
 
 # 🗺️ Project Index — Frontend (Serum App Flutter & LIS)
@@ -195,7 +195,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 * **Ubicación**: `lib/src/modules/lab_test/`
 * **Controladores**: `LabTestFormViewController`, `LabTestFormMediator`
 * **Vistas**: `view/lab_test_screen.dart`, `view/lab_test_form_screen.dart`
-* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/lab_test_quick_price_dialog.dart`, `widgets/pack_test_selector.dart`, `widgets/quick_create_parameter_dialog.dart`, `widgets/clinical_classification_registry.dart`, subsecciones en `widgets/sections/` (`lab_test_general_info_section.dart`, `lab_test_pricing_section.dart`, `lab_test_reference_values_section.dart`, `lab_test_pack_children_section.dart`)
+* **Widgets**: `widgets/lab_tests_list.dart`, `widgets/lab_test_detail_dialog.dart`, `widgets/lab_test_quick_price_dialog.dart`, `widgets/pack_test_selector.dart`, `widgets/quick_create_parameter_dialog.dart`, `widgets/clinical_classification_registry.dart`, `widgets/reference_values_editor.dart`, subsecciones en `widgets/sections/` (`lab_test_general_info_section.dart`, `lab_test_pricing_section.dart`, `lab_test_reference_values_section.dart`, `lab_test_pack_children_section.dart`)
 * **Cubits Asociados**: `ReadLabTestCubit`, `WriteLabTestCubit`, `SearchLabTestsCubit`
 * **Funciones Clave**:
   1. **Soporte Híbrido (Individuales vs Packs)**: Gestiona tanto pruebas analíticas individuales como paquetes comerciales (`isPack: true`) que agrupan múltiples análisis.
@@ -203,7 +203,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   3. **Mitigación de Ruido Visual en Catálogo**: Filtro *"Ocultar parámetros de perfil"* activo por defecto en `LabTestsScreen`, badge distintivo `PARÁMETRO` y exclusión de búsquedas comerciales de venta rápida para evitar saturar al cajero con parámetros internos.
   4. **Filtros por Doble Dropdown en Cascada**: Sustituye la lista de chips horizontales por dos selectores desplegables: *Clasificación General* (especialidades clínicas A-Z) y *Subclasificación* (subseries mapeadas reactivamente) con botón de 1-tap *"Limpiar filtros"*.
   5. **Selector Avanzado para Packs (`PackTestSelector`)**: Modal interactivo ordenado de la A a la Z que permite buscar, seleccionar múltiples pruebas y comparar el precio de lista sumado contra el precio de paquete asignado.
-  6. **Definición de Rangos y Valores de Referencia**: Permite configurar rangos por sexo y edad para valores numéricos, listas de opciones para valores cualitativos (ej. Positivo/Negativo) y formato de texto libre.
+  6. **Definición de Rangos y Valores de Referencia**: Permite configurar rangos por sexo y edad para valores numéricos con switches *“Rangos por edad”* / *“Rangos por género”* (`useAge` / `useGender`, por defecto `false`), captura de edades en Días/Meses/Años, listas de opciones para valores cualitativos (ej. Positivo/Negativo) y formato de texto libre.
   7. **Visor de Ficha Técnica (`LabTestDetailDialog`)**: Diálogo amplio para inspeccionar parámetros clínicos, metodología, subclasificación y desglose de análisis incluidos.
 
 ---
@@ -234,7 +234,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
   1. **Creación en Pantalla Completa y Dos Columnas (`CreateOrderScreen`)**: Interfaz dedicada (`/orders/new`) con catálogo interactivo de análisis y perfiles a la izquierda y panel de orden/carrito a la derecha.
   2. **Selectores Especializados (Pickers) para Paciente y Médico**: Diálogos con búsqueda debounced (`SearchFieldDebounced`) preparados para miles de registros, con tarjetas interactivas de asignación (`OrderPatientCard`, `OrderDoctorCard`).
   3. **Captura con Snapshot Inmutable**: Al crear una orden, congela una copia idéntica del paciente, precios de venta y parámetros de referencia vigentes en ese instante, protegiendo los registros históricos.
-  4. **Monitoreo de Estados**: Tarjetas de orden con insignias dinámicas según estado de flujo (`pending`, `sample_taken`, `in_process`, `completed`, `delivered`) y estado de pago (`unpaid`, `partially_paid`, `paid`).
+  4. **Monitoreo de Estados**: Tarjetas de orden con insignias dinámicas según estado clínico (`pending`, `in_review`, `completed`, `cancelled`) y estado financiero derivado de `paidAmount` (`unpaid`, `partiallyPaid`, `paid`). Las órdenes con todos los resultados pasan a `in_review`; el botón **Finalizar Orden** las cierra explícitamente y el badge de estado permite reabrirlas con motivo (nivel 3+).
   5. **Módulo de Cobro Integrado (`OrderPayDialog`)**:
      - Permite abonar o liquidar el saldo de la orden.
      - Permite seleccionar el método de pago (`cash`, `card`, `transfer`).
@@ -244,7 +244,7 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
      - **Resolución Canónica y Blindaje Contextual**: Reconoce códigos mnemónicos y alias textuales en español ordenados por longitud descendente; aísla por unidad y contexto biológico para evitar colisiones cruzadas (ej. descarta que `HbA1c` colisione con `HB` o que `EOS-SANG` contamine el diferencial porcentual).
      - **Transparencia y Control**: Despliega el badge visual `"Auto ⚡"` con tooltip explicativo de la fórmula, permitiendo la sobreescritura manual del bioanalista, limpieza automática ante insumos vaciados y restauración inteligente sin importar el orden de los parámetros al reabrir órdenes guardadas.
      - **Modularización**: Dividido en subwidgets especializados en `widgets/order_results_dialogs/` para máxima legibilidad y aislamiento.
-     - Compara automáticamente los valores numéricos contra los rangos de referencia demográficos del paciente y alerta visualmente si un resultado está fuera de límites.
+     - Compara automáticamente los valores numéricos contra los rangos de referencia demográficos del paciente usando `ReferenceValueResolver`: edad exacta en días desde `dateOfBirth` (o `order.createdAt` para órdenes históricas), flags `useAge`/`useGender` y selección del rango más específico. Si no hay rango aplicable, muestra `SIN RANGO` y no calcula `H`/`L`.
   7. **Emisión de Informes Clínicos y Sobres Físicos de Entrega**:
      - Emisión de informe oficial PDF A4 con membrete, subseries clínicas y alertas discretas `H`/`L`.
      - Rotulación directa de sobres físicos comerciales \#10 / Oficio ($10.5\text{ cm} \times 24.0\text{ cm}$) con alimentación vertical para la bandeja manual de la impresora, recuadro de atención con médico condicional (se oculta si es nulo), datos de paciente y pie de página con marco redondeado (ver especificación completa en **[Impresión de Sobres Clínicos](modulos/impresion_sobres_clinicos.md)**).

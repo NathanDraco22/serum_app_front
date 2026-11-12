@@ -69,8 +69,7 @@ void main() {
   });
 
   group('LabTestQuickPriceDialog', () {
-    testWidgets('renders current prices and test info accurately',
-        (tester) async {
+    testWidgets('renders current prices and test info accurately', (tester) async {
       final writeCubit = WriteLabTestCubit(labTestsRepository: repository);
 
       await tester.pumpWidget(
@@ -133,8 +132,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Modify price
-      final priceField =
-          find.widgetWithText(TextFormField, 'Precio 1 / Regular (C\$)');
+      final priceField = find.widgetWithText(TextFormField, 'Precio 1 / Regular (C\$)');
       expect(priceField, findsOneWidget);
 
       await tester.enterText(priceField, '195.50');
@@ -150,8 +148,9 @@ void main() {
       await writeCubit.close();
     });
 
-    testWidgets('renders pack options without assertion errors when isPack is true',
-        (tester) async {
+    testWidgets('renders pack options without assertion errors when isPack is true', (
+      tester,
+    ) async {
       final packTest = LabTestInDb(
         id: 'pack-201',
         name: 'Perfil Lipídico',

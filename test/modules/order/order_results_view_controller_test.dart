@@ -476,8 +476,9 @@ void main() {
         expect(updatedVcm.showInPrint, isFalse);
 
         final updateDto = controller.generateUpdateOrder();
-        // Como totalPrice == paidAmount (20000 == 20000), el nuevo estado es 'paid'
-        expect(updateDto.status, equals('paid'));
+        // El estado financiero lo calcula el backend a partir de paidAmount;
+        // el cliente ya no envía status en la actualización de resultados.
+        expect(updateDto.status, isNull);
         expect(updateDto.notes, equals('Muestra procesada correctamente.'));
         expect(updateDto.results?.length, equals(6));
 

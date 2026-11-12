@@ -140,12 +140,8 @@ class LabTestDetailDialog extends StatelessWidget {
                             value: priceFormatted,
                             icon: Icons.sell,
                             isHighlighted: true,
-                            tooltip: onEditPrice != null
-                                ? 'Tocar para modificar precio'
-                                : null,
-                            onTap: onEditPrice != null
-                                ? () => onEditPrice!(labTest)
-                                : null,
+                            tooltip: onEditPrice != null ? 'Tocar para modificar precio' : null,
+                            onTap: onEditPrice != null ? () => onEditPrice!(labTest) : null,
                           ),
                         ),
                         /* // Comentado temporalmente por requerimiento del cliente: Soporte Precio 2
@@ -304,30 +300,41 @@ class LabTestDetailDialog extends StatelessWidget {
                   children: const [
                     Padding(
                       padding: EdgeInsets.all(8),
-                      child: Text('Género', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      child: Text(
+                        'Género',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
                     Padding(
                       padding: EdgeInsets.all(8),
-                      child: Text('Rango Edad', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      child: Text(
+                        'Rango Edad',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
                     Padding(
                       padding: EdgeInsets.all(8),
-                      child: Text('Rango Normal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      child: Text(
+                        'Rango Normal',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
                 ...labTest.referenceValues.map((ref) {
                   final g = ref.gender.toLowerCase();
-                  final genderLabel = (g == 'male' || g == 'm')
+                  final genderLabel = !ref.useGender
+                      ? 'Ambos'
+                      : (g == 'male' || g == 'm')
                       ? 'Masculino'
                       : (g == 'female' || g == 'f')
-                          ? 'Femenino'
-                          : 'Ambos';
-                  final ageYearsMin = (ref.minAgeDays / 365).floor();
-                  final ageYearsMax = (ref.maxAgeDays / 365).floor();
-                  final ageLabel = ref.maxAgeDays >= 36500
-                      ? 'Todas las edades'
-                      : '$ageYearsMin - $ageYearsMax años';
+                      ? 'Femenino'
+                      : 'Ambos';
+                  final ageLabel = ReferenceValueResolver.formatAgeRange(
+                    ref.minAgeDays,
+                    ref.maxAgeDays,
+                    useAge: ref.useAge,
+                  );
 
                   return TableRow(
                     children: [
@@ -371,7 +378,10 @@ class LabTestDetailDialog extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text('Opciones posibles: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const Text(
+                      'Opciones posibles: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
                     Text(
                       labTest.qualitativeOptions.isNotEmpty
                           ? labTest.qualitativeOptions.join(', ')
@@ -383,7 +393,10 @@ class LabTestDetailDialog extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Text('Valor Normal Esperado: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const Text(
+                      'Valor Normal Esperado: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
                     Text(
                       labTest.expectedQualitativeValue ?? 'No definido',
                       style: TextStyle(
@@ -427,9 +440,7 @@ class LabTestDetailDialog extends StatelessWidget {
   Widget _buildPackContent(BuildContext context) {
     final theme = Theme.of(context);
 
-    final childTests = allLabTests
-        .where((t) => labTest.childTestIds.contains(t.id))
-        .toList();
+    final childTests = allLabTests.where((t) => labTest.childTestIds.contains(t.id)).toList();
 
     final individualSumCents = childTests.fold<int>(0, (sum, t) => sum + t.salePrice);
     final individualSum = individualSumCents / 100.0;
@@ -514,7 +525,8 @@ class LabTestDetailDialog extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: childTests.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: theme.colorScheme.outlineVariant),
+              separatorBuilder: (context, index) =>
+                  Divider(height: 1, color: theme.colorScheme.outlineVariant),
               itemBuilder: (context, index) {
                 final test = childTests[index];
                 final price = NumberFormatter.convertToMoneyLike(test.salePrice);
@@ -613,9 +625,7 @@ class _InfoTile extends StatelessWidget {
             Icon(
               Icons.edit_outlined,
               size: 16,
-              color: isHighlighted
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
+              color: isHighlighted ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
             ),
         ],
       ),

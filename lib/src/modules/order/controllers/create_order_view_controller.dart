@@ -130,6 +130,18 @@ class CreateOrderViewController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Refresca los datos demográficos del paciente ya seleccionado sin cambiar
+  /// su identidad. Se usa cuando el usuario corrige la fecha/edad desde la
+  /// pantalla de creación de la orden.
+  void updateSelectedPatientData(PatientInDb patient) {
+    if (_selectedPatient?.id != patient.id) {
+      selectPatient(patient);
+      return;
+    }
+    _selectedPatient = patient;
+    notifyListeners();
+  }
+
   void removePatient() {
     if (editingOrder != null && hasCapturedResults) return;
     if (_selectedPatient == null) return;
@@ -495,7 +507,7 @@ class CreateOrderViewController extends ChangeNotifier {
         address: _selectedPatient!.address ?? '',
         cardId: _selectedPatient!.cardId,
         email: _selectedPatient!.email,
-        age: _selectedPatient!.age,
+        age: _selectedPatient!.explicitAge,
       ),
       doctorInfo: _selectedDoctor != null
           ? DoctorInfo(
@@ -651,7 +663,7 @@ class CreateOrderViewController extends ChangeNotifier {
         address: _selectedPatient!.address ?? '',
         cardId: _selectedPatient!.cardId,
         email: _selectedPatient!.email,
-        age: _selectedPatient!.age,
+        age: _selectedPatient!.explicitAge,
       ),
       doctorInfo: _selectedDoctor != null
           ? DoctorInfo(

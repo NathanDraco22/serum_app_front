@@ -85,7 +85,7 @@ class ClinicalClassificationRegistry {
 
   static List<String> getSubclassificationsFor(String classification) {
     if (classification.trim().isEmpty) return ['General'];
-    
+
     // Buscar coincidencia exacta o por subcadena
     for (final entry in categoriesWithSubclassifications.entries) {
       if (entry.key.toLowerCase() == classification.trim().toLowerCase()) {

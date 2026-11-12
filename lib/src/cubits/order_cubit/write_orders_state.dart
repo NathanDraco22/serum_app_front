@@ -31,6 +31,14 @@ final class OrderApproved extends WriteOrderSuccess {
   OrderApproved(super.item);
 }
 
+final class OrderFinalized extends WriteOrderSuccess {
+  OrderFinalized(super.item);
+}
+
+final class OrderReopened extends WriteOrderSuccess {
+  OrderReopened(super.item);
+}
+
 final class WriteOrderError extends WriteOrderState {
   final String message;
   WriteOrderError(this.message);

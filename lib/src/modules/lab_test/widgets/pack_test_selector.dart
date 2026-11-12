@@ -145,11 +145,16 @@ class _PackTestSelectorState extends State<PackTestSelector> {
     if (test.dataType == 'numeric') {
       final unit = test.unitOfMeasure.isNotEmpty ? ' ${test.unitOfMeasure}' : '';
       if (test.referenceValues.isNotEmpty) {
+        if (test.referenceValues.length > 1) {
+          return 'Ref: ${test.referenceValues.length} rangos configurados';
+        }
         final ref = test.referenceValues.first;
-        final minStr =
-            ref.minValue % 1 == 0 ? ref.minValue.toInt().toString() : ref.minValue.toString();
-        final maxStr =
-            ref.maxValue % 1 == 0 ? ref.maxValue.toInt().toString() : ref.maxValue.toString();
+        final minStr = ref.minValue % 1 == 0
+            ? ref.minValue.toInt().toString()
+            : ref.minValue.toString();
+        final maxStr = ref.maxValue % 1 == 0
+            ? ref.maxValue.toInt().toString()
+            : ref.maxValue.toString();
         return 'Ref: $minStr - $maxStr$unit';
       }
       return 'Numérico${unit.isNotEmpty ? ' ($unit)' : ''}';
@@ -479,8 +484,10 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                         ),
                                       ),
                                       if (test.subclassification.isNotEmpty) ...[
-                                        const Text(' • ',
-                                            style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                        const Text(
+                                          ' • ',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                                        ),
                                         Text(
                                           test.subclassification,
                                           style: TextStyle(
@@ -642,7 +649,8 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                       ChoiceChip(
                         label: const Text('Todos', style: TextStyle(fontSize: 12)),
                         selected: _selectedTypeFilter == PackSelectorItemTypeFilter.all,
-                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.all),
+                        onSelected: (_) =>
+                            setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.all),
                         visualDensity: VisualDensity.compact,
                       ),
                       const SizedBox(width: 6),
@@ -656,7 +664,8 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                         ),
                         label: const Text('Perfiles', style: TextStyle(fontSize: 12)),
                         selected: _selectedTypeFilter == PackSelectorItemTypeFilter.packs,
-                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.packs),
+                        onSelected: (_) =>
+                            setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.packs),
                         visualDensity: VisualDensity.compact,
                       ),
                       const SizedBox(width: 6),
@@ -670,7 +679,9 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                         ),
                         label: const Text('Pruebas individuales', style: TextStyle(fontSize: 12)),
                         selected: _selectedTypeFilter == PackSelectorItemTypeFilter.individual,
-                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.individual),
+                        onSelected: (_) => setState(
+                          () => _selectedTypeFilter = PackSelectorItemTypeFilter.individual,
+                        ),
                         visualDensity: VisualDensity.compact,
                       ),
                       const SizedBox(width: 6),
@@ -684,7 +695,9 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                         ),
                         label: const Text('Parámetros', style: TextStyle(fontSize: 12)),
                         selected: _selectedTypeFilter == PackSelectorItemTypeFilter.parameters,
-                        onSelected: (_) => setState(() => _selectedTypeFilter = PackSelectorItemTypeFilter.parameters),
+                        onSelected: (_) => setState(
+                          () => _selectedTypeFilter = PackSelectorItemTypeFilter.parameters,
+                        ),
                         visualDensity: VisualDensity.compact,
                       ),
                     ],
@@ -722,7 +735,9 @@ class _PackTestSelectorState extends State<PackTestSelector> {
               children: [
                 Text(
                   'Mostrando ${filteredTests.length} de ${widget.availableTests.length} pruebas',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const Spacer(),
                 if (filteredTests.isNotEmpty)
@@ -846,8 +861,10 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                   ),
                                 ),
                                 if (test.subclassification.isNotEmpty) ...[
-                                  const Text(' • ',
-                                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                  const Text(
+                                    ' • ',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
                                   Text(
                                     test.subclassification,
                                     style: TextStyle(
@@ -858,8 +875,10 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                   ),
                                 ],
                                 if (test.unitOfMeasure.isNotEmpty) ...[
-                                  const Text(' • ',
-                                      style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                  const Text(
+                                    ' • ',
+                                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                                  ),
                                   Text(
                                     test.unitOfMeasure,
                                     style: TextStyle(
@@ -871,8 +890,7 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                 if (test.isPack) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                     decoration: BoxDecoration(
                                       color: theme.colorScheme.tertiaryContainer,
                                       borderRadius: BorderRadius.circular(4),
@@ -889,8 +907,7 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                                 ] else if (test.isProfileParameter) ...[
                                   const SizedBox(width: 6),
                                   Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                     decoration: BoxDecoration(
                                       color: theme.colorScheme.secondaryContainer,
                                       borderRadius: BorderRadius.circular(4),
@@ -955,7 +972,9 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                           ? Colors.green.shade50
                           : theme.colorScheme.surfaceContainerLowest,
                       border: Border.all(
-                        color: savings > 0 ? Colors.green.shade400 : theme.colorScheme.outlineVariant,
+                        color: savings > 0
+                            ? Colors.green.shade400
+                            : theme.colorScheme.outlineVariant,
                       ),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -966,19 +985,19 @@ class _PackTestSelectorState extends State<PackTestSelector> {
                           widget.useChildTestsPriceSum
                               ? 'Precio del Pack = Sumatoria: ${NumberFormatter.currencyFormat.format(packPrice)}'
                               : (savings > 0
-                                  ? 'Ahorro al cliente: ${NumberFormatter.currencyFormat.format(savings)}'
-                                  : 'Precio del Pack: ${NumberFormatter.currencyFormat.format(packPrice)}'),
+                                    ? 'Ahorro al cliente: ${NumberFormatter.currencyFormat.format(savings)}'
+                                    : 'Precio del Pack: ${NumberFormatter.currencyFormat.format(packPrice)}'),
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: widget.useChildTestsPriceSum
                                 ? theme.colorScheme.primary
-                                : (savings > 0
-                                    ? Colors.green.shade800
-                                    : theme.colorScheme.primary),
+                                : (savings > 0 ? Colors.green.shade800 : theme.colorScheme.primary),
                           ),
                         ),
-                        if (!widget.useChildTestsPriceSum && savings > 0 && totalIndividualPrice > 0)
+                        if (!widget.useChildTestsPriceSum &&
+                            savings > 0 &&
+                            totalIndividualPrice > 0)
                           Text(
                             '(${((savings / totalIndividualPrice) * 100).toStringAsFixed(1)}% descuento)',
                             style: TextStyle(

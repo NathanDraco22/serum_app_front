@@ -270,20 +270,17 @@ class _ImportsScaffold extends StatelessWidget {
                               const SizedBox(height: 24),
 
                               // 4. Estado de carga en progreso
-                              if (isLoading)
-                                _buildLoadingIndicator(context, theme, state),
+                              if (isLoading) _buildLoadingIndicator(context, theme, state),
 
                               // 5. Tarjetas de Resultados (KPIs)
                               if (state is ImportsSuccess)
                                 _buildResultsCard(context, theme, state.result),
 
                               if (state is ImportsUpdateSuccess)
-                                _buildUpdateResultsCard(
-                                    context, theme, state.result),
+                                _buildUpdateResultsCard(context, theme, state.result),
 
                               if (state is ImportsPricesSuccess)
-                                _buildPricesResultsCard(
-                                    context, theme, state.result),
+                                _buildPricesResultsCard(context, theme, state.result),
 
                               // 6. Tarjeta de Error
                               if (state is ImportsFailure)
@@ -365,8 +362,7 @@ class _ImportsScaffold extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.secondaryContainer
-                                  .withAlpha(120),
+                              color: theme.colorScheme.secondaryContainer.withAlpha(120),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -562,8 +558,7 @@ class _ImportsScaffold extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    state.message ??
-                        'Sincronizando información en la base de datos...',
+                    state.message ?? 'Sincronizando información en la base de datos...',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -795,6 +790,14 @@ class _ImportsScaffold extends StatelessWidget {
                       color: Colors.amber.shade800,
                       width: isCompact ? double.infinity : 170,
                     ),
+                    _buildKpiCard(
+                      theme,
+                      title: 'Rangos Preservados',
+                      value: result.preservedReferenceValuesCount.toString(),
+                      icon: Icons.rule_rounded,
+                      color: Colors.indigo,
+                      width: isCompact ? double.infinity : 170,
+                    ),
                   ],
                 );
               },
@@ -848,8 +851,7 @@ class _ImportsScaffold extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.close_rounded, size: 20),
                             tooltip: 'Cerrar resumen',
-                            onPressed: () =>
-                                context.read<ImportsCubit>().reset(),
+                            onPressed: () => context.read<ImportsCubit>().reset(),
                           ),
                         ],
                       ),
@@ -877,13 +879,9 @@ class _ImportsScaffold extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    result.mustOverridePrice
-                        ? Icons.edit_note_rounded
-                        : Icons.add_task_rounded,
+                    result.mustOverridePrice ? Icons.edit_note_rounded : Icons.add_task_rounded,
                     size: 16,
-                    color: result.mustOverridePrice
-                        ? Colors.amber.shade900
-                        : Colors.blue.shade800,
+                    color: result.mustOverridePrice ? Colors.amber.shade900 : Colors.blue.shade800,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -1024,8 +1022,7 @@ class _ImportsScaffold extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            Icon(Icons.error_outline_rounded,
-                color: theme.colorScheme.error, size: 28),
+            Icon(Icons.error_outline_rounded, color: theme.colorScheme.error, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -1089,8 +1086,7 @@ class _ImportsScaffold extends StatelessWidget {
               child: _buildUpcomingCard(
                 theme,
                 title: 'Importación de Médicos Referentes',
-                description:
-                    'Directorio de médicos, números de colegiatura y convenios clínicos.',
+                description: 'Directorio de médicos, números de colegiatura y convenios clínicos.',
                 icon: Icons.local_hospital_outlined,
               ),
             ),
@@ -1138,8 +1134,7 @@ class _ImportsScaffold extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(4),

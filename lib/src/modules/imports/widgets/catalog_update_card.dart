@@ -18,6 +18,7 @@ class CatalogUpdateCard extends StatefulWidget {
 class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
   bool _overridePrice = false;
   bool _updateLabTest = true;
+  bool _preserveReferenceValues = true;
 
   void _confirmAndExecute() {
     if (!_updateLabTest) {
@@ -58,57 +59,86 @@ class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                if (!_overridePrice) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withAlpha(25),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.green.withAlpha(80)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.shield_outlined, color: Colors.green, size: 22),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Protección de Tarifas Activa: Se actualizarán nombres, subclasificaciones, valores de referencia y relaciones de perfiles. Los precios de venta y costo de tu laboratorio NO serán modificados.',
-                            style: theme.textTheme.bodySmall?.copyWith(color: Colors.green.shade900),
-                          ),
-                        ),
-                      ],
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _preserveReferenceValues
+                        ? Colors.green.withAlpha(25)
+                        : Colors.amber.withAlpha(25),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _preserveReferenceValues
+                          ? Colors.green.withAlpha(80)
+                          : Colors.amber.withAlpha(120),
                     ),
                   ),
-                ] else ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.withAlpha(25),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.amber.withAlpha(120)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 22),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'ADVERTENCIA: Has seleccionado sobrescribir precios. Los precios personalizados de tu laboratorio serán reemplazados por las tarifas base del archivo estático.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.amber.shade900,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        _preserveReferenceValues
+                            ? Icons.shield_outlined
+                            : Icons.warning_amber_rounded,
+                        color: _preserveReferenceValues ? Colors.green : Colors.amber.shade900,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _preserveReferenceValues
+                              ? 'Rangos de referencia protegidos: se actualizarán nombres, categorías, subclasificaciones, opciones cualitativas y relaciones de perfiles. Los rangos de edad/género y sus flags NO serán modificados.'
+                              : 'ADVERTENCIA: los rangos de referencia existentes serán reemplazados por los del archivo maestro. Se perderán los ajustes de edad/género y sus flags.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: _preserveReferenceValues
+                                ? Colors.green.shade900
+                                : Colors.amber.shade900,
+                            fontWeight: _preserveReferenceValues
+                                ? FontWeight.normal
+                                : FontWeight.w600,
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _overridePrice ? Colors.amber.withAlpha(25) : Colors.green.withAlpha(25),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _overridePrice
+                          ? Colors.amber.withAlpha(120)
+                          : Colors.green.withAlpha(80),
                     ),
                   ),
-                ],
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        _overridePrice ? Icons.warning_amber_rounded : Icons.shield_outlined,
+                        color: _overridePrice ? Colors.amber.shade900 : Colors.green,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _overridePrice
+                              ? 'ADVERTENCIA: Has seleccionado sobrescribir precios. Los precios personalizados de tu laboratorio serán reemplazados por las tarifas base del archivo estático.'
+                              : 'Protección de Tarifas Activa: Los precios de venta y costo de tu laboratorio NO serán modificados.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: _overridePrice ? Colors.amber.shade900 : Colors.green.shade900,
+                            fontWeight: _overridePrice ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Text(
-                  'Las pruebas o perfiles nuevos que no existían en tu base de datos se crearán automáticamente.',
+                  'Las pruebas o perfiles nuevos que no existían en tu base de datos se crearán automáticamente con los valores del archivo maestro.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -137,6 +167,7 @@ class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
         cubit.updateCatalog(
           overridePrice: _overridePrice,
           updateLabTest: _updateLabTest,
+          preserveReferenceValues: _preserveReferenceValues,
         );
       }
     });
@@ -245,15 +276,64 @@ class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               subtitle: Text(
-                'Sincroniza nombres, subclasificaciones clínicas, opciones cualitativas, valores de referencia y dependencias de packs.',
+                'Sincroniza nombres, subclasificaciones clínicas, opciones cualitativas y dependencias de packs.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               value: _updateLabTest,
+              onChanged: widget.isLoading ? null : (val) => setState(() => _updateLabTest = val),
+            ),
+
+            const SizedBox(height: 6),
+
+            // Switch: Preservar rangos de referencia
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Preservar rangos de referencia personalizados (preserveReferenceValues)',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                  ),
+                  if (!_preserveReferenceValues) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'SOBRESCRIBE',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              subtitle: Text(
+                _preserveReferenceValues
+                    ? 'Recomendado: mantiene intactos los rangos de edad/género y sus flags. Solo se actualiza la estructura clínica.'
+                    : 'ADVERTENCIA: los rangos de referencia existentes serán reemplazados por los del archivo maestro. Se perderán los ajustes de edad/género.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: _preserveReferenceValues
+                      ? theme.colorScheme.onSurfaceVariant
+                      : Colors.amber.shade900,
+                  fontWeight: _preserveReferenceValues ? FontWeight.normal : FontWeight.w500,
+                ),
+              ),
+              value: _preserveReferenceValues,
+              activeTrackColor: Colors.amber.shade900,
               onChanged: widget.isLoading
                   ? null
-                  : (val) => setState(() => _updateLabTest = val),
+                  : (val) => setState(() => _preserveReferenceValues = val),
             ),
 
             const SizedBox(height: 6),
@@ -299,9 +379,7 @@ class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
               ),
               value: _overridePrice,
               activeTrackColor: Colors.amber.shade900,
-              onChanged: widget.isLoading
-                  ? null
-                  : (val) => setState(() => _overridePrice = val),
+              onChanged: widget.isLoading ? null : (val) => setState(() => _overridePrice = val),
             ),
 
             const SizedBox(height: 16),
@@ -310,35 +388,59 @@ class _CatalogUpdateCardState extends State<CatalogUpdateCard> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _overridePrice
+                color: (_overridePrice || !_preserveReferenceValues)
                     ? Colors.amber.withAlpha(20)
                     : theme.colorScheme.surfaceContainerHighest.withAlpha(100),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: _overridePrice
+                  color: (_overridePrice || !_preserveReferenceValues)
                       ? Colors.amber.withAlpha(100)
                       : theme.colorScheme.outlineVariant.withAlpha(80),
                 ),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    _overridePrice ? Icons.info_outline_rounded : Icons.lock_outline_rounded,
-                    color: _overridePrice ? Colors.amber.shade900 : theme.colorScheme.primary,
+                    (_overridePrice || !_preserveReferenceValues)
+                        ? Icons.info_outline_rounded
+                        : Icons.lock_outline_rounded,
+                    color: (_overridePrice || !_preserveReferenceValues)
+                        ? Colors.amber.shade900
+                        : theme.colorScheme.primary,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      _overridePrice
-                          ? 'Se actualizarán metadatos Y precios base del catálogo maestro.'
-                          : 'Tus precios actuales están protegidos. Solo se sincronizará la estructura clínica.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: _overridePrice
-                            ? Colors.amber.shade900
-                            : theme.colorScheme.onSurfaceVariant,
-                        fontWeight: _overridePrice ? FontWeight.w600 : FontWeight.normal,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _preserveReferenceValues
+                              ? 'Rangos de referencia actuales protegidos.'
+                              : 'Los rangos de referencia serán reemplazados por los del maestro.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: !_preserveReferenceValues
+                                ? Colors.amber.shade900
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: !_preserveReferenceValues
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _overridePrice
+                              ? 'Se actualizarán metadatos Y precios base del catálogo maestro.'
+                              : 'Tus precios actuales están protegidos. Solo se sincronizará la estructura clínica.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: _overridePrice
+                                ? Colors.amber.shade900
+                                : theme.colorScheme.onSurfaceVariant,
+                            fontWeight: _overridePrice ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

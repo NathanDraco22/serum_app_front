@@ -69,7 +69,7 @@ class _Body extends StatefulWidget {
 
 class _BodyState extends State<_Body> {
   final TextEditingController _searchController = TextEditingController();
-  String _filterStatus = 'all'; // 'all', 'pending', 'paid', 'completed'
+  String _filterStatus = 'all'; // 'all', 'pending', 'in_review', 'paid', 'completed'
 
   @override
   void dispose() {
@@ -144,8 +144,7 @@ class _BodyState extends State<_Body> {
   }
 
   bool _isCompleted(OrderInDb order) {
-    return order.status == 'completed' ||
-        (order.isFullyPaid && _hasAllResults(order));
+    return order.isCompleted;
   }
 
   bool _isPaidAwaitingResults(OrderInDb order) {
@@ -158,11 +157,16 @@ class _BodyState extends State<_Body> {
     return baseList.where((order) {
       // 1. Filtro por Estado
       final isCompleted = _isCompleted(order);
+      final isInReview = order.isInReview;
       final isPaidAwaitingResults = _isPaidAwaitingResults(order);
 
       if (_filterStatus == 'pending') {
         // Aún pendiente de pago o en proceso sin completarse
-        if (isCompleted || isPaidAwaitingResults) {
+        if (isCompleted || isInReview || isPaidAwaitingResults) {
+          return false;
+        }
+      } else if (_filterStatus == 'in_review') {
+        if (!isInReview) {
           return false;
         }
       } else if (_filterStatus == 'paid') {
@@ -171,7 +175,7 @@ class _BodyState extends State<_Body> {
           return false;
         }
       } else if (_filterStatus == 'completed') {
-        // Completada: resultados listos
+        // Finalizada explícitamente
         if (!isCompleted) {
           return false;
         }
@@ -217,7 +221,21 @@ class _BodyState extends State<_Body> {
           );
         } else if (state is OrderUpdated) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Orden actualizada con éxito')),
+            SnackBar(
+              content: Text(
+                state.item.isInReview
+                    ? 'Resultados completos. La orden quedó en revisión.'
+                    : 'Orden actualizada con éxito',
+              ),
+            ),
+          );
+        } else if (state is OrderFinalized) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Orden finalizada con éxito')),
+          );
+        } else if (state is OrderReopened) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Orden reabierta para corrección')),
           );
         } else if (state is OrderDeleted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -246,8 +264,10 @@ class _BodyState extends State<_Body> {
 
           final totalCount = allOrders.length;
           final completedCount = allOrders.where(_isCompleted).length;
+          final inReviewCount = allOrders.where((o) => o.isInReview).length;
           final paidCount = allOrders.where(_isPaidAwaitingResults).length;
-          final pendingCount = totalCount - completedCount - paidCount;
+          final pendingCount =
+              totalCount - completedCount - inReviewCount - paidCount;
 
           final filteredOrders = _applyFilters(allOrders, patientNames);
 
@@ -303,6 +323,12 @@ class _BodyState extends State<_Body> {
                           label: 'Pendientes',
                           count: pendingCount,
                           color: Colors.orange.shade700,
+                        ),
+                        const SizedBox(width: 8),
+                        _KpiBadge(
+                          label: 'En revisión',
+                          count: inReviewCount,
+                          color: Colors.amber.shade800,
                         ),
                         const SizedBox(width: 8),
                         _KpiBadge(
@@ -404,12 +430,16 @@ class _BodyState extends State<_Body> {
                                 child: Text('Pendientes de pago/proceso'),
                               ),
                               DropdownMenuItem(
+                                value: 'in_review',
+                                child: Text('En revisión (por finalizar)'),
+                              ),
+                              DropdownMenuItem(
                                 value: 'paid',
                                 child: Text('Pagadas (por adelantado)'),
                               ),
                               DropdownMenuItem(
                                 value: 'completed',
-                                child: Text('Completadas (con resultados)'),
+                                child: Text('Finalizadas'),
                               ),
                             ],
                             onChanged: (val) {
@@ -441,13 +471,19 @@ class _BodyState extends State<_Body> {
                           ),
                           const SizedBox(width: 6),
                           _StatusFilterChip(
+                            label: 'En revisión ($inReviewCount)',
+                            isSelected: _filterStatus == 'in_review',
+                            onSelected: () => setState(() => _filterStatus = 'in_review'),
+                          ),
+                          const SizedBox(width: 6),
+                          _StatusFilterChip(
                             label: 'Pagadas ($paidCount)',
                             isSelected: _filterStatus == 'paid',
                             onSelected: () => setState(() => _filterStatus = 'paid'),
                           ),
                           const SizedBox(width: 6),
                           _StatusFilterChip(
-                            label: 'Completadas ($completedCount)',
+                            label: 'Finalizadas ($completedCount)',
                             isSelected: _filterStatus == 'completed',
                             onSelected: () => setState(() => _filterStatus = 'completed'),
                           ),

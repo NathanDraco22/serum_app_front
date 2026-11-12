@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
+import '../controllers/reference_values_validator.dart';
 import 'clinical_classification_registry.dart';
+import 'reference_values_editor.dart';
 
 class QuickCreateParameterDialog extends StatefulWidget {
   final String initialCategory;
@@ -70,11 +72,12 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
   late TextEditingController _nameController;
   late TextEditingController _codeController;
   late TextEditingController _unitController;
-  late TextEditingController _minValueController;
-  late TextEditingController _maxValueController;
   late TextEditingController _qualitativeOptionsController;
   late TextEditingController _referenceTextController;
   late TextEditingController _customSubclassController;
+
+  late List<ReferenceValue> _referenceValues;
+  bool _referenceRangesExpanded = false;
 
   late List<String> _qualitativeOptions;
   late String _expectedQualitativeValue;
@@ -138,19 +141,23 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
       _codeController = TextEditingController(text: p.code ?? '');
       _unitController = TextEditingController(text: p.unitOfMeasure);
 
-      final firstRef = p.referenceValues.isNotEmpty ? p.referenceValues.first : null;
-      _minValueController = TextEditingController(
-        text: firstRef != null ? firstRef.minValue.toString() : '0',
-      );
-      _maxValueController = TextEditingController(
-        text: firstRef != null ? firstRef.maxValue.toString() : '100',
-      );
+      if (_dataType == 'numeric') {
+        _referenceValues = p.referenceValues.isNotEmpty
+            ? List<ReferenceValue>.of(p.referenceValues)
+            : [_defaultReferenceValue()];
+        // En edición, los rangos existentes se muestran colapsados para
+        // priorizar los datos generales del parámetro.
+        _referenceRangesExpanded = p.referenceValues.isEmpty;
+      } else {
+        _referenceValues = <ReferenceValue>[];
+        _referenceRangesExpanded = false;
+      }
 
       _qualitativeOptions = p.qualitativeOptions.isNotEmpty
           ? List.from(p.qualitativeOptions)
           : ['Negativo', 'Positivo'];
-      _expectedQualitativeValue = (p.expectedQualitativeValue != null &&
-              p.expectedQualitativeValue!.trim().isNotEmpty)
+      _expectedQualitativeValue =
+          (p.expectedQualitativeValue != null && p.expectedQualitativeValue!.trim().isNotEmpty)
           ? p.expectedQualitativeValue!.trim()
           : (_qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : 'Negativo');
       _qualitativeOptionsController = TextEditingController(
@@ -184,8 +191,8 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
       _nameController = TextEditingController();
       _codeController = TextEditingController();
       _unitController = TextEditingController(text: 'mg/dL');
-      _minValueController = TextEditingController(text: '0');
-      _maxValueController = TextEditingController(text: '100');
+      _referenceValues = [_defaultReferenceValue()];
+      _referenceRangesExpanded = true;
       _qualitativeOptions = ['Negativo', 'Positivo'];
       _expectedQualitativeValue = 'Negativo';
       _qualitativeOptionsController = TextEditingController(text: 'Negativo, Positivo');
@@ -201,25 +208,51 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
     _nameController.dispose();
     _codeController.dispose();
     _unitController.dispose();
-    _minValueController.dispose();
-    _maxValueController.dispose();
     _qualitativeOptionsController.dispose();
     _referenceTextController.dispose();
     _customSubclassController.dispose();
     super.dispose();
   }
 
+  ReferenceValue _defaultReferenceValue() {
+    return ReferenceValue(
+      patientType: 'general',
+      gender: 'both',
+      minAgeDays: 0,
+      maxAgeDays: 36500,
+      minValue: 0,
+      maxValue: 100,
+      useAge: false,
+      useGender: false,
+      ageUnit: 'years',
+    );
+  }
+
+  String get _referenceRangesSubtitle {
+    final count = _referenceValues.length;
+    if (count == 0) return 'Sin rangos';
+    if (count == 1) return '1 rango configurado';
+    return '$count rangos configurados';
+  }
+
+  void _onDataTypeChanged(String value) {
+    if (value == _dataType) return;
+    setState(() {
+      _dataType = value;
+      if (value == 'numeric') {
+        if (_referenceValues.isEmpty) {
+          _referenceValues = [_defaultReferenceValue()];
+        }
+        _referenceRangesExpanded = true;
+      }
+    });
+  }
+
   void _updateQualitativeOptionsFromText(String text) {
-    final parsed = text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList();
+    final parsed = text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toSet().toList();
     _qualitativeOptions = parsed;
     if (!_qualitativeOptions.contains(_expectedQualitativeValue)) {
-      _expectedQualitativeValue =
-          _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
+      _expectedQualitativeValue = _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
     }
   }
 
@@ -236,6 +269,19 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_dataType == 'numeric') {
+      final referenceError = ReferenceValuesValidator.errorFor(_referenceValues);
+      if (referenceError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(referenceError),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -243,21 +289,9 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
           ? _customSubclassController.text.trim()
           : _subclassification.trim();
 
-      List<ReferenceValue> refs = [];
-      if (_dataType == 'numeric') {
-        final minVal = double.tryParse(_minValueController.text.trim()) ?? 0.0;
-        final maxVal = double.tryParse(_maxValueController.text.trim()) ?? 0.0;
-        refs = [
-          ReferenceValue(
-            patientType: 'general',
-            gender: 'both',
-            minAgeDays: 0,
-            maxAgeDays: 36500,
-            minValue: minVal,
-            maxValue: maxVal,
-          ),
-        ];
-      }
+      final refs = _dataType == 'numeric'
+          ? List<ReferenceValue>.of(_referenceValues)
+          : <ReferenceValue>[];
 
       List<String> qualOptions = [];
       String? expectedQual;
@@ -324,7 +358,9 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditing ? 'Error al actualizar parámetro: $e' : 'Error al crear parámetro: $e'),
+            content: Text(
+              _isEditing ? 'Error al actualizar parámetro: $e' : 'Error al crear parámetro: $e',
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -335,6 +371,8 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final dialogWidth = screenWidth > 1120 ? 1000.0 : screenWidth * 0.9;
     final availableCategories = ClinicalClassificationRegistry.classifications;
     if (!availableCategories.contains(_category)) {
       availableCategories.add(_category);
@@ -358,14 +396,18 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isEditing ? 'Editar Parámetro: ${widget.parameterToEdit!.name}' : 'Crear Parámetro de Perfil',
+                  _isEditing
+                      ? 'Editar Parámetro: ${widget.parameterToEdit!.name}'
+                      : 'Crear Parámetro de Perfil',
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   _isEditing
                       ? 'Modifique los valores de referencia o configuración técnica de este parámetro'
                       : 'Se asociará automáticamente a este perfil sin saturar el catálogo general',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -373,7 +415,7 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
         ],
       ),
       content: SizedBox(
-        width: 580,
+        width: dialogWidth,
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
@@ -438,7 +480,10 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                           border: OutlineInputBorder(),
                         ),
                         items: availableCategories.map((c) {
-                          return DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis));
+                          return DropdownMenuItem(
+                            value: c,
+                            child: Text(c, overflow: TextOverflow.ellipsis),
+                          );
                         }).toList(),
                         onChanged: _onCategoryChanged,
                       ),
@@ -456,7 +501,12 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                           border: OutlineInputBorder(),
                         ),
                         items: [
-                          ...availableSubs.map((s) => DropdownMenuItem(value: s, child: Text(s, overflow: TextOverflow.ellipsis))),
+                          ...availableSubs.map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s, overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
                           const DropdownMenuItem(
                             value: '__custom__',
                             child: Text('+ Otra subclasificación...'),
@@ -524,49 +574,67 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                   ],
                   selected: {_dataType},
                   onSelectionChanged: (val) {
-                    setState(() => _dataType = val.first);
+                    _onDataTypeChanged(val.first);
                   },
                 ),
                 const SizedBox(height: 16),
 
                 // Opciones según Tipo de Dato
                 if (_dataType == 'numeric') ...[
-                  Row(
+                  TextFormField(
+                    controller: _unitController,
+                    decoration: const InputDecoration(
+                      labelText: 'Unidad de Medida',
+                      hintText: 'mg/dL, %, /campo...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 10),
+                  ExpansionTile(
+                    key: const ValueKey('dialog_reference_ranges_tile'),
+                    initiallyExpanded: _referenceRangesExpanded,
+                    onExpansionChanged: (expanded) {
+                      _referenceRangesExpanded = expanded;
+                    },
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                    childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    leading: Icon(
+                      Icons.tune_rounded,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: Text(
+                      'Rangos de referencia',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _referenceRangesSubtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    ),
+                    collapsedShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: theme.colorScheme.outlineVariant),
+                    ),
+                    backgroundColor: theme.colorScheme.surfaceContainerLowest,
+                    collapsedBackgroundColor: theme.colorScheme.surfaceContainerLowest,
                     children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _unitController,
-                          decoration: const InputDecoration(
-                            labelText: 'Unidad de Medida',
-                            hintText: 'mg/dL, %, /campo...',
-                            isDense: true,
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _minValueController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Mínimo de Referencia',
-                            isDense: true,
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _maxValueController,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Máximo de Referencia',
-                            isDense: true,
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
+                      ReferenceValuesEditor(
+                        values: _referenceValues,
+                        onChanged: (updated) {
+                          setState(() => _referenceValues = updated);
+                        },
+                        unitOfMeasure: _unitController.text.trim(),
+                        showTitle: false,
                       ),
                     ],
                   ),
@@ -574,7 +642,9 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                   // Presets rápidos
                   Text(
                     'Plantillas rápidas:',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
@@ -583,7 +653,10 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                     children: _qualitativePresets.map((preset) {
                       return ActionChip(
                         avatar: const Icon(Icons.flash_on, size: 14),
-                        label: Text(preset['label'] as String, style: const TextStyle(fontSize: 11)),
+                        label: Text(
+                          preset['label'] as String,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                         visualDensity: VisualDensity.compact,
                         onPressed: () {
                           setState(() {
@@ -707,8 +780,10 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Notas de Referencia / Escala Explicativa (Opcional)',
-                    hintText: 'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
-                    helperText: 'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones.',
+                    hintText:
+                        'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
+                    helperText:
+                        'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones.',
                     isDense: true,
                     border: OutlineInputBorder(),
                     alignLabelWithHint: true,
@@ -733,7 +808,9 @@ class _QuickCreateParameterDialogState extends State<QuickCreateParameterDialog>
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                 )
               : const Icon(Icons.check, size: 18),
-          label: Text(_isSubmitting ? 'Guardando...' : (_isEditing ? 'Guardar Cambios' : 'Crear y Agregar')),
+          label: Text(
+            _isSubmitting ? 'Guardando...' : (_isEditing ? 'Guardar Cambios' : 'Crear y Agregar'),
+          ),
         ),
       ],
     );

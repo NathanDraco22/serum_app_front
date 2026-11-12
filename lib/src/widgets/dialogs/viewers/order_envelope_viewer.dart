@@ -21,7 +21,8 @@ Future<void> showOrderEnvelopeViewerDialog(
 
   // Obtener sucursal actual de la sesión
   final appSession = sl<AppSessionCubit>();
-  final branch = appSession.currentBranch ??
+  final branch =
+      appSession.currentBranch ??
       BranchInDb(
         id: order.branchId.isNotEmpty ? order.branchId : 'BRANCH_DEFAULT',
         name: 'Laboratorio Clínico Serum',
@@ -100,16 +101,14 @@ class _OrderEnvelopeViewerState extends State<_OrderEnvelopeViewer> {
               address: p.address ?? '',
               cardId: p.cardId,
               email: p.email,
-              age: p.age,
+              age: p.explicitAge,
             );
           });
         }
       } catch (_) {}
     }
 
-    if (_doctorInfo == null &&
-        widget.order.doctorId != null &&
-        widget.order.doctorId!.isNotEmpty) {
+    if (_doctorInfo == null && widget.order.doctorId != null && widget.order.doctorId!.isNotEmpty) {
       try {
         final d = await doctorsRepo.getDoctorById(widget.order.doctorId!);
         if (d != null && mounted) {
@@ -167,18 +166,14 @@ class _OrderEnvelopeViewerState extends State<_OrderEnvelopeViewer> {
         title: Text('Sobre de Entrega - Folio #$shortId'),
         actions: [
           IconButton(
-            tooltip: _rotate180
-                ? 'Orientación Normal'
-                : 'Invertir Sentido (180°)',
+            tooltip: _rotate180 ? 'Orientación Normal' : 'Invertir Sentido (180°)',
             onPressed: () {
               setState(() {
                 _rotate180 = !_rotate180;
               });
             },
             icon: Icon(
-              _rotate180
-                  ? Icons.screen_rotation_alt
-                  : Icons.screen_rotation_outlined,
+              _rotate180 ? Icons.screen_rotation_alt : Icons.screen_rotation_outlined,
             ),
           ),
           IconButton(
@@ -245,8 +240,7 @@ class _OrderEnvelopeViewerState extends State<_OrderEnvelopeViewer> {
                     canChangePageFormat: false,
                     allowPrinting: true,
                     allowSharing: true,
-                    initialPageFormat:
-                        ClinicalOrderEnvelopePdfTemplate.envelopeVerticalFormat,
+                    initialPageFormat: ClinicalOrderEnvelopePdfTemplate.envelopeVerticalFormat,
                     pdfFileName: 'sobre_orden_$shortId.pdf',
                   ),
                 ),

@@ -99,6 +99,16 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
       return;
     }
 
+    if (_controller.referenceRangesError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_controller.referenceRangesError!),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
       final branchId = context.read<AppSessionCubit>().currentBranchId;
       final cubit = context.read<WriteLabTestCubit>();
@@ -165,8 +175,8 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                       isEdit
                           ? _controller.name
                           : (_controller.isPack
-                              ? 'Configurando Paquete Comercial (Pack de Análisis)'
-                              : 'Configurando Parámetro Clínico Individual'),
+                                ? 'Configurando Paquete Comercial (Pack de Análisis)'
+                                : 'Configurando Parámetro Clínico Individual'),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: const Color(0xFFCCE5FF),
                       ),
@@ -210,6 +220,7 @@ class _LabTestFormScreenState extends State<LabTestFormScreen> {
                         allAvailableTests: allAvailableTests,
                         onQuickCreateParameter: () => _openQuickCreateParameter(allAvailableTests),
                         onQuickEditParameter: (t) => _openQuickEditParameter(t, allAvailableTests),
+                        branchId: context.read<AppSessionCubit>().currentBranchId,
                       ),
                       const LabTestReferenceValuesSection(),
                       const SizedBox(height: 24),

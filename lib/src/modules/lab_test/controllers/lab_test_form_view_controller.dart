@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:serum_business/serum_business.dart';
 import '../widgets/clinical_classification_registry.dart';
+import 'reference_values_validator.dart';
 
 /// Controlador de estado local para la pantalla de formulario de estudios clínicos y perfiles/packs.
 /// Sigue la arquitectura ViewController del estándar OKF v0.2.
@@ -70,9 +71,8 @@ class LabTestFormViewController extends ChangeNotifier {
   ];
 
   static String normalizeGender(String raw) {
-    final lower = raw.trim().toLowerCase();
-    if (lower == 'f' || lower == 'female' || lower == 'femenino') return 'female';
-    if (lower == 'm' || lower == 'male' || lower == 'masculino') return 'male';
+    final normalized = ReferenceValueResolver.normalizeGender(raw);
+    if (normalized == 'male' || normalized == 'female') return normalized;
     return 'both';
   }
 
@@ -122,6 +122,9 @@ class LabTestFormViewController extends ChangeNotifier {
           maxAgeDays: ref.maxAgeDays,
           minValue: ref.minValue,
           maxValue: ref.maxValue,
+          ageUnit: ref.ageUnit,
+          useAge: ref.useAge,
+          useGender: ref.useGender,
         );
       }).toList();
 
@@ -149,6 +152,7 @@ class LabTestFormViewController extends ChangeNotifier {
           maxAgeDays: 36500,
           minValue: 70.0,
           maxValue: 100.0,
+          ageUnit: 'years',
         ),
       ];
       _qualitativeOptions = ['Negativo', 'Positivo'];
@@ -204,11 +208,28 @@ class LabTestFormViewController extends ChangeNotifier {
   String get expectedQualitativeValue => _expectedQualitativeValue;
   String get referenceText => referenceTextController.text.trim();
 
+  /// Indica si la prueba evalúa la edad en sus rangos de referencia.
+  bool get usesAge => _referenceValues.any((ref) => ref.useAge);
+
+  /// Indica si la prueba evalúa el género en sus rangos de referencia.
+  bool get usesGender => _referenceValues.any((ref) => ref.useGender);
+
+  /// Error de configuración de los rangos de referencia.
+  String? get referenceRangesError {
+    if (_isPack || _dataType != 'numeric') return null;
+    return ReferenceValuesValidator.errorFor(_referenceValues);
+  }
+
+  /// Advertencia de configuración ambigua de los rangos de referencia.
+  String? get referenceRangesWarning {
+    if (_isPack || _dataType != 'numeric') return null;
+    return ReferenceValuesValidator.warningFor(_referenceValues);
+  }
+
   // --- Cálculos Financieros y Dinámicos ---
 
   double calculateChildrenSum(List<LabTestInDb> allAvailableTests) {
-    final selectedTests =
-        allAvailableTests.where((t) => _childTestIds.contains(t.id)).toList();
+    final selectedTests = allAvailableTests.where((t) => _childTestIds.contains(t.id)).toList();
     final totalCents = selectedTests.fold<int>(0, (sum, t) => sum + t.salePrice);
     return totalCents / 100.0;
   }
@@ -316,6 +337,8 @@ class LabTestFormViewController extends ChangeNotifier {
   }
 
   void addReferenceValue([ReferenceValue? ref]) {
+    final useAge = usesAge;
+    final useGender = usesGender;
     _referenceValues.add(
       ref ??
           ReferenceValue(
@@ -325,8 +348,34 @@ class LabTestFormViewController extends ChangeNotifier {
             maxAgeDays: 36500,
             minValue: 0.0,
             maxValue: 100.0,
+            ageUnit: 'years',
+            useAge: useAge,
+            useGender: useGender,
           ),
     );
+    notifyListeners();
+  }
+
+  /// Reemplaza la lista completa de rangos de referencia.
+  ///
+  /// Es el punto de entrada usado por el editor para mantener una única
+  /// fuente de verdad en el controlador.
+  void setReferenceValues(List<ReferenceValue> values) {
+    _referenceValues = List<ReferenceValue>.of(values);
+    notifyListeners();
+  }
+
+  /// Activa o desactiva la evaluación por edad en todos los rangos.
+  void setUseAge(bool value) {
+    if (_referenceValues.every((ref) => ref.useAge == value)) return;
+    _referenceValues = _referenceValues.map((ref) => ref.copyWith(useAge: value)).toList();
+    notifyListeners();
+  }
+
+  /// Activa o desactiva la evaluación por género en todos los rangos.
+  void setUseGender(bool value) {
+    if (_referenceValues.every((ref) => ref.useGender == value)) return;
+    _referenceValues = _referenceValues.map((ref) => ref.copyWith(useGender: value)).toList();
     notifyListeners();
   }
 
@@ -360,8 +409,7 @@ class LabTestFormViewController extends ChangeNotifier {
         .toList();
     _qualitativeOptions = parsed;
     if (!_qualitativeOptions.contains(_expectedQualitativeValue)) {
-      _expectedQualitativeValue =
-          _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
+      _expectedQualitativeValue = _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
     }
     notifyListeners();
   }
@@ -436,9 +484,11 @@ class LabTestFormViewController extends ChangeNotifier {
           ? List.of(_qualitativeOptions)
           : const [],
       expectedQualitativeValue:
-          !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
-              ? _expectedQualitativeValue.trim()
-              : null,
+          !_isPack &&
+              (_dataType == 'qualitative' || _dataType == 'boolean') &&
+              _expectedQualitativeValue.isNotEmpty
+          ? _expectedQualitativeValue.trim()
+          : null,
       referenceText: !_isPack ? referenceTextController.text.trim() : '',
       isProfileParameter: _isProfileParameter,
     );
@@ -468,9 +518,11 @@ class LabTestFormViewController extends ChangeNotifier {
           ? List.of(_qualitativeOptions)
           : const [],
       expectedQualitativeValue:
-          !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
-              ? _expectedQualitativeValue.trim()
-              : null,
+          !_isPack &&
+              (_dataType == 'qualitative' || _dataType == 'boolean') &&
+              _expectedQualitativeValue.isNotEmpty
+          ? _expectedQualitativeValue.trim()
+          : null,
       referenceText: !_isPack ? referenceTextController.text.trim() : '',
       isProfileParameter: _isProfileParameter,
     );

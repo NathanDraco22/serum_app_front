@@ -93,9 +93,7 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
   }
 
   double _calculateChildrenSum(List<LabTestInDb> allAvailableTests) {
-    final selectedTests = allAvailableTests
-        .where((t) => _childTestIds.contains(t.id))
-        .toList();
+    final selectedTests = allAvailableTests.where((t) => _childTestIds.contains(t.id)).toList();
     final totalCents = selectedTests.fold<int>(0, (sum, t) => sum + t.salePrice);
     return totalCents / 100.0;
   }
@@ -129,6 +127,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
           maxAgeDays: ref.maxAgeDays,
           minValue: ref.minValue,
           maxValue: ref.maxValue,
+          ageUnit: ref.ageUnit,
+          useAge: ref.useAge,
+          useGender: ref.useGender,
         );
       }).toList();
       _qualitativeOptions = List.from(widget.labTest!.qualitativeOptions);
@@ -211,9 +212,13 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
           referenceValues: !_isPack && _dataType == 'numeric' ? _referenceValues : [],
-          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') ? _qualitativeOptions : [],
+          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean')
+              ? _qualitativeOptions
+              : [],
           expectedQualitativeValue:
-              !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
+              !_isPack &&
+                  (_dataType == 'qualitative' || _dataType == 'boolean') &&
+                  _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
           referenceText: !_isPack ? _referenceTextController.text.trim() : '',
@@ -236,9 +241,13 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
           dataType: _isPack ? 'pack' : _dataType,
           unitOfMeasure: !_isPack && _dataType == 'numeric' ? _unitOfMeasure.trim() : '',
           referenceValues: !_isPack && _dataType == 'numeric' ? _referenceValues : [],
-          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') ? _qualitativeOptions : [],
+          qualitativeOptions: !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean')
+              ? _qualitativeOptions
+              : [],
           expectedQualitativeValue:
-              !_isPack && (_dataType == 'qualitative' || _dataType == 'boolean') && _expectedQualitativeValue.isNotEmpty
+              !_isPack &&
+                  (_dataType == 'qualitative' || _dataType == 'boolean') &&
+                  _expectedQualitativeValue.isNotEmpty
               ? _expectedQualitativeValue.trim()
               : null,
           referenceText: !_isPack ? _referenceTextController.text.trim() : '',
@@ -365,7 +374,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               _isPack = set.first;
                               if (_isPack && _useChildTestsPriceSum) {
                                 _salePrice = _calculateChildrenSum(allAvailableTests);
-                                _priceController.text = _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                                _priceController.text = _salePrice > 0
+                                    ? _salePrice.toStringAsFixed(2)
+                                    : '0.00';
                               }
                             });
                           },
@@ -486,18 +497,28 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                 ),
                                 helperText: _isPack && _useChildTestsPriceSum
                                     ? 'Sumatoria automática de análisis'
-                                    : (_isPack ? 'Tarifa personalizada (debe ser mayor a 0)' : null),
+                                    : (_isPack
+                                          ? 'Tarifa personalizada (debe ser mayor a 0)'
+                                          : null),
                                 filled: _isPack && _useChildTestsPriceSum,
                                 fillColor: _isPack && _useChildTestsPriceSum
-                                    ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                                    ? theme.colorScheme.surfaceContainerHighest.withValues(
+                                        alpha: 0.5,
+                                      )
                                     : null,
                               ),
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               validator: (val) {
-                                if (_isPack && _useChildTestsPriceSum) return null;
-                                if (val == null || val.trim().isEmpty) return 'El precio es requerido';
+                                if (_isPack && _useChildTestsPriceSum) {
+                                  return null;
+                                }
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'El precio es requerido';
+                                }
                                 final parsed = double.tryParse(val);
-                                if (parsed == null || parsed <= 0) return 'El precio debe ser mayor a 0';
+                                if (parsed == null || parsed <= 0) {
+                                  return 'El precio debe ser mayor a 0';
+                                }
                                 return null;
                               },
                               onChanged: (val) {
@@ -592,8 +613,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                     _useChildTestsPriceSum = val;
                                     if (val) {
                                       _salePrice = _calculateChildrenSum(allAvailableTests);
-                                      _priceController.text =
-                                          _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                                      _priceController.text = _salePrice > 0
+                                          ? _salePrice.toStringAsFixed(2)
+                                          : '0.00';
                                     } else {
                                       if (_salePrice > 0) {
                                         _priceController.text = _salePrice.toStringAsFixed(2);
@@ -639,8 +661,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               _childTestIds = updated;
                               if (_useChildTestsPriceSum) {
                                 _salePrice = _calculateChildrenSum(allAvailableTests);
-                                _priceController.text =
-                                    _salePrice > 0 ? _salePrice.toStringAsFixed(2) : '0.00';
+                                _priceController.text = _salePrice > 0
+                                    ? _salePrice.toStringAsFixed(2)
+                                    : '0.00';
                               }
                             });
                           },
@@ -820,6 +843,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                                 maxAgeDays: ref.maxAgeDays,
                                                 minValue: ref.minValue,
                                                 maxValue: ref.maxValue,
+                                                ageUnit: ref.ageUnit,
+                                                useAge: ref.useAge,
+                                                useGender: ref.useGender,
                                               );
                                             });
                                           },
@@ -847,6 +873,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                               maxAgeDays: ref.maxAgeDays,
                                               minValue: parsed,
                                               maxValue: ref.maxValue,
+                                              ageUnit: ref.ageUnit,
+                                              useAge: ref.useAge,
+                                              useGender: ref.useGender,
                                             );
                                           },
                                         ),
@@ -873,6 +902,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                               maxAgeDays: ref.maxAgeDays,
                                               minValue: ref.minValue,
                                               maxValue: parsed,
+                                              ageUnit: ref.ageUnit,
+                                              useAge: ref.useAge,
+                                              useGender: ref.useGender,
                                             );
                                           },
                                         ),
@@ -939,7 +971,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                             ),
                             validator: (val) {
                               if (_dataType == 'qualitative' || _dataType == 'boolean') {
-                                if (val == null || val.trim().isEmpty || _qualitativeOptions.isEmpty) {
+                                if (val == null ||
+                                    val.trim().isEmpty ||
+                                    _qualitativeOptions.isEmpty) {
                                   return 'Debe ingresar al menos una opción';
                                 }
                               }
@@ -955,8 +989,9 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                                     .toList();
                                 _qualitativeOptions = parsed;
                                 if (!_qualitativeOptions.contains(_expectedQualitativeValue)) {
-                                  _expectedQualitativeValue =
-                                      _qualitativeOptions.isNotEmpty ? _qualitativeOptions.first : '';
+                                  _expectedQualitativeValue = _qualitativeOptions.isNotEmpty
+                                      ? _qualitativeOptions.first
+                                      : '';
                                 }
                               });
                             },
@@ -997,7 +1032,11 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                                  Icon(
+                                    Icons.info_outline,
+                                    size: 18,
+                                    color: theme.colorScheme.primary,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -1019,8 +1058,10 @@ class _LabTestFormDialogState extends State<LabTestFormDialog> {
                           maxLines: 3,
                           decoration: const InputDecoration(
                             labelText: 'Texto / Escala de Referencia Explicativa (Opcional)',
-                            hintText: 'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
-                            helperText: 'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones PDF.',
+                            hintText:
+                                'Ej. - Menor de 5.6%: Nivel no diabético\n- 5.7 - 6.4%: Nivel prediabético...',
+                            helperText:
+                                'Opcional. Permite mostrar escalas clínicas complejas o notas multilínea en órdenes e impresiones PDF.',
                             border: OutlineInputBorder(),
                             alignLabelWithHint: true,
                           ),

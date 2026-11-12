@@ -268,7 +268,54 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     return discard ?? false;
   }
 
-  void _submit(List<LabTestInDb> allLabTests) {
+  Future<bool> _ensurePatientDemographics() async {
+    final patient = viewController.selectedPatient;
+    if (patient == null) return false;
+
+    final hasDemographics = patient.dateOfBirth > 0 || patient.explicitAge != null;
+    if (hasDemographics) return true;
+
+    final shouldEdit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Datos demográficos incompletos'),
+        content: Text(
+          'El paciente "${patient.name}" no tiene fecha de nacimiento ni edad registrada.\n\n'
+          'Complete estos datos antes de crear la orden para interpretar correctamente los rangos de referencia.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Editar paciente'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldEdit != true || !mounted) return false;
+
+    final updated = await showDialog<dynamic>(
+      context: context,
+      builder: (dialogCtx) => BlocProvider<WritePatientCubit>(
+        create: (context) => WritePatientCubit(
+          patientsRepository: RepositoryProvider.of<PatientsRepository>(context),
+        ),
+        child: PatientFormDialog(patient: patient),
+      ),
+    );
+
+    if (updated is PatientInDb && mounted) {
+      viewController.updateSelectedPatientData(updated);
+      return updated.dateOfBirth > 0 || updated.explicitAge != null;
+    }
+    return false;
+  }
+
+  Future<void> _submit(List<LabTestInDb> allLabTests) async {
     if (viewController.isSubmitting) return;
 
     if (widget.editingOrder != null && !viewController.isPopulated) {
@@ -289,6 +336,9 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
       );
       return;
     }
+
+    if (!await _ensurePatientDemographics()) return;
+    if (!mounted) return;
 
     if (viewController.selectedItems.isEmpty && viewController.services.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

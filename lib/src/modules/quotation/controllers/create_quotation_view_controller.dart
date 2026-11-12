@@ -183,7 +183,7 @@ class CreateQuotationViewController extends ChangeNotifier {
             address: _selectedPatient!.address ?? '',
             cardId: _selectedPatient!.cardId,
             email: _selectedPatient!.email,
-            age: _selectedPatient!.age,
+            age: _selectedPatient!.explicitAge,
           )
         : (casualText.isNotEmpty ? PatientInfo(name: casualText) : null);
 

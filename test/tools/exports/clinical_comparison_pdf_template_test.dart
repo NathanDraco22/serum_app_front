@@ -256,6 +256,168 @@ void main() {
       expect(template.comparisonOrder.id, equals('ord-evol-200'));
     });
 
+    test('Ignora alertFlag guardado cuando no hay rango aplicable para la demografía', () {
+      final result = OrderTestResult(
+        labTestId: 'lt-glucosa',
+        parameterName: 'Glucosa',
+        dataType: 'numeric',
+        unitOfMeasure: 'mg/dL',
+        resultValue: '150',
+        alertFlag: 'HIGH',
+      );
+      final referenceValues = [
+        ReferenceValue(
+          patientType: 'general',
+          gender: 'female',
+          minAgeDays: 0,
+          maxAgeDays: 36500,
+          minValue: 70,
+          maxValue: 100,
+          useGender: true,
+        ),
+      ];
+
+      final row = ClinicalComparisonPdfRow(
+        key: 'GLU',
+        parameterName: 'Glucosa',
+        dataType: 'numeric',
+        unitOfMeasure: 'mg/dL',
+        baseResult: result,
+        baseReferenceValues: referenceValues,
+        baseAgeInDays: 30 * 365,
+        baseGender: 'M',
+      );
+
+      expect(row.baseReference, isNull);
+      expect(row.baseAlert, isNull);
+      expect(row.comparisonAlert, isNull);
+    });
+
+    test('Recalcula H en la fila comparativa aunque el flag guardado sea NORMAL', () {
+      final result = OrderTestResult(
+        labTestId: 'lt-glucosa',
+        parameterName: 'Glucosa',
+        dataType: 'numeric',
+        unitOfMeasure: 'mg/dL',
+        resultValue: '150',
+        alertFlag: 'NORMAL',
+      );
+
+      final row = ClinicalComparisonPdfRow(
+        key: 'GLU',
+        parameterName: 'Glucosa',
+        dataType: 'numeric',
+        unitOfMeasure: 'mg/dL',
+        baseResult: result,
+        baseReferenceValues: [
+          ReferenceValue(
+            patientType: 'general',
+            gender: 'both',
+            minAgeDays: 0,
+            maxAgeDays: 36500,
+            minValue: 70,
+            maxValue: 100,
+          ),
+        ],
+        baseAgeInDays: 30 * 365,
+        baseGender: 'M',
+      );
+
+      expect(row.baseAlert, 'H');
+    });
+
+    test('Resuelve edad y rango por cada orden en el comparativo', () {
+      final birthMs = DateTime(2000, 1, 1).millisecondsSinceEpoch;
+      final baseDate = DateTime(2020, 1, 1).millisecondsSinceEpoch;
+      final comparisonDate = DateTime(2045, 1, 1).millisecondsSinceEpoch;
+
+      ReferenceValue range({
+        required int minAgeDays,
+        required int maxAgeDays,
+        required double minValue,
+        required double maxValue,
+      }) {
+        return ReferenceValue(
+          patientType: 'general',
+          gender: 'both',
+          minAgeDays: minAgeDays,
+          maxAgeDays: maxAgeDays,
+          minValue: minValue,
+          maxValue: maxValue,
+          useAge: true,
+        );
+      }
+
+      OrderInDb order({
+        required String id,
+        required int createdAt,
+        required OrderTestResult result,
+      }) {
+        return OrderInDb(
+          id: id,
+          patientId: 'pat-001',
+          branchId: 'br-001',
+          createdAt: createdAt,
+          patientInfo: PatientInfo(
+            name: 'Paciente de prueba',
+            dateOfBirth: birthMs,
+            gender: 'F',
+          ),
+          results: [result],
+        );
+      }
+
+      final baseOrder = order(
+        id: 'ord-base',
+        createdAt: baseDate,
+        result: OrderTestResult(
+          labTestId: 'lt-x',
+          parameterName: 'Prueba',
+          dataType: 'numeric',
+          unitOfMeasure: 'u',
+          resultValue: '85',
+          referenceValues: [
+            range(
+              minAgeDays: 18 * 365,
+              maxAgeDays: 39 * 365,
+              minValue: 70,
+              maxValue: 100,
+            ),
+          ],
+        ),
+      );
+      final comparisonOrder = order(
+        id: 'ord-comparison',
+        createdAt: comparisonDate,
+        result: OrderTestResult(
+          labTestId: 'lt-x',
+          parameterName: 'Prueba',
+          dataType: 'numeric',
+          unitOfMeasure: 'u',
+          resultValue: '105',
+          referenceValues: [
+            range(
+              minAgeDays: 40 * 365,
+              maxAgeDays: 59 * 365,
+              minValue: 80,
+              maxValue: 110,
+            ),
+          ],
+        ),
+      );
+
+      final rows = ClinicalComparisonPdfTemplate.buildComparisonRows(
+        baseOrder,
+        comparisonOrder,
+      );
+      final row = rows.single;
+
+      expect(row.baseReference?.maxValue, 100);
+      expect(row.comparisonReference?.maxValue, 110);
+      expect(row.baseAlert, isNull);
+      expect(row.comparisonAlert, isNull);
+    });
+
     test('Construye documento PDF comparativo sin excepciones y genera páginas', () async {
       final template = ClinicalComparisonPdfTemplate(
         order1: mockOrder1,

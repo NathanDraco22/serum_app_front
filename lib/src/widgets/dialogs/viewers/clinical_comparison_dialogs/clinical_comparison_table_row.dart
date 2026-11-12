@@ -13,27 +13,6 @@ class ClinicalComparisonTableRow extends StatelessWidget {
     required this.row,
   });
 
-  String? _resolveAlertFlag(OrderTestResult? r, List<ReferenceValue> referenceValues) {
-    if (r == null) return null;
-    if (r.alertFlag != null && r.alertFlag!.isNotEmpty) {
-      final flag = r.alertFlag!.toUpperCase();
-      if (flag == 'HIGH' || flag == 'ALTO' || flag == 'H') return 'H';
-      if (flag == 'LOW' || flag == 'BAJO' || flag == 'L') return 'L';
-      if (flag == 'ABNORMAL' || flag == 'ANORMAL') return '*';
-      return flag;
-    }
-
-    if (r.dataType == 'numeric' && r.resultValue != null && referenceValues.isNotEmpty) {
-      final numVal = ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue);
-      if (numVal != null) {
-        final ref = referenceValues.first;
-        if (numVal > ref.maxValue) return 'H';
-        if (numVal < ref.minValue) return 'L';
-      }
-    }
-    return null;
-  }
-
   Widget _buildAlertBadge(String flag) {
     Color bg = Colors.red.shade100;
     Color fg = Colors.red.shade900;
@@ -58,18 +37,22 @@ class ClinicalComparisonTableRow extends StatelessWidget {
     );
   }
 
+  String _formatReferenceRange(ReferenceValue ref, String unitOfMeasure) {
+    final unitSuffix = unitOfMeasure.isNotEmpty ? ' $unitOfMeasure' : '';
+    return '${ref.minValue} - ${ref.maxValue}$unitSuffix';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final baseAlert = _resolveAlertFlag(row.baseResult, row.referenceValues);
-    final compAlert = _resolveAlertFlag(row.comparisonResult, row.referenceValues);
+    final baseAlert = row.baseAlert;
+    final compAlert = row.comparisonAlert;
 
-    final baseVal = row.baseResult?.resultValue != null &&
-            row.baseResult!.resultValue!.isNotEmpty
+    final baseVal = row.baseResult?.resultValue != null && row.baseResult!.resultValue!.isNotEmpty
         ? ThousandsSeparatorInputFormatter.formatText(row.baseResult!.resultValue!)
         : '—';
 
-    final compVal = row.comparisonResult?.resultValue != null &&
-            row.comparisonResult!.resultValue!.isNotEmpty
+    final compVal =
+        row.comparisonResult?.resultValue != null && row.comparisonResult!.resultValue!.isNotEmpty
         ? ThousandsSeparatorInputFormatter.formatText(row.comparisonResult!.resultValue!)
         : '—';
 
@@ -102,10 +85,29 @@ class ClinicalComparisonTableRow extends StatelessWidget {
     }
 
     String refText = '—';
-    if (row.dataType == 'numeric' && row.referenceValues.isNotEmpty) {
-      final ref = row.referenceValues.first;
-      final unit = row.unitOfMeasure.isNotEmpty ? ' ${row.unitOfMeasure}' : '';
-      refText = '${ref.minValue} - ${ref.maxValue}$unit';
+    if (row.dataType == 'numeric') {
+      final baseRef = row.baseReference;
+      final comparisonRef = row.comparisonReference;
+
+      final baseText = baseRef != null
+          ? _formatReferenceRange(baseRef, row.unitOfMeasure)
+          : (row.hasBaseDemographics ? 'Sin rango' : 'Sin datos demográficos');
+      final comparisonText = comparisonRef != null
+          ? _formatReferenceRange(comparisonRef, row.unitOfMeasure)
+          : (row.hasComparisonDemographics ? 'Sin rango' : 'Sin datos demográficos');
+
+      if (row.baseResult == null) {
+        refText = 'Evolutiva: $comparisonText';
+      } else if (row.comparisonResult == null) {
+        refText = 'Base: $baseText';
+      } else if (baseRef != null &&
+          comparisonRef != null &&
+          baseRef.minValue == comparisonRef.minValue &&
+          baseRef.maxValue == comparisonRef.maxValue) {
+        refText = baseText;
+      } else {
+        refText = 'Base: $baseText\nEvolutiva: $comparisonText';
+      }
     } else if (row.expectedQualitativeValue != null) {
       refText = 'Esp: ${row.expectedQualitativeValue}';
     }
@@ -147,7 +149,10 @@ class ClinicalComparisonTableRow extends StatelessWidget {
                         color: Colors.amber.shade200,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('CAMBIO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        'CAMBIO',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
               ],

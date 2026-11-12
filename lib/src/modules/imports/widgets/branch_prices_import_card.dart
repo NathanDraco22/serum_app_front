@@ -63,11 +63,23 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
 
     final sourceBranch = _branches.firstWhere(
       (b) => b.id == _sourceBranchId,
-      orElse: () => BranchInDb(id: _sourceBranchId!, name: _sourceBranchId!, address: '', phone: '', createdAt: 0),
+      orElse: () => BranchInDb(
+        id: _sourceBranchId!,
+        name: _sourceBranchId!,
+        address: '',
+        phone: '',
+        createdAt: 0,
+      ),
     );
     final targetBranch = _branches.firstWhere(
       (b) => b.id == _targetBranchId,
-      orElse: () => BranchInDb(id: _targetBranchId!, name: _targetBranchId!, address: '', phone: '', createdAt: 0),
+      orElse: () => BranchInDb(
+        id: _targetBranchId!,
+        name: _targetBranchId!,
+        address: '',
+        phone: '',
+        createdAt: 0,
+      ),
     );
 
     final cubit = context.read<ImportsCubit>();
@@ -108,7 +120,10 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                         children: [
                           const Icon(Icons.outbox_rounded, size: 18, color: Colors.blueGrey),
                           const SizedBox(width: 8),
-                          const Text('Sede Origen: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Sede Origen: ',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           Expanded(
                             child: Text(
                               sourceBranch.displayName,
@@ -123,7 +138,10 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                         children: [
                           const Icon(Icons.move_to_inbox_rounded, size: 18, color: Colors.teal),
                           const SizedBox(width: 8),
-                          const Text('Sede Destino: ', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Sede Destino: ',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           Expanded(
                             child: Text(
                               targetBranch.displayName,
@@ -140,14 +158,10 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _mustOverridePrice
-                        ? Colors.amber.shade50
-                        : Colors.blue.shade50,
+                    color: _mustOverridePrice ? Colors.amber.shade50 : Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: _mustOverridePrice
-                          ? Colors.amber.shade300
-                          : Colors.blue.shade200,
+                      color: _mustOverridePrice ? Colors.amber.shade300 : Colors.blue.shade200,
                     ),
                   ),
                   child: Row(
@@ -158,9 +172,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                             ? Icons.warning_amber_rounded
                             : Icons.info_outline_rounded,
                         size: 20,
-                        color: _mustOverridePrice
-                            ? Colors.amber.shade900
-                            : Colors.blue.shade800,
+                        color: _mustOverridePrice ? Colors.amber.shade900 : Colors.blue.shade800,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -213,10 +225,10 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isSameBranch = _sourceBranchId != null &&
-        _targetBranchId != null &&
-        _sourceBranchId == _targetBranchId;
-    final canSubmit = !widget.isLoading &&
+    final isSameBranch =
+        _sourceBranchId != null && _targetBranchId != null && _sourceBranchId == _targetBranchId;
+    final canSubmit =
+        !widget.isLoading &&
         !_isLoadingBranches &&
         _sourceBranchId != null &&
         _targetBranchId != null &&
@@ -435,9 +447,7 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                           ? null
                           : (val) => setState(() => _mustOverridePrice = val),
                       secondary: Icon(
-                        _mustOverridePrice
-                            ? Icons.edit_note_rounded
-                            : Icons.add_task_rounded,
+                        _mustOverridePrice ? Icons.edit_note_rounded : Icons.add_task_rounded,
                         color: _mustOverridePrice
                             ? Colors.amber.shade900
                             : theme.colorScheme.primary,
@@ -477,9 +487,11 @@ class _BranchPricesImportCardState extends State<BranchPricesImportCard> {
                               ),
                             )
                           : const Icon(Icons.sync_alt_rounded, size: 18),
-                      label: Text(widget.isLoading
-                          ? 'Importando Precios...'
-                          : 'Iniciar Importación de Precios'),
+                      label: Text(
+                        widget.isLoading
+                            ? 'Importando Precios...'
+                            : 'Iniciar Importación de Precios',
+                      ),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.teal.shade700,
                         padding: const EdgeInsets.symmetric(

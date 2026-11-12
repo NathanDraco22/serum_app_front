@@ -93,92 +93,97 @@ void main() {
 
   final List<LabTestInDb> allTests = [testGlucosa, testColesterol, testPerfilLipidico];
 
-  testWidgets('PackTestSelector muestra la sección superior de parámetros seleccionados con visor y acciones', (tester) async {
-    tester.view.physicalSize = const Size(1280, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'PackTestSelector muestra la sección superior de parámetros seleccionados con visor y acciones',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    List<String> selected = ['test-glu-1', 'test-col-2'];
-    LabTestInDb? editedTest;
+      List<String> selected = ['test-glu-1', 'test-col-2'];
+      LabTestInDb? editedTest;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) {
-              return SingleChildScrollView(
-                child: PackTestSelector(
-                  availableTests: allTests,
-                  selectedTestIds: selected,
-                  packSalePrice: 330.0,
-                  useChildTestsPriceSum: true,
-                  onSelectionChanged: (updated) {
-                    setState(() {
-                      selected = updated;
-                    });
-                  },
-                  onEditTest: (test) {
-                    editedTest = test;
-                  },
-                ),
-              );
-            },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return SingleChildScrollView(
+                  child: PackTestSelector(
+                    availableTests: allTests,
+                    selectedTestIds: selected,
+                    packSalePrice: 330.0,
+                    useChildTestsPriceSum: true,
+                    onSelectionChanged: (updated) {
+                      setState(() {
+                        selected = updated;
+                      });
+                    },
+                    onEditTest: (test) {
+                      editedTest = test;
+                    },
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // 1. Verificar encabezado de la sección superior
-    expect(find.text('Parámetros y Análisis en este Perfil'), findsOneWidget);
-    expect(find.text('2'), findsWidgets); // Contador de 2 seleccionados
+      // 1. Verificar encabezado de la sección superior
+      expect(find.text('Parámetros y Análisis en este Perfil'), findsOneWidget);
+      expect(find.text('2'), findsWidgets); // Contador de 2 seleccionados
 
-    // 2. Verificar que muestra Glucosa con su resumen de referencia y badge
-    expect(find.text('Glucosa'), findsWidgets);
-    expect(find.text('GLU'), findsWidgets);
-    expect(find.text('Parámetro'), findsWidgets); // isProfileParameter = true
-    expect(find.text('Ref: 70 - 100 mg/dL'), findsOneWidget);
+      // 2. Verificar que muestra Glucosa con su resumen de referencia y badge
+      expect(find.text('Glucosa'), findsWidgets);
+      expect(find.text('GLU'), findsWidgets);
+      expect(find.text('Parámetro'), findsWidgets); // isProfileParameter = true
+      expect(find.text('Ref: 70 - 100 mg/dL'), findsOneWidget);
 
-    // 3. Verificar que muestra Colesterol
-    expect(find.text('Colesterol Total'), findsWidgets);
-    expect(find.text('COL'), findsWidgets);
-    expect(find.text('Ref: 0 - 200 mg/dL'), findsOneWidget);
+      // 3. Verificar que muestra Colesterol
+      expect(find.text('Colesterol Total'), findsWidgets);
+      expect(find.text('COL'), findsWidgets);
+      expect(find.text('Ref: 0 - 200 mg/dL'), findsOneWidget);
 
-    // 4. Verificar presencia del botón de edición con lápiz y pulsarlo
-    final editButtons = find.byIcon(Icons.edit_outlined);
-    expect(editButtons, findsWidgets);
+      // 4. Verificar presencia del botón de edición con lápiz y pulsarlo
+      final editButtons = find.byIcon(Icons.edit_outlined);
+      expect(editButtons, findsWidgets);
 
-    // Verificar presencia de handles de arrastre y flechas de orden
-    expect(find.byIcon(Icons.drag_indicator_rounded), findsWidgets);
-    expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
-    expect(find.byIcon(Icons.arrow_drop_down_rounded), findsWidgets);
+      // Verificar presencia de handles de arrastre y flechas de orden
+      expect(find.byIcon(Icons.drag_indicator_rounded), findsWidgets);
+      expect(find.byIcon(Icons.arrow_drop_up_rounded), findsWidgets);
+      expect(find.byIcon(Icons.arrow_drop_down_rounded), findsWidgets);
 
-    // Hacer tap en el lápiz del primer parámetro (Glucosa)
-    await tester.tap(editButtons.first);
-    await tester.pumpAndSettle();
-    expect(editedTest, isNotNull);
-    expect(editedTest!.id, 'test-glu-1');
-    expect(editedTest!.name, 'Glucosa');
+      // Hacer tap en el lápiz del primer parámetro (Glucosa)
+      await tester.tap(editButtons.first);
+      await tester.pumpAndSettle();
+      expect(editedTest, isNotNull);
+      expect(editedTest!.id, 'test-glu-1');
+      expect(editedTest!.name, 'Glucosa');
 
-    // 5. Verificar que al presionar el botón remover (remove_circle_outline) se quita de la selección
-    final removeButtons = find.byIcon(Icons.remove_circle_outline);
-    expect(removeButtons, findsWidgets);
+      // 5. Verificar que al presionar el botón remover (remove_circle_outline) se quita de la selección
+      final removeButtons = find.byIcon(Icons.remove_circle_outline);
+      expect(removeButtons, findsWidgets);
 
-    // Quitar el primer parámetro (Glucosa)
-    await tester.tap(removeButtons.first);
-    await tester.pumpAndSettle();
+      // Quitar el primer parámetro (Glucosa)
+      await tester.tap(removeButtons.first);
+      await tester.pumpAndSettle();
 
-    expect(selected, ['test-col-2']);
+      expect(selected, ['test-col-2']);
 
-    // 6. Verificar que la sección del catálogo inferior existe debajo del divisor
-    expect(find.text('Agregar Más Análisis desde el Catálogo'), findsOneWidget);
-  });
+      // 6. Verificar que la sección del catálogo inferior existe debajo del divisor
+      expect(find.text('Agregar Más Análisis desde el Catálogo'), findsOneWidget);
+    },
+  );
 
-  testWidgets('PackTestSelector muestra banner informativo cuando no hay análisis seleccionados', (tester) async {
+  testWidgets('PackTestSelector muestra banner informativo cuando no hay análisis seleccionados', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1280, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
@@ -205,150 +210,158 @@ void main() {
     expect(find.text('Parámetros y Análisis en este Perfil'), findsOneWidget);
     expect(find.text('0'), findsWidgets);
     expect(
-      find.text('Aún no hay análisis o parámetros asignados a este perfil. Búscalos en el catálogo inferior o haz clic en "Crear Parámetro en este Perfil".'),
+      find.text(
+        'Aún no hay análisis o parámetros asignados a este perfil. Búscalos en el catálogo inferior o haz clic en "Crear Parámetro en este Perfil".',
+      ),
       findsOneWidget,
     );
   });
 
-  testWidgets('PackTestSelector reordena los parámetros correctamente usando las flechas de orden', (tester) async {
-    tester.view.physicalSize = const Size(1280, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'PackTestSelector reordena los parámetros correctamente usando las flechas de orden',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    List<String> selected = ['test-glu-1', 'test-col-2'];
+      List<String> selected = ['test-glu-1', 'test-col-2'];
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) {
-              return SingleChildScrollView(
-                child: PackTestSelector(
-                  availableTests: allTests,
-                  selectedTestIds: selected,
-                  packSalePrice: 330.0,
-                  useChildTestsPriceSum: true,
-                  onSelectionChanged: (updated) {
-                    setState(() {
-                      selected = updated;
-                    });
-                  },
-                ),
-              );
-            },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return SingleChildScrollView(
+                  child: PackTestSelector(
+                    availableTests: allTests,
+                    selectedTestIds: selected,
+                    packSalePrice: 330.0,
+                    useChildTestsPriceSum: true,
+                    onSelectionChanged: (updated) {
+                      setState(() {
+                        selected = updated;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // Orden inicial: Glucosa (0), Colesterol (1)
-    expect(selected, ['test-glu-1', 'test-col-2']);
+      // Orden inicial: Glucosa (0), Colesterol (1)
+      expect(selected, ['test-glu-1', 'test-col-2']);
 
-    // Bajar Glucosa (primer botón de flecha abajo)
-    final downButtons = find.byTooltip('Mover abajo');
-    expect(downButtons, findsWidgets);
+      // Bajar Glucosa (primer botón de flecha abajo)
+      final downButtons = find.byTooltip('Mover abajo');
+      expect(downButtons, findsWidgets);
 
-    await tester.tap(downButtons.first);
-    await tester.pumpAndSettle();
+      await tester.tap(downButtons.first);
+      await tester.pumpAndSettle();
 
-    // Ahora Colesterol está de primero y Glucosa de segundo
-    expect(selected, ['test-col-2', 'test-glu-1']);
+      // Ahora Colesterol está de primero y Glucosa de segundo
+      expect(selected, ['test-col-2', 'test-glu-1']);
 
-    // Subir Glucosa (segundo botón de flecha arriba, ahora en posición 1)
-    final upButtons = find.byTooltip('Mover arriba');
-    expect(upButtons, findsWidgets);
+      // Subir Glucosa (segundo botón de flecha arriba, ahora en posición 1)
+      final upButtons = find.byTooltip('Mover arriba');
+      expect(upButtons, findsWidgets);
 
-    await tester.tap(upButtons.at(1));
-    await tester.pumpAndSettle();
+      await tester.tap(upButtons.at(1));
+      await tester.pumpAndSettle();
 
-    // Restaurado al orden original
-    expect(selected, ['test-glu-1', 'test-col-2']);
-  });
+      // Restaurado al orden original
+      expect(selected, ['test-glu-1', 'test-col-2']);
+    },
+  );
 
-  testWidgets('PackTestSelector filtra correctamente por tipo: Todos, Perfiles, Pruebas individuales y Parámetros', (tester) async {
-    tester.view.physicalSize = const Size(1280, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'PackTestSelector filtra correctamente por tipo: Todos, Perfiles, Pruebas individuales y Parámetros',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    List<String> selected = [];
+      List<String> selected = [];
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (context, setState) {
-              return SingleChildScrollView(
-                child: PackTestSelector(
-                  availableTests: allTests,
-                  selectedTestIds: selected,
-                  packSalePrice: 100.0,
-                  useChildTestsPriceSum: true,
-                  onSelectionChanged: (updated) {
-                    setState(() {
-                      selected = updated;
-                    });
-                  },
-                ),
-              );
-            },
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: StatefulBuilder(
+              builder: (context, setState) {
+                return SingleChildScrollView(
+                  child: PackTestSelector(
+                    availableTests: allTests,
+                    selectedTestIds: selected,
+                    packSalePrice: 100.0,
+                    useChildTestsPriceSum: true,
+                    onSelectionChanged: (updated) {
+                      setState(() {
+                        selected = updated;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // 1. Por defecto "Todos" está seleccionado -> Se muestran los 3 análisis
-    expect(find.text('Perfil Lipídico'), findsWidgets);
-    expect(find.text('Colesterol Total'), findsWidgets);
-    expect(find.text('Glucosa'), findsWidgets);
+      // 1. Por defecto "Todos" está seleccionado -> Se muestran los 3 análisis
+      expect(find.text('Perfil Lipídico'), findsWidgets);
+      expect(find.text('Colesterol Total'), findsWidgets);
+      expect(find.text('Glucosa'), findsWidgets);
 
-    // 2. Filtrar por "Perfiles"
-    final perfilesChip = find.widgetWithText(ChoiceChip, 'Perfiles');
-    expect(perfilesChip, findsOneWidget);
-    await tester.tap(perfilesChip);
-    await tester.pumpAndSettle();
+      // 2. Filtrar por "Perfiles"
+      final perfilesChip = find.widgetWithText(ChoiceChip, 'Perfiles');
+      expect(perfilesChip, findsOneWidget);
+      await tester.tap(perfilesChip);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Perfil Lipídico'), findsWidgets);
-    expect(find.text('Colesterol Total'), findsNothing);
-    expect(find.text('Glucosa'), findsNothing);
+      expect(find.text('Perfil Lipídico'), findsWidgets);
+      expect(find.text('Colesterol Total'), findsNothing);
+      expect(find.text('Glucosa'), findsNothing);
 
-    // 3. Filtrar por "Pruebas individuales"
-    final individualesChip = find.widgetWithText(ChoiceChip, 'Pruebas individuales');
-    expect(individualesChip, findsOneWidget);
-    await tester.tap(individualesChip);
-    await tester.pumpAndSettle();
+      // 3. Filtrar por "Pruebas individuales"
+      final individualesChip = find.widgetWithText(ChoiceChip, 'Pruebas individuales');
+      expect(individualesChip, findsOneWidget);
+      await tester.tap(individualesChip);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Perfil Lipídico'), findsNothing);
-    expect(find.text('Colesterol Total'), findsWidgets);
-    expect(find.text('Glucosa'), findsNothing);
+      expect(find.text('Perfil Lipídico'), findsNothing);
+      expect(find.text('Colesterol Total'), findsWidgets);
+      expect(find.text('Glucosa'), findsNothing);
 
-    // 4. Filtrar por "Parámetros"
-    final parametrosChip = find.widgetWithText(ChoiceChip, 'Parámetros');
-    expect(parametrosChip, findsOneWidget);
-    await tester.tap(parametrosChip);
-    await tester.pumpAndSettle();
+      // 4. Filtrar por "Parámetros"
+      final parametrosChip = find.widgetWithText(ChoiceChip, 'Parámetros');
+      expect(parametrosChip, findsOneWidget);
+      await tester.tap(parametrosChip);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Perfil Lipídico'), findsNothing);
-    expect(find.text('Colesterol Total'), findsNothing);
-    expect(find.text('Glucosa'), findsWidgets);
+      expect(find.text('Perfil Lipídico'), findsNothing);
+      expect(find.text('Colesterol Total'), findsNothing);
+      expect(find.text('Glucosa'), findsWidgets);
 
-    // 5. Regresar a "Todos"
-    final todosChip = find.widgetWithText(ChoiceChip, 'Todos');
-    expect(todosChip, findsOneWidget);
-    await tester.tap(todosChip);
-    await tester.pumpAndSettle();
+      // 5. Regresar a "Todos"
+      final todosChip = find.widgetWithText(ChoiceChip, 'Todos');
+      expect(todosChip, findsOneWidget);
+      await tester.tap(todosChip);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Perfil Lipídico'), findsWidgets);
-    expect(find.text('Colesterol Total'), findsWidgets);
-    expect(find.text('Glucosa'), findsWidgets);
-  });
+      expect(find.text('Perfil Lipídico'), findsWidgets);
+      expect(find.text('Colesterol Total'), findsWidgets);
+      expect(find.text('Glucosa'), findsWidgets);
+    },
+  );
 }

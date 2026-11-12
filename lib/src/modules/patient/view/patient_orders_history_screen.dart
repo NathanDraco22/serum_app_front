@@ -41,12 +41,10 @@ class PatientOrdersHistoryScreen extends StatefulWidget {
   }
 
   @override
-  State<PatientOrdersHistoryScreen> createState() =>
-      _PatientOrdersHistoryScreenState();
+  State<PatientOrdersHistoryScreen> createState() => _PatientOrdersHistoryScreenState();
 }
 
-class _PatientOrdersHistoryScreenState
-    extends State<PatientOrdersHistoryScreen> {
+class _PatientOrdersHistoryScreenState extends State<PatientOrdersHistoryScreen> {
   PatientInDb? _patient;
   List<OrderInDb> _orders = [];
   bool _isLoading = true;
@@ -105,7 +103,11 @@ class _PatientOrdersHistoryScreenState
 
   List<OrderInDb> get _filteredOrders {
     return _orders.where((order) {
-      if (_selectedStatusFilter != 'ALL' &&
+      if (_selectedStatusFilter == 'completed') {
+        if (!order.isCompleted) return false;
+      } else if (_selectedStatusFilter == 'in_review') {
+        if (!order.isInReview) return false;
+      } else if (_selectedStatusFilter != 'ALL' &&
           order.status.toLowerCase() != _selectedStatusFilter.toLowerCase()) {
         return false;
       }
@@ -121,23 +123,17 @@ class _PatientOrdersHistoryScreenState
   }
 
   int get _totalBilled => _orders.fold<int>(
-      0, (sum, o) => sum + (o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied));
+    0,
+    (sum, o) => sum + (o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied),
+  );
 
   int get _totalPendingBalance => _orders.fold<int>(0, (sum, o) {
-        final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
-        final pending = total - o.paidAmount;
-        return sum + (pending > 0 ? pending : 0);
-      });
+    final total = o.totalPrice > 0 ? o.totalPrice : o.salePriceApplied;
+    final pending = total - o.paidAmount;
+    return sum + (pending > 0 ? pending : 0);
+  });
 
-  int get _completedOrdersCount => _orders.where((o) {
-        final hasResults = o.results.isNotEmpty &&
-            o.results.every(
-              (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
-            );
-        return o.status == 'completed' ||
-            o.status == 'published' ||
-            (o.isFullyPaid && hasResults);
-      }).length;
+  int get _completedOrdersCount => _orders.where((o) => o.isCompleted).length;
 
   List<OrderInDb> get _biometryOrders =>
       _orders.where(PatientHistoryHelpers.isBiometryOrder).toList();
@@ -172,7 +168,7 @@ class _PatientOrdersHistoryScreenState
                 address: _patient!.address ?? '',
                 cardId: _patient!.cardId,
                 email: _patient!.email,
-                age: _patient!.age,
+                age: _patient!.explicitAge,
               )
             : null);
   }

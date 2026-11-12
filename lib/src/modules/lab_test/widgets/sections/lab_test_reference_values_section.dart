@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:serum_business/serum_business.dart';
 import '../../controllers/lab_test_form_mediator.dart';
 import '../../controllers/lab_test_form_view_controller.dart';
+import '../reference_values_editor.dart';
 
 class LabTestReferenceValuesSection extends StatelessWidget {
   const LabTestReferenceValuesSection({super.key});
@@ -102,9 +102,9 @@ class LabTestReferenceValuesSection extends StatelessWidget {
                               ),
                               validator: (val) =>
                                   controller.dataType == 'numeric' &&
-                                          (val == null || val.trim().isEmpty)
-                                      ? 'Requerido'
-                                      : null,
+                                      (val == null || val.trim().isEmpty)
+                                  ? 'Requerido'
+                                  : null,
                               onChanged: (val) => controller.setUnitOfMeasure(val),
                             ),
                             const SizedBox(height: 6),
@@ -135,178 +135,13 @@ class LabTestReferenceValuesSection extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Editor de Rangos Numéricos
-                if (controller.dataType == 'numeric') ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Tabla de Rangos de Referencia:',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => controller.addReferenceValue(),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Agregar Rango'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          foregroundColor: theme.colorScheme.onPrimaryContainer,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      ),
-                    ],
+                if (controller.dataType == 'numeric')
+                  ReferenceValuesEditor(
+                    values: controller.referenceValues,
+                    onChanged: controller.setReferenceValues,
+                    unitOfMeasure: controller.unitOfMeasure,
+                    showTitle: false,
                   ),
-                  const SizedBox(height: 8),
-                  if (controller.referenceValues.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Haga clic en "+ Agregar Rango" para definir los límites de normalidad.',
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: controller.referenceValues.length,
-                      itemBuilder: (context, index) {
-                        final ref = controller.referenceValues[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.colorScheme.outlineVariant,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: LabTestFormViewController.normalizeGender(ref.gender),
-                                  isDense: true,
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Género',
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'both',
-                                      child: Text('Ambos'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'male',
-                                      child: Text('Masculino'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'female',
-                                      child: Text('Femenino'),
-                                    ),
-                                  ],
-                                  onChanged: (val) {
-                                    controller.updateReferenceValue(
-                                      index,
-                                      ReferenceValue(
-                                        patientType: ref.patientType,
-                                        gender: val ?? 'both',
-                                        minAgeDays: ref.minAgeDays,
-                                        maxAgeDays: ref.maxAgeDays,
-                                        minValue: ref.minValue,
-                                        maxValue: ref.maxValue,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 2,
-                                child: TextFormField(
-                                  initialValue: ref.minValue.toString(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Mínimo',
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    final parsed = double.tryParse(val) ?? 0.0;
-                                    controller.updateReferenceValue(
-                                      index,
-                                      ReferenceValue(
-                                        patientType: ref.patientType,
-                                        gender: ref.gender,
-                                        minAgeDays: ref.minAgeDays,
-                                        maxAgeDays: ref.maxAgeDays,
-                                        minValue: parsed,
-                                        maxValue: ref.maxValue,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                flex: 2,
-                                child: TextFormField(
-                                  initialValue: ref.maxValue.toString(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Máximo',
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    final parsed = double.tryParse(val) ?? 0.0;
-                                    controller.updateReferenceValue(
-                                      index,
-                                      ReferenceValue(
-                                        patientType: ref.patientType,
-                                        gender: ref.gender,
-                                        minAgeDays: ref.minAgeDays,
-                                        maxAgeDays: ref.maxAgeDays,
-                                        minValue: ref.minValue,
-                                        maxValue: parsed,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => controller.removeReferenceValueAt(index),
-                                color: theme.colorScheme.error,
-                                tooltip: 'Eliminar rango',
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                ],
 
                 // Editor Cualitativo
                 if (controller.dataType == 'qualitative' || controller.dataType == 'boolean') ...[
@@ -370,9 +205,11 @@ class LabTestReferenceValuesSection extends StatelessWidget {
                     DropdownButtonFormField<String>(
                       key: ValueKey('expected_${controller.expectedQualitativeValue}'),
                       initialValue:
-                          controller.qualitativeOptions.contains(controller.expectedQualitativeValue)
-                              ? controller.expectedQualitativeValue
-                              : controller.qualitativeOptions.first,
+                          controller.qualitativeOptions.contains(
+                            controller.expectedQualitativeValue,
+                          )
+                          ? controller.expectedQualitativeValue
+                          : controller.qualitativeOptions.first,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Valor Normal / Esperado *',

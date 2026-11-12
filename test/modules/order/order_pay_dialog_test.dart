@@ -2,9 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_app_front/src/cubits/app_session_cubit/app_session_cubit.dart';
+import 'package:serum_app_front/src/cubits/cash_shift_cubit/read_cash_shifts_cubit.dart';
 import 'package:serum_app_front/src/cubits/order_cubit/write_orders_cubit.dart';
 import 'package:serum_app_front/src/modules/order/widgets/order_pay_dialog.dart';
 import 'package:serum_business/serum_business.dart';
+
+class _FakeCashShiftsDataSource extends Fake implements CashShiftsDataSource {
+  @override
+  Future<Map<String, dynamic>> getAllCashShifts({
+    String? branchId,
+    String? userId,
+    String? status,
+  }) async {
+    return {'count': 0, 'data': []};
+  }
+}
 
 class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
   Map<String, dynamic>? lastPayBody;
@@ -29,8 +41,10 @@ class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
 
 class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCubit {
   _FakeAppSessionCubit({CashShiftInDb? shift})
-      : super(AppSessionState(
-          activeShift: shift ??
+    : super(
+        AppSessionState(
+          activeShift:
+              shift ??
               CashShiftInDb(
                 id: 'shift-10',
                 userId: 'u1',
@@ -55,7 +69,8 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
             phone: '22223333',
             createdAt: 1000,
           ),
-        ));
+        ),
+      );
 
   @override
   CashShiftInDb? get activeShift => state.activeShift;
@@ -70,6 +85,9 @@ class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionC
   bool get hasShiftBranchMismatch => false;
 
   @override
+  String get currentBranchId => 'b1';
+
+  @override
   Future<void> fetchActiveShift([String? branchId]) async {}
 
   @override
@@ -81,6 +99,7 @@ void main() {
   late OrdersRepository ordersRepo;
   late WriteOrderCubit writeOrderCubit;
   late _FakeAppSessionCubit fakeSessionCubit;
+  late ReadCashShiftCubit readCashShiftCubit;
 
   final testOrder = OrderInDb(
     id: 'ORD-999',
@@ -99,6 +118,15 @@ void main() {
     ordersRepo = OrdersRepository(fakeOrdersDataSource);
     writeOrderCubit = WriteOrderCubit(ordersRepository: ordersRepo);
     fakeSessionCubit = _FakeAppSessionCubit();
+    readCashShiftCubit = ReadCashShiftCubit(
+      cashShiftsRepository: CashShiftsRepository(_FakeCashShiftsDataSource()),
+    );
+  });
+
+  tearDown(() {
+    writeOrderCubit.close();
+    fakeSessionCubit.close();
+    readCashShiftCubit.close();
   });
 
   Widget createWidgetUnderTest() {
@@ -106,6 +134,7 @@ void main() {
       providers: [
         BlocProvider<AppSessionCubit>.value(value: fakeSessionCubit),
         BlocProvider<WriteOrderCubit>.value(value: writeOrderCubit),
+        BlocProvider<ReadCashShiftCubit>.value(value: readCashShiftCubit),
       ],
       child: MaterialApp(
         home: Scaffold(
@@ -116,8 +145,9 @@ void main() {
   }
 
   group('OrderPayDialog Tests', () {
-    testWidgets('Campos de transferencia aparecen condicionalmente al seleccionar Transferencia',
-        (tester) async {
+    testWidgets('Campos de transferencia aparecen condicionalmente al seleccionar Transferencia', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();
@@ -152,8 +182,9 @@ void main() {
       expect(find.text('AVANZ'), findsOneWidget);
     });
 
-    testWidgets('Tocar chip de banco rápido auto-completa el banco y valida envío de pago',
-        (tester) async {
+    testWidgets('Tocar chip de banco rápido auto-completa el banco y valida envío de pago', (
+      tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(1200, 900));
       await tester.pumpWidget(createWidgetUnderTest());
       await tester.pumpAndSettle();

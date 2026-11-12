@@ -24,8 +24,9 @@ class LabTestGeneralInfoSection extends StatelessWidget {
         final currentCatForSubs = controller.isCustomCategory
             ? controller.customCategoryController.text
             : controller.rawCommercialCategory;
-        final availableSubs =
-            ClinicalClassificationRegistry.getSubclassificationsFor(currentCatForSubs);
+        final availableSubs = ClinicalClassificationRegistry.getSubclassificationsFor(
+          currentCatForSubs,
+        );
         if (controller.rawSubclassification.isNotEmpty &&
             !controller.isCustomSubclass &&
             !availableSubs.contains(controller.rawSubclassification)) {
@@ -52,9 +53,7 @@ class LabTestGeneralInfoSection extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          controller.isPack
-                              ? Icons.inventory_2_outlined
-                              : Icons.science_outlined,
+                          controller.isPack ? Icons.inventory_2_outlined : Icons.science_outlined,
                           color: theme.colorScheme.primary,
                           size: 24,
                         ),
@@ -196,7 +195,8 @@ class LabTestGeneralInfoSection extends StatelessWidget {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             key: ValueKey(
-                                'form_cat_${controller.isCustomCategory ? "__custom__" : controller.rawCommercialCategory}'),
+                              'form_cat_${controller.isCustomCategory ? "__custom__" : controller.rawCommercialCategory}',
+                            ),
                             initialValue: controller.isCustomCategory
                                 ? '__custom__'
                                 : controller.rawCommercialCategory,
@@ -209,10 +209,12 @@ class LabTestGeneralInfoSection extends StatelessWidget {
                               ),
                             ),
                             items: [
-                              ...availableCategories.map((c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c, overflow: TextOverflow.ellipsis),
-                                  )),
+                              ...availableCategories.map(
+                                (c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c, overflow: TextOverflow.ellipsis),
+                                ),
+                              ),
                               const DropdownMenuItem(
                                 value: '__custom__',
                                 child: Text('+ Otra clasificación...'),
@@ -229,24 +231,26 @@ class LabTestGeneralInfoSection extends StatelessWidget {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             key: ValueKey(
-                                'form_sub_${controller.rawCommercialCategory}_${controller.isCustomSubclass ? "__custom__" : controller.rawSubclassification}'),
+                              'form_sub_${controller.rawCommercialCategory}_${controller.isCustomSubclass ? "__custom__" : controller.rawSubclassification}',
+                            ),
                             initialValue: controller.isCustomSubclass
                                 ? '__custom__'
                                 : controller.rawSubclassification,
                             isExpanded: true,
                             decoration: InputDecoration(
                               labelText: 'Subclasificación *',
-                              prefixIcon:
-                                  const Icon(Icons.account_tree_outlined, size: 20),
+                              prefixIcon: const Icon(Icons.account_tree_outlined, size: 20),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             items: [
-                              ...availableSubs.map((s) => DropdownMenuItem(
-                                    value: s,
-                                    child: Text(s, overflow: TextOverflow.ellipsis),
-                                  )),
+                              ...availableSubs.map(
+                                (s) => DropdownMenuItem(
+                                  value: s,
+                                  child: Text(s, overflow: TextOverflow.ellipsis),
+                                ),
+                              ),
                               const DropdownMenuItem(
                                 value: '__custom__',
                                 child: Text('+ Otra subclasificación...'),

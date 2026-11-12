@@ -6,18 +6,14 @@ import 'imports_state.dart';
 class ImportsCubit extends Cubit<ImportsState> {
   final ImportsRepository importsRepository;
 
-  ImportsCubit({required this.importsRepository})
-      : super(const ImportsInitial());
+  ImportsCubit({required this.importsRepository}) : super(const ImportsInitial());
 
   ImportCatalogResult? get lastResult => importsRepository.lastResult;
-  ImportBranchPricesResult? get lastPricesResult =>
-      importsRepository.lastPricesResult;
-  UpdateImportResult? get lastUpdateResult =>
-      importsRepository.lastUpdateResult;
+  ImportBranchPricesResult? get lastPricesResult => importsRepository.lastPricesResult;
+  UpdateImportResult? get lastUpdateResult => importsRepository.lastUpdateResult;
 
   Future<ImportCatalogResult?> importDefaultCatalog() async {
-    emit(const ImportsLoading(
-        message: 'Importando catálogo clínico maestro por defecto...'));
+    emit(const ImportsLoading(message: 'Importando catálogo clínico maestro por defecto...'));
     try {
       final result = await importsRepository.importDefaultCatalog();
       if (isClosed) return result;
@@ -31,8 +27,7 @@ class ImportsCubit extends Cubit<ImportsState> {
   }
 
   Future<ImportCatalogResult?> importLabTests() async {
-    emit(const ImportsLoading(
-        message: 'Importando pruebas de laboratorio por defecto...'));
+    emit(const ImportsLoading(message: 'Importando pruebas de laboratorio por defecto...'));
     try {
       final result = await importsRepository.importLabTests();
       if (isClosed) return result;
@@ -50,8 +45,7 @@ class ImportsCubit extends Cubit<ImportsState> {
     required String targetBranchId,
     bool mustOverridePrice = false,
   }) async {
-    emit(const ImportsLoading(
-        message: 'Importando precios entre sucursales...'));
+    emit(const ImportsLoading(message: 'Importando precios entre sucursales...'));
     try {
       final result = await importsRepository.importBranchPrices(
         sourceBranchId: sourceBranchId,
@@ -71,13 +65,14 @@ class ImportsCubit extends Cubit<ImportsState> {
   Future<UpdateImportResult?> updateCatalog({
     bool overridePrice = false,
     bool updateLabTest = true,
+    bool preserveReferenceValues = true,
   }) async {
-    emit(const ImportsLoading(
-        message: 'Actualizando y sincronizando catálogo clínico maestro...'));
+    emit(const ImportsLoading(message: 'Actualizando y sincronizando catálogo clínico maestro...'));
     try {
       final result = await importsRepository.updateCatalog(
         overridePrice: overridePrice,
         updateLabTest: updateLabTest,
+        preserveReferenceValues: preserveReferenceValues,
       );
       if (isClosed) return result;
       emit(ImportsUpdateSuccess(result));

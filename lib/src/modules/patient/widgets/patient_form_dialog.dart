@@ -22,8 +22,10 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   late String _gender;
   String? _email;
   String? _cardId;
-  late DateTime _dateOfBirth;
+  DateTime? _dateOfBirth;
   late TextEditingController _ageController;
+  final GlobalKey<FormFieldState<DateTime>> _dateOfBirthFieldKey =
+      GlobalKey<FormFieldState<DateTime>>();
 
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _cardIdFocusNode = FocusNode();
@@ -39,7 +41,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _name = widget.patient!.name;
       _phone = widget.patient!.phone;
       _address = widget.patient!.address;
-      
+
       final rawGender = widget.patient!.gender.toLowerCase();
       if (rawGender == 'm' || rawGender == 'male') {
         _gender = 'male';
@@ -48,10 +50,12 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       } else {
         _gender = 'other';
       }
-      
+
       _email = widget.patient!.email;
       _cardId = widget.patient!.cardId;
-      _dateOfBirth = DateTime.fromMillisecondsSinceEpoch(widget.patient!.dateOfBirth);
+      _dateOfBirth = widget.patient!.dateOfBirth > 0
+          ? DateTime.fromMillisecondsSinceEpoch(widget.patient!.dateOfBirth)
+          : null;
       final ageVal = widget.patient!.age;
       _ageController = TextEditingController(text: ageVal > 0 ? ageVal.toString() : '');
     } else {
@@ -61,7 +65,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       _gender = 'male';
       _email = '';
       _cardId = '';
-      _dateOfBirth = DateTime.now();
+      _dateOfBirth = null;
       _ageController = TextEditingController();
     }
   }
@@ -83,8 +87,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     final birth = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final today = DateTime.now();
     int age = today.year - birth.year;
-    if (today.month < birth.month ||
-        (today.month == birth.month && today.day < birth.day)) {
+    if (today.month < birth.month || (today.month == birth.month && today.day < birth.day)) {
       age--;
     }
     return age >= 0 ? age : 0;
@@ -93,7 +96,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dateOfBirth,
+      initialDate: _dateOfBirth ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
@@ -103,6 +106,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
         final computedAge = _calculateAge(picked.millisecondsSinceEpoch);
         _ageController.text = computedAge.toString();
       });
+      _dateOfBirthFieldKey.currentState?.didChange(_dateOfBirth);
     }
   }
 
@@ -112,21 +116,37 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     final age = int.tryParse(trimmed);
     if (age != null && age >= 0 && age <= 130) {
       final now = DateTime.now();
+      final baseDate = _dateOfBirth ?? now;
       final newYear = now.year - age;
-      final newMonth = _dateOfBirth.month;
+      final newMonth = baseDate.month;
       final maxDays = DateTime(newYear, newMonth + 1, 0).day;
-      final newDay = _dateOfBirth.day > maxDays ? maxDays : _dateOfBirth.day;
+      final newDay = baseDate.day > maxDays ? maxDays : baseDate.day;
       setState(() {
         _dateOfBirth = DateTime(newYear, newMonth, newDay);
       });
+      _dateOfBirthFieldKey.currentState?.didChange(_dateOfBirth);
     }
   }
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      if (_dateOfBirth == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ingrese la edad o seleccione la fecha de nacimiento.',
+            ),
+          ),
+        );
+        return;
+      }
       final cubit = context.read<WritePatientCubit>();
-      final mappedGender = _gender == 'male' ? 'M' : _gender == 'female' ? 'F' : 'O';
+      final mappedGender = _gender == 'male'
+          ? 'M'
+          : _gender == 'female'
+          ? 'F'
+          : 'O';
       final parsedAge = int.tryParse(_ageController.text.trim());
 
       if (widget.patient == null) {
@@ -134,7 +154,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
 
         final newPatient = CreatePatient(
           name: _name,
-          dateOfBirth: _dateOfBirth.millisecondsSinceEpoch,
+          dateOfBirth: _dateOfBirth!.millisecondsSinceEpoch,
           gender: mappedGender,
           phone: _phone,
           address: _address?.trim().isNotEmpty == true ? _address!.trim() : null,
@@ -154,7 +174,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
       } else {
         final updatePatient = UpdatePatient(
           name: _name,
-          dateOfBirth: _dateOfBirth.millisecondsSinceEpoch,
+          dateOfBirth: _dateOfBirth!.millisecondsSinceEpoch,
           gender: mappedGender,
           phone: _phone,
           address: _address?.trim().isNotEmpty == true ? _address!.trim() : null,
@@ -265,19 +285,38 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       flex: 5,
-                      child: InkWell(
-                        onTap: () => _selectDate(context),
-                        borderRadius: BorderRadius.circular(8),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Fecha de Nacimiento',
-                            suffixIcon: Icon(Icons.calendar_month, size: 20),
-                          ),
-                          child: Text(
-                            '${_dateOfBirth.day.toString().padLeft(2, '0')}/${_dateOfBirth.month.toString().padLeft(2, '0')}/${_dateOfBirth.year}',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
+                      child: FormField<DateTime>(
+                        key: _dateOfBirthFieldKey,
+                        initialValue: _dateOfBirth,
+                        validator: (_) => _dateOfBirth == null ? 'Requerido' : null,
+                        builder: (field) {
+                          final date = _dateOfBirth;
+                          final display = date == null
+                              ? 'Seleccione fecha'
+                              : '${date.day.toString().padLeft(2, '0')}/'
+                                    '${date.month.toString().padLeft(2, '0')}/'
+                                    '${date.year}';
+                          return InkWell(
+                            onTap: () => _selectDate(context),
+                            borderRadius: BorderRadius.circular(8),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Fecha de Nacimiento *',
+                                errorText: field.errorText,
+                                suffixIcon: const Icon(
+                                  Icons.calendar_month,
+                                  size: 20,
+                                ),
+                              ),
+                              child: Text(
+                                display,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: date == null ? theme.hintColor : null,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],

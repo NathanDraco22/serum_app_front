@@ -179,21 +179,19 @@ class LabTestsList extends StatelessWidget {
                                 color: Colors.transparent,
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(8),
-                                  onTap: onEditPrice != null
-                                      ? () => onEditPrice!(labTest)
-                                      : null,
+                                  onTap: onEditPrice != null ? () => onEditPrice!(labTest) : null,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
                                       vertical: 3,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: theme.colorScheme.primaryContainer
-                                          .withValues(alpha: 0.35),
+                                      color: theme.colorScheme.primaryContainer.withValues(
+                                        alpha: 0.35,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.35),
+                                        color: theme.colorScheme.primary.withValues(alpha: 0.35),
                                       ),
                                     ),
                                     child: Row(
@@ -248,7 +246,11 @@ class LabTestsList extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.category_outlined, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                Icon(
+                                  Icons.category_outlined,
+                                  size: 14,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   labTest.commercialCategory.isNotEmpty
@@ -264,7 +266,11 @@ class LabTestsList extends StatelessWidget {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.account_tree_outlined, size: 14, color: theme.colorScheme.tertiary),
+                                  Icon(
+                                    Icons.account_tree_outlined,
+                                    size: 14,
+                                    color: theme.colorScheme.tertiary,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     labTest.subclassification,
@@ -280,14 +286,19 @@ class LabTestsList extends StatelessWidget {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.biotech, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                  Icon(
+                                    Icons.biotech,
+                                    size: 14,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    labTest.dataType == 'qualitative' || labTest.dataType == 'boolean'
+                                    labTest.dataType == 'qualitative' ||
+                                            labTest.dataType == 'boolean'
                                         ? 'Cualitativo'
                                         : labTest.dataType == 'text'
-                                            ? 'Texto Libre'
-                                            : 'Numérico',
+                                        ? 'Texto Libre'
+                                        : 'Numérico',
                                     style: theme.textTheme.bodySmall?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
@@ -298,7 +309,11 @@ class LabTestsList extends StatelessWidget {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.straighten, size: 14, color: theme.colorScheme.onSurfaceVariant),
+                                    Icon(
+                                      Icons.straighten,
+                                      size: 14,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       labTest.unitOfMeasure,

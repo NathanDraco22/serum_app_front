@@ -6,13 +6,15 @@ import 'package:serum_app_front/src/cubits/order_cubit/read_orders_cubit.dart';
 import 'package:serum_app_front/src/cubits/order_cubit/write_orders_cubit.dart';
 import 'package:serum_app_front/src/cubits/patient_cubit/read_patients_cubit.dart';
 import 'package:serum_app_front/src/modules/order/widgets/orders_list.dart';
-import 'package:serum_app_front/src/widgets/dialogs/confirm_delete_dialog.dart';
 import 'package:serum_business/serum_business.dart';
 
 class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
   final Map<String, Map<String, dynamic>> _storage = {};
   String? lastUpdatedId;
   Map<String, dynamic>? lastUpdatedData;
+  String? lastFinalizedId;
+  String? lastReopenedId;
+  Map<String, dynamic>? lastReopenedData;
 
   void setOrder(String id, Map<String, dynamic> data) {
     _storage[id] = data;
@@ -44,6 +46,26 @@ class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
     }
     return order;
   }
+
+  @override
+  Future<Map<String, dynamic>> finalizeOrder(String orderId) async {
+    lastFinalizedId = orderId;
+    final data = _storage[orderId] ?? {'id': orderId};
+    data['status'] = 'completed';
+    return data;
+  }
+
+  @override
+  Future<Map<String, dynamic>> reopenOrder(
+    String orderId,
+    Map<String, dynamic> body,
+  ) async {
+    lastReopenedId = orderId;
+    lastReopenedData = body;
+    final data = _storage[orderId] ?? {'id': orderId};
+    data['status'] = 'in_review';
+    return data;
+  }
 }
 
 class _FakePatientsDataSource extends Fake implements PatientsDataSource {
@@ -54,7 +76,19 @@ class _FakePatientsDataSource extends Fake implements PatientsDataSource {
 }
 
 class _FakeAppSessionCubit extends Cubit<AppSessionState> implements AppSessionCubit {
-  _FakeAppSessionCubit() : super(const AppSessionState());
+  _FakeAppSessionCubit()
+      : super(
+          AppSessionState(
+            currentUser: UserInDb(
+              id: 'user-1',
+              username: 'bioanalista',
+              name: 'Bioanalista',
+              role: 'Operador',
+              accessLevel: 3,
+              createdAt: 0,
+            ),
+          ),
+        );
 
   @override
   String get currentBranchId => 'branch-1';
@@ -92,9 +126,65 @@ void main() {
     ),
   );
 
+  final reviewOrder = OrderInDb(
+    id: 'ORD-200',
+    patientId: 'PAT-1',
+    branchId: 'branch-1',
+    totalPrice: 15000,
+    paidAmount: 15000,
+    status: 'in_review',
+    items: [
+      OrderItem(
+        labTestId: 'lt-1',
+        name: 'Biometría Hemática',
+        salePriceApplied: 15000,
+      ),
+    ],
+    results: [
+      OrderTestResult(
+        labTestId: 'res-1',
+        parameterName: 'Hemoglobina',
+        dataType: 'numeric',
+        resultValue: '14.2',
+      ),
+    ],
+    createdAt: DateTime.now().millisecondsSinceEpoch,
+    patientInfo: PatientInfo(name: 'María Delgado', gender: 'F'),
+  );
+
+  final completedOrder = OrderInDb(
+    id: 'ORD-300',
+    patientId: 'PAT-1',
+    branchId: 'branch-1',
+    totalPrice: 15000,
+    paidAmount: 15000,
+    status: 'completed',
+    items: [
+      OrderItem(
+        labTestId: 'lt-1',
+        name: 'Biometría Hemática',
+        salePriceApplied: 15000,
+      ),
+    ],
+    results: [
+      OrderTestResult(
+        labTestId: 'res-1',
+        parameterName: 'Hemoglobina',
+        dataType: 'numeric',
+        resultValue: '14.2',
+      ),
+    ],
+    createdAt: DateTime.now().millisecondsSinceEpoch,
+    finalizedAt: DateTime.now().millisecondsSinceEpoch,
+    finalizedBy: UserInfo(id: 'user-1', name: 'Bioanalista'),
+    patientInfo: PatientInfo(name: 'María Delgado', gender: 'F'),
+  );
+
   setUp(() {
     fakeOrdersDataSource = _FakeOrdersDataSource();
     fakeOrdersDataSource.setOrder(sampleOrder.id, sampleOrder.toJson());
+    fakeOrdersDataSource.setOrder(reviewOrder.id, reviewOrder.toJson());
+    fakeOrdersDataSource.setOrder(completedOrder.id, completedOrder.toJson());
     ordersRepo = OrdersRepository(fakeOrdersDataSource);
 
     fakePatientsDataSource = _FakePatientsDataSource();
@@ -167,37 +257,59 @@ void main() {
     expect(editedOrder!.id, 'ORD-100');
   });
 
-  testWidgets('Tapping status icon shows ConfirmDeleteDialog with 5s countdown to complete order',
-      (tester) async {
+  testWidgets('Shows Finalizar Orden for in_review orders and calls finalize', (tester) async {
     await tester.pumpWidget(
       createWidgetUnderTest(
-        orders: [sampleOrder],
+        orders: [reviewOrder],
         onEditResults: (_) {},
       ),
     );
-    await tester.pump();
-
-    // Find the CircleAvatar status icon
-    final avatar = find.byType(CircleAvatar).first;
-    await tester.tap(avatar);
-    await tester.pump();
-
-    // Confirm dialog is displayed
-    expect(find.byType(ConfirmDeleteDialog), findsOneWidget);
-    expect(find.text('Completar Orden Médica'), findsOneWidget);
-    expect(find.text('Marcar como Completada (5s)'), findsOneWidget);
-
-    // Wait 5 seconds for countdown to expire
-    await tester.pump(const Duration(seconds: 5));
-
-    expect(find.text('Marcar como Completada'), findsOneWidget);
-
-    // Tap confirm button
-    await tester.tap(find.text('Marcar como Completada'));
     await tester.pumpAndSettle();
 
-    // Verify order was updated to completed
-    expect(fakeOrdersDataSource.lastUpdatedId, 'ORD-100');
-    expect(fakeOrdersDataSource.lastUpdatedData?['status'], 'completed');
+    expect(find.text('EN REVISIÓN'), findsOneWidget);
+    final finalizeButton = find.widgetWithText(FilledButton, 'Finalizar Orden');
+    expect(finalizeButton, findsOneWidget);
+
+    await tester.tap(finalizeButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Finalizar Orden Médica'), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Finalizar Orden'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(fakeOrdersDataSource.lastFinalizedId, 'ORD-200');
+  });
+
+  testWidgets('Tapping completed status opens reopen dialog and sends reason', (tester) async {
+    await tester.pumpWidget(
+      createWidgetUnderTest(
+        orders: [completedOrder],
+        onEditResults: (_) {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ORDEN COMPLETADA'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Orden completada (clic para reabrir)').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Reabrir Orden Médica'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Corrección de hemoglobina');
+    await tester.tap(find.text('Reabrir Orden'));
+    await tester.pumpAndSettle();
+
+    expect(fakeOrdersDataSource.lastReopenedId, 'ORD-300');
+    expect(
+      fakeOrdersDataSource.lastReopenedData?['reason'],
+      'Corrección de hemoglobina',
+    );
   });
 }

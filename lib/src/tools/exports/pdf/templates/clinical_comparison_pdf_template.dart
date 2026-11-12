@@ -17,8 +17,13 @@ class ClinicalComparisonPdfRow {
   final String dataType;
   final OrderTestResult? baseResult;
   final OrderTestResult? comparisonResult;
-  final List<ReferenceValue> referenceValues;
+  final List<ReferenceValue> baseReferenceValues;
+  final List<ReferenceValue> comparisonReferenceValues;
   final String? expectedQualitativeValue;
+  final int? baseAgeInDays;
+  final int? comparisonAgeInDays;
+  final String baseGender;
+  final String comparisonGender;
 
   ClinicalComparisonPdfRow({
     required this.key,
@@ -28,19 +33,38 @@ class ClinicalComparisonPdfRow {
     this.dataType = 'numeric',
     this.baseResult,
     this.comparisonResult,
-    this.referenceValues = const [],
+    this.baseReferenceValues = const [],
+    this.comparisonReferenceValues = const [],
     this.expectedQualitativeValue,
+    this.baseAgeInDays,
+    this.comparisonAgeInDays,
+    this.baseGender = '',
+    this.comparisonGender = '',
   });
 
-  double? get baseNumeric =>
-      baseResult?.resultValue != null
-          ? ThousandsSeparatorInputFormatter.tryParseDouble(baseResult!.resultValue!)
-          : null;
+  ReferenceValue? get baseReference => ReferenceValueResolver.resolve(
+    values: baseReferenceValues,
+    ageInDays: baseAgeInDays,
+    gender: baseGender,
+  );
 
-  double? get comparisonNumeric =>
-      comparisonResult?.resultValue != null
-          ? ThousandsSeparatorInputFormatter.tryParseDouble(comparisonResult!.resultValue!)
-          : null;
+  ReferenceValue? get comparisonReference => ReferenceValueResolver.resolve(
+    values: comparisonReferenceValues,
+    ageInDays: comparisonAgeInDays,
+    gender: comparisonGender,
+  );
+
+  bool get hasBaseDemographics => baseAgeInDays != null;
+
+  bool get hasComparisonDemographics => comparisonAgeInDays != null;
+
+  double? get baseNumeric => baseResult?.resultValue != null
+      ? ThousandsSeparatorInputFormatter.tryParseDouble(baseResult!.resultValue!)
+      : null;
+
+  double? get comparisonNumeric => comparisonResult?.resultValue != null
+      ? ThousandsSeparatorInputFormatter.tryParseDouble(comparisonResult!.resultValue!)
+      : null;
 
   double? get deltaAbsolute {
     if (baseNumeric == null || comparisonNumeric == null) return null;
@@ -50,6 +74,25 @@ class ClinicalComparisonPdfRow {
   double? get deltaPercentage {
     if (baseNumeric == null || comparisonNumeric == null || baseNumeric == 0) return null;
     return ((comparisonNumeric! - baseNumeric!) / baseNumeric!) * 100.0;
+  }
+
+  /// Alerta recalculada del resultado base usando su propio rango.
+  String? get baseAlert => _evaluateAlert(baseResult, baseReference);
+
+  /// Alerta recalculada del resultado comparativo usando su propio rango.
+  String? get comparisonAlert => _evaluateAlert(comparisonResult, comparisonReference);
+
+  String? _evaluateAlert(OrderTestResult? result, ReferenceValue? reference) {
+    if (result == null) return null;
+
+    final flag = ClinicalAlertEvaluator.evaluateResult(
+      dataType: result.dataType,
+      resultValue: result.resultValue,
+      expectedQualitativeValue: result.expectedQualitativeValue,
+      reference: result.dataType == 'numeric' ? reference : null,
+    );
+
+    return flag == 'ABNORMAL' ? '*' : flag;
   }
 }
 
@@ -70,17 +113,20 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
     PatientInfo? patientInfo,
     DoctorInfo? doctorInfo,
     List<ClinicalComparisonPdfRow>? rows,
-  })  : baseOrder = order1.createdAt <= order2.createdAt ? order1 : order2,
-        comparisonOrder = order1.createdAt <= order2.createdAt ? order2 : order1,
-        patientInfo = patientInfo ??
-            order2.patientInfo ??
-            order1.patientInfo ??
-            PatientInfo(name: 'Paciente sin registrar'),
-        doctorInfo = doctorInfo ?? order2.doctorInfo ?? order1.doctorInfo,
-        comparisonRows = rows ?? buildComparisonRows(
-          order1.createdAt <= order2.createdAt ? order1 : order2,
-          order1.createdAt <= order2.createdAt ? order2 : order1,
-        );
+  }) : baseOrder = order1.createdAt <= order2.createdAt ? order1 : order2,
+       comparisonOrder = order1.createdAt <= order2.createdAt ? order2 : order1,
+       patientInfo =
+           patientInfo ??
+           order2.patientInfo ??
+           order1.patientInfo ??
+           PatientInfo(name: 'Paciente sin registrar'),
+       doctorInfo = doctorInfo ?? order2.doctorInfo ?? order1.doctorInfo,
+       comparisonRows =
+           rows ??
+           buildComparisonRows(
+             order1.createdAt <= order2.createdAt ? order1 : order2,
+             order1.createdAt <= order2.createdAt ? order2 : order1,
+           );
 
   /// Construye y empareja las filas de resultados entre la orden base y la evolutiva.
   static List<ClinicalComparisonPdfRow> buildComparisonRows(
@@ -88,6 +134,24 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
     OrderInDb comparison,
   ) {
     final Map<String, ClinicalComparisonPdfRow> map = {};
+    final basePatient = base.patientInfo;
+    final comparisonPatient = comparison.patientInfo;
+    final baseAgeInDays = basePatient != null
+        ? ReferenceValueResolver.tryAgeInDaysAt(
+            dateOfBirthMs: basePatient.dateOfBirth,
+            referenceDateMs: base.createdAt,
+            fallbackAgeYears: basePatient.explicitAge,
+          )
+        : null;
+    final comparisonAgeInDays = comparisonPatient != null
+        ? ReferenceValueResolver.tryAgeInDaysAt(
+            dateOfBirthMs: comparisonPatient.dateOfBirth,
+            referenceDateMs: comparison.createdAt,
+            fallbackAgeYears: comparisonPatient.explicitAge,
+          )
+        : null;
+    final baseGender = basePatient?.gender ?? '';
+    final comparisonGender = comparisonPatient?.gender ?? '';
 
     String resolveKey(OrderTestResult r) {
       final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(
@@ -112,8 +176,12 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
         unitOfMeasure: r.unitOfMeasure,
         dataType: r.dataType,
         baseResult: r,
-        referenceValues: r.referenceValues,
+        baseReferenceValues: r.referenceValues,
         expectedQualitativeValue: r.expectedQualitativeValue,
+        baseAgeInDays: baseAgeInDays,
+        comparisonAgeInDays: comparisonAgeInDays,
+        baseGender: baseGender,
+        comparisonGender: comparisonGender,
       );
     }
 
@@ -124,16 +192,25 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
         final existing = map[key]!;
         map[key] = ClinicalComparisonPdfRow(
           key: key,
-          parameterName: existing.parameterName.isNotEmpty ? existing.parameterName : r.parameterName,
+          parameterName: existing.parameterName.isNotEmpty
+              ? existing.parameterName
+              : r.parameterName,
           medicalClassification: existing.medicalClassification.isNotEmpty
               ? existing.medicalClassification
               : r.medicalClassification,
-          unitOfMeasure: existing.unitOfMeasure.isNotEmpty ? existing.unitOfMeasure : r.unitOfMeasure,
+          unitOfMeasure: existing.unitOfMeasure.isNotEmpty
+              ? existing.unitOfMeasure
+              : r.unitOfMeasure,
           dataType: existing.dataType,
           baseResult: existing.baseResult,
           comparisonResult: r,
-          referenceValues: existing.referenceValues.isNotEmpty ? existing.referenceValues : r.referenceValues,
+          baseReferenceValues: existing.baseReferenceValues,
+          comparisonReferenceValues: r.referenceValues,
           expectedQualitativeValue: existing.expectedQualitativeValue ?? r.expectedQualitativeValue,
+          baseAgeInDays: baseAgeInDays,
+          comparisonAgeInDays: comparisonAgeInDays,
+          baseGender: baseGender,
+          comparisonGender: comparisonGender,
         );
       } else {
         map[key] = ClinicalComparisonPdfRow(
@@ -143,8 +220,12 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
           unitOfMeasure: r.unitOfMeasure,
           dataType: r.dataType,
           comparisonResult: r,
-          referenceValues: r.referenceValues,
+          comparisonReferenceValues: r.referenceValues,
           expectedQualitativeValue: r.expectedQualitativeValue,
+          baseAgeInDays: baseAgeInDays,
+          comparisonAgeInDays: comparisonAgeInDays,
+          baseGender: baseGender,
+          comparisonGender: comparisonGender,
         );
       }
     }
@@ -171,59 +252,38 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
     return gender;
   }
 
-  String _resolveReferenceText(ClinicalComparisonPdfRow row, int patientAge, String gender) {
+  String _formatReferenceRange(ReferenceValue ref, String unitOfMeasure) {
+    final unitSuffix = unitOfMeasure.isNotEmpty ? ' $unitOfMeasure' : '';
+    return '${ref.minValue} - ${ref.maxValue}$unitSuffix';
+  }
+
+  String _resolveReferenceText(ClinicalComparisonPdfRow row) {
     if (row.dataType == 'numeric') {
-      if (row.referenceValues.isNotEmpty) {
-        final normalizedGender = gender.toLowerCase();
-        ReferenceValue? matchedRef;
-        for (final ref in row.referenceValues) {
-          final refGender = ref.gender.toLowerCase();
-          final matchesGender = refGender.isEmpty ||
-              refGender == 'both' ||
-              refGender == 'todos' ||
-              (refGender.startsWith('m') && normalizedGender.startsWith('m')) ||
-              (refGender.startsWith('f') && normalizedGender.startsWith('f'));
+      final baseRef = row.baseReference;
+      final comparisonRef = row.comparisonReference;
 
-          final ageDays = patientAge * 365;
-          final matchesAge = (ref.minAgeDays <= 0 || ageDays >= ref.minAgeDays) &&
-              (ref.maxAgeDays <= 0 || ageDays <= ref.maxAgeDays);
+      final baseText = baseRef != null
+          ? _formatReferenceRange(baseRef, row.unitOfMeasure)
+          : (row.hasBaseDemographics ? 'Sin rango' : 'Sin datos demográficos');
+      final comparisonText = comparisonRef != null
+          ? _formatReferenceRange(comparisonRef, row.unitOfMeasure)
+          : (row.hasComparisonDemographics ? 'Sin rango' : 'Sin datos demográficos');
 
-          if (matchesGender && matchesAge) {
-            matchedRef = ref;
-            break;
-          }
-        }
-        matchedRef ??= row.referenceValues.first;
-        final unitSuffix = row.unitOfMeasure.isNotEmpty ? ' ${row.unitOfMeasure}' : '';
-        return '${matchedRef.minValue} - ${matchedRef.maxValue}$unitSuffix';
-      }
-      return '-';
-    } else if (row.expectedQualitativeValue != null &&
-        row.expectedQualitativeValue!.isNotEmpty) {
+      if (row.baseResult == null) return 'Evolutiva: $comparisonText';
+      if (row.comparisonResult == null) return 'Base: $baseText';
+
+      final sameRange =
+          baseRef != null &&
+          comparisonRef != null &&
+          baseRef.minValue == comparisonRef.minValue &&
+          baseRef.maxValue == comparisonRef.maxValue;
+      if (sameRange) return baseText;
+
+      return 'Base: $baseText\nEvolutiva: $comparisonText';
+    } else if (row.expectedQualitativeValue != null && row.expectedQualitativeValue!.isNotEmpty) {
       return 'Esperado: ${row.expectedQualitativeValue}';
     }
     return '-';
-  }
-
-  String? _resolveAlertFlag(OrderTestResult? r, List<ReferenceValue> referenceValues) {
-    if (r == null) return null;
-    if (r.alertFlag != null && r.alertFlag!.isNotEmpty) {
-      final flag = r.alertFlag!.toUpperCase();
-      if (flag == 'HIGH' || flag == 'ALTO' || flag == 'H') return 'H';
-      if (flag == 'LOW' || flag == 'BAJO' || flag == 'L') return 'L';
-      if (flag == 'ABNORMAL' || flag == 'ANORMAL') return '*';
-      return flag;
-    }
-
-    if (r.dataType == 'numeric' && r.resultValue != null && referenceValues.isNotEmpty) {
-      final numVal = ThousandsSeparatorInputFormatter.tryParseDouble(r.resultValue);
-      if (numVal != null) {
-        final ref = referenceValues.first;
-        if (numVal > ref.maxValue) return 'H';
-        if (numVal < ref.minValue) return 'L';
-      }
-    }
-    return null;
   }
 
   String _groupForParam(ClinicalComparisonPdfRow row) {
@@ -296,8 +356,18 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
       }
     }
 
-    final patientAge =
-        patientInfo.age > 0 ? patientInfo.age : _calculateAge(patientInfo.dateOfBirth);
+    final patientAge = patientInfo.age > 0
+        ? patientInfo.age
+        : _calculateAge(patientInfo.dateOfBirth);
+    final hasDemographics = patientInfo.dateOfBirth > 0 || patientInfo.explicitAge != null;
+    final patientAgeInDays = ReferenceValueResolver.tryAgeInDaysAt(
+      dateOfBirthMs: patientInfo.dateOfBirth,
+      referenceDateMs: baseOrder.createdAt,
+      fallbackAgeYears: patientInfo.explicitAge,
+    );
+    final patientAgeLabel = hasDemographics && patientAgeInDays == 0
+        ? '0 días'
+        : (patientAge > 0 ? '$patientAge años' : (hasDemographics ? '0 años' : 'N/D'));
     final genderStr = _formatGender(patientInfo.gender);
 
     // Agrupar filas
@@ -443,7 +513,10 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
                               children: [
                                 pw.TextSpan(
                                   text: 'Paciente: ',
-                                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5),
+                                  style: pw.TextStyle(
+                                    fontWeight: pw.FontWeight.bold,
+                                    fontSize: 9.5,
+                                  ),
                                 ),
                                 pw.TextSpan(
                                   text: patientInfo.name,
@@ -454,7 +527,7 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
                           ),
                           pw.SizedBox(height: 2),
                           pw.Text(
-                            'Edad / Sexo: ${patientAge > 0 ? '$patientAge años' : 'N/D'} | $genderStr$cardIdSuffix',
+                            'Edad / Sexo: $patientAgeLabel | $genderStr$cardIdSuffix',
                             style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800),
                           ),
                         ],
@@ -611,17 +684,20 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
                     ),
                   ),
                   ...rows.map((r) {
-                    final baseAlert = _resolveAlertFlag(r.baseResult, r.referenceValues);
-                    final compAlert = _resolveAlertFlag(r.comparisonResult, r.referenceValues);
+                    final baseAlert = r.baseAlert;
+                    final compAlert = r.comparisonAlert;
 
-                    final baseVal = r.baseResult?.resultValue != null &&
-                            r.baseResult!.resultValue!.isNotEmpty
+                    final baseVal =
+                        r.baseResult?.resultValue != null && r.baseResult!.resultValue!.isNotEmpty
                         ? ThousandsSeparatorInputFormatter.formatText(r.baseResult!.resultValue!)
                         : '—';
 
-                    final compVal = r.comparisonResult?.resultValue != null &&
+                    final compVal =
+                        r.comparisonResult?.resultValue != null &&
                             r.comparisonResult!.resultValue!.isNotEmpty
-                        ? ThousandsSeparatorInputFormatter.formatText(r.comparisonResult!.resultValue!)
+                        ? ThousandsSeparatorInputFormatter.formatText(
+                            r.comparisonResult!.resultValue!,
+                          )
                         : '—';
 
                     final deltaAbs = r.deltaAbsolute;
@@ -643,7 +719,7 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
                       }
                     }
 
-                    final refText = _resolveReferenceText(r, patientAge, genderStr);
+                    final refText = _resolveReferenceText(r);
 
                     return pw.Container(
                       padding: const pw.EdgeInsets.symmetric(vertical: 3, horizontal: 6),
