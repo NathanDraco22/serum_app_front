@@ -24,18 +24,6 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
        doctorInfo = doctorInfo ?? order.doctorInfo,
        signer = signer ?? branch.bioanalyst;
 
-  int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
-    final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-    if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) {
-      age--;
-    }
-    return age >= 0 ? age : 0;
-  }
-
   String _formatGender(String gender) {
     final g = gender.trim().toLowerCase();
     if (g == 'm' || g == 'male' || g == 'masculino') return 'Masculino';
@@ -255,7 +243,6 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           dateOfBirth: 0,
           gender: '',
         );
-    final patientAge = patient.age > 0 ? patient.age : _calculateAge(patient.dateOfBirth);
     final genderStr = _formatGender(patient.gender);
 
     doc.addPage(
@@ -272,7 +259,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
         },
         build: (pw.Context context) {
           return [
-            _buildPatientAndDoctorInfo(patient, patientAge, genderStr),
+            _buildPatientAndDoctorInfo(patient, genderStr),
             pw.SizedBox(height: 14),
             _buildClinicalResultsSection(patient.gender),
             pw.SizedBox(height: 20),
@@ -418,13 +405,12 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
   pw.Widget _buildPatientAndDoctorInfo(
     PatientInfo patient,
-    int patientAge,
     String genderStr,
   ) {
     final doctor = doctorInfo;
-    final patientAgeLabel = _hasDemographics && _patientAgeInDays == 0
-        ? '0 días'
-        : (patientAge > 0 ? '$patientAge años' : (_hasDemographics ? '0 días' : 'N/D'));
+    final patientAgeLabel = _patientAgeInDays != null
+        ? ReferenceValueResolver.formatAgeDays(_patientAgeInDays!)
+        : 'N/D';
 
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),

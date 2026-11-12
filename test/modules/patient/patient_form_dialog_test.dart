@@ -174,6 +174,18 @@ void main() {
       expect(calculatedBirth.year, equals(expectedYear));
     });
 
+    testWidgets('Al ingresar edad 0 muestra advertencia de neonato', (tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      final ageFinder = find.widgetWithText(TextFormField, 'Edad (años) *');
+      await tester.enterText(ageFinder, '0');
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Edad registrada: 0 días'), findsOneWidget);
+      expect(find.textContaining('ajuste la fecha'), findsOneWidget);
+    });
+
     testWidgets('Modo edición pre-llena la edad calculada a partir del paciente existente', (
       tester,
     ) async {

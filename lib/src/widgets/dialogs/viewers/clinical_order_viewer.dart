@@ -410,18 +410,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
   final DoctorInfo? doctorInfo;
   final BioanalystInfo? signer;
 
-  int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
-    final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-    if (today.month < birthDate.month ||
-        (today.month == birthDate.month && today.day < birthDate.day)) {
-      age--;
-    }
-    return age >= 0 ? age : 0;
-  }
-
   String _formatGender(String gender) {
     final g = gender.trim().toLowerCase();
     if (g == 'm' || g == 'male' || g == 'masculino') return 'Masculino';
@@ -447,9 +435,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     final orderDate = DateTime.fromMillisecondsSinceEpoch(order.createdAt);
     final formattedDate =
         '${DateTimeTool.formatddMMyy(orderDate)} ${DateTimeTool.formatHHmm(orderDate)}';
-    final patientAge = patientInfo.age > 0
-        ? patientInfo.age
-        : _calculateAge(patientInfo.dateOfBirth);
     final patientAgeInDays = ReferenceValueResolver.tryAgeInDaysAt(
       dateOfBirthMs: patientInfo.dateOfBirth,
       referenceDateMs: order.createdAt,
@@ -457,9 +442,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     );
     final hasDemographics = patientInfo.dateOfBirth > 0 || patientInfo.explicitAge != null;
     final genderStr = _formatGender(patientInfo.gender);
-    final patientAgeLabel = hasDemographics && patientAgeInDays == 0
-        ? '0 días'
-        : (patientAge > 0 ? '$patientAge años' : (hasDemographics ? '0 días' : 'N/D'));
+    final patientAgeLabel = patientAgeInDays != null
+        ? ReferenceValueResolver.formatAgeDays(patientAgeInDays)
+        : 'N/D';
     final shortId = order.id.length > 8
         ? order.id.substring(order.id.length - 8).toUpperCase()
         : order.id.toUpperCase();

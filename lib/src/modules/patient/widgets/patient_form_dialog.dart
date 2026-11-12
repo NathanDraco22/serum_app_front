@@ -128,6 +128,84 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
     }
   }
 
+  Widget _buildAgeHint(ThemeData theme) {
+    final age = int.tryParse(_ageController.text.trim());
+    if (age != 0) return const SizedBox.shrink();
+
+    final date = _dateOfBirth;
+    if (date == null) {
+      return _buildHint(
+        theme,
+        icon: Icons.info_outline_rounded,
+        message: 'Para menores de 1 año, seleccione la fecha exacta de nacimiento.',
+      );
+    }
+
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    if (isToday) {
+      return _buildHint(
+        theme,
+        icon: Icons.warning_amber_rounded,
+        message:
+            'Edad registrada: 0 días. Si el paciente tiene semanas o meses, '
+            'ajuste la fecha de nacimiento.',
+      );
+    }
+
+    final days = ReferenceValueResolver.tryAgeInDaysAt(
+      dateOfBirthMs: date.millisecondsSinceEpoch,
+      referenceDateMs: now.millisecondsSinceEpoch,
+    );
+    if (days == null) return const SizedBox.shrink();
+
+    return _buildHint(
+      theme,
+      icon: Icons.check_circle_outline_rounded,
+      message: 'Edad calculada: ${ReferenceValueResolver.formatAgeDays(days)}.',
+      isWarning: false,
+    );
+  }
+
+  Widget _buildHint(
+    ThemeData theme, {
+    required IconData icon,
+    required String message,
+    bool isWarning = true,
+  }) {
+    final background = isWarning ? Colors.amber.shade50 : Colors.green.shade50;
+    final border = isWarning ? Colors.amber.shade200 : Colors.green.shade200;
+    final foreground = isWarning ? Colors.amber.shade900 : Colors.green.shade800;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: foreground),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _submit() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
@@ -321,6 +399,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
                     ),
                   ],
                 ),
+                _buildAgeHint(theme),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _gender,
