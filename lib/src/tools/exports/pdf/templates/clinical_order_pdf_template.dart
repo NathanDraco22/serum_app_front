@@ -57,6 +57,28 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     );
   }
 
+  ClinicalEvaluationResult _evaluate(OrderTestResult r) {
+    final patient =
+        patientInfo ??
+        PatientInfo(
+          name: 'Paciente #${order.patientId}',
+          dateOfBirth: 0,
+          gender: '',
+        );
+    return const ClinicalEvaluationService().evaluate(
+      ClinicalEvaluationInput(
+        dateOfBirthMs: patient.dateOfBirth,
+        explicitAgeYears: patient.explicitAge,
+        referenceDateMs: order.createdAt,
+        gender: patient.gender,
+        dataType: r.dataType,
+        resultValue: r.resultValue,
+        expectedQualitativeValue: r.expectedQualitativeValue,
+        referenceValues: r.referenceValues,
+      ),
+    );
+  }
+
   /// Resuelve la edad en días usada para elegir el rango de referencia.
   ///
   /// Si el paciente no tiene fecha de nacimiento ni edad explícita, devuelve
@@ -67,13 +89,6 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
   }) {
     final hasAgeData = patient != null && (patient.dateOfBirth > 0 || patient.explicitAge != null);
     return hasAgeData ? exactAgeInDays : null;
-  }
-
-  int? _referenceAgeInDays() {
-    return resolveReferenceAgeInDays(
-      patient: patientInfo,
-      exactAgeInDays: _patientAgeInDays,
-    );
   }
 
   /// Construye la etiqueta principal de referencia para un resultado.
@@ -118,25 +133,16 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return '-';
   }
 
-  bool get _hasDemographics =>
-      patientInfo != null && (patientInfo!.dateOfBirth > 0 || patientInfo!.explicitAge != null);
-
-  String _resolveReferenceText(OrderTestResult r, String gender) {
-    final reference = r.dataType == 'numeric'
-        ? ReferenceValueResolver.resolve(
-            values: r.referenceValues,
-            ageInDays: _referenceAgeInDays(),
-            gender: gender,
-          )
-        : null;
+  String _resolveReferenceText(OrderTestResult r) {
+    final evaluation = _evaluate(r);
 
     return resolveReferenceLabel(
       dataType: r.dataType,
       referenceText: r.referenceText,
       unitOfMeasure: r.unitOfMeasure,
       expectedQualitativeValue: r.expectedQualitativeValue,
-      reference: reference,
-      hasDemographics: _hasDemographics,
+      reference: evaluation.reference,
+      hasDemographics: evaluation.hasDemographics,
     );
   }
 
@@ -158,16 +164,9 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return flag == 'ABNORMAL' ? '*' : flag;
   }
 
-  String? _resolveAlertFlag(OrderTestResult r, String gender) {
-    final reference = r.dataType == 'numeric'
-        ? ReferenceValueResolver.resolve(
-            values: r.referenceValues,
-            ageInDays: _referenceAgeInDays(),
-            gender: gender,
-          )
-        : null;
-
-    return resolveResultAlert(result: r, reference: reference);
+  String? _resolveAlertFlag(OrderTestResult r) {
+    final flag = _evaluate(r).alertFlag;
+    return flag == 'ABNORMAL' ? '*' : flag;
   }
 
   @override
@@ -261,7 +260,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
           return [
             _buildPatientAndDoctorInfo(patient, genderStr),
             pw.SizedBox(height: 14),
-            _buildClinicalResultsSection(patient.gender),
+            _buildClinicalResultsSection(),
             pw.SizedBox(height: 20),
             _buildSignatureAndNotes(sealImage),
           ];
@@ -492,14 +491,14 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     );
   }
 
-  pw.Widget _buildClinicalResultsSection(String gender) {
+  pw.Widget _buildClinicalResultsSection() {
     final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
     final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
     pw.TableRow buildPdfTableRow(OrderTestResult r, bool hasGroupHeader) {
-      final alertFlag = _resolveAlertFlag(r, gender);
+      final alertFlag = _resolveAlertFlag(r);
       final hasAlert = alertFlag != null && alertFlag.isNotEmpty;
-      final refText = _resolveReferenceText(r, gender);
+      final refText = _resolveReferenceText(r);
       final isTotalRow = r.parameterName.trim().toUpperCase() == 'TOTAL';
       final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
       final double leftIndent = isSubParam
@@ -600,7 +599,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     pw.Widget buildPdfTextResultBlock(OrderTestResult r, bool hasGroupHeader) {
       final hasContent = r.resultValue != null && r.resultValue!.trim().isNotEmpty;
       final displayValue = hasContent ? r.resultValue!.trim() : '-';
-      final refText = _resolveReferenceText(r, gender);
+      final refText = _resolveReferenceText(r);
       final isSubParam = ClinicalOrderGrouper.isSubParameter(r);
       final double leftIndent = isSubParam
           ? (hasGroupHeader ? 22.0 : 14.0)

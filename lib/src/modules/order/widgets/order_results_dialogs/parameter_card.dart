@@ -138,20 +138,23 @@ class ParameterCard extends StatelessWidget {
         isAutoCalculated ?? activeController?.isAutoCalculated(result.labTestId) ?? false;
     final resolvedFormulaDisplay =
         formulaDisplay ?? activeController?.getFormulaDisplay(result.labTestId);
-    final resolvedAlert = alert ?? activeController?.getAlertFlag(result);
+    final isNumeric = result.dataType == 'numeric';
+    final liveValue = result.dataType == 'qualitative' || result.dataType == 'boolean'
+        ? resolvedQualitativeValue
+        : resolvedController?.text.trim();
+    final evaluation = activeController?.evaluateResult(result, resultValue: liveValue);
+    final resolvedAlert = alert ?? evaluation?.alertFlag;
     final resolvedIsAlert =
         isAlert ??
-        (activeController != null
-            ? activeController.isAlert(result)
+        (evaluation != null
+            ? evaluation.hasAlert
             : (resolvedAlert == 'H' ||
                   resolvedAlert == 'HIGH' ||
                   resolvedAlert == 'L' ||
                   resolvedAlert == 'LOW' ||
                   resolvedAlert == 'ABNORMAL'));
-    final isNumeric = result.dataType == 'numeric';
-    final resolution = activeController?.findReferenceResolutionForPatient(result);
     final resolvedReference =
-        resolution?.value ?? (activeController == null ? _fallbackGeneralReference() : null);
+        evaluation?.reference ?? (activeController == null ? _fallbackGeneralReference() : null);
     final resolvedHasReference = isNumeric
         ? resolvedReference != null
         : result.referenceText.trim().isNotEmpty;
@@ -339,7 +342,7 @@ class ParameterCard extends StatelessWidget {
               // Caja de Referencia (solo si no es texto libre o si tiene referenceText definido)
               if (result.dataType != 'text' || result.referenceText.trim().isNotEmpty) ...[
                 Tooltip(
-                  message: _getReferenceText(activeController),
+                  message: _getReferenceText(evaluation),
                   child: Container(
                     constraints: const BoxConstraints(minWidth: 160, maxWidth: 260),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -369,7 +372,7 @@ class ParameterCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _getReferenceText(activeController),
+                          _getReferenceText(evaluation),
                           maxLines: result.referenceText.isNotEmpty ? 4 : 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -425,7 +428,7 @@ class ParameterCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    _getAlertExplanation(resolvedAlert, activeController),
+                    _getAlertExplanation(resolvedAlert, evaluation),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
@@ -516,19 +519,19 @@ class ParameterCard extends StatelessWidget {
     }
   }
 
-  String _getReferenceText(OrderResultsViewController? activeController) {
+  String _getReferenceText(ClinicalEvaluationResult? evaluation) {
     if (result.dataType == 'numeric') {
-      final resolution = activeController?.findReferenceResolutionForPatient(result);
-      final ref = activeController != null ? resolution?.value : _fallbackGeneralReference();
+      final ref =
+          evaluation?.reference ?? (evaluation == null ? _fallbackGeneralReference() : null);
       if (ref != null) {
         final unit = result.unitOfMeasure.isNotEmpty ? ' ${result.unitOfMeasure}' : '';
         return '${ref.minValue} - ${ref.maxValue}$unit';
       }
 
-      final message = activeController != null
-          ? (activeController.patientAgeInDays == null
-                ? 'Sin datos demográficos'
-                : 'Sin rango para esta edad/género')
+      final message = evaluation != null
+          ? (evaluation.hasDemographics
+                ? 'Sin rango para esta edad/género'
+                : 'Sin datos demográficos')
           : (result.referenceValues.isEmpty ? 'Sin rango definido' : 'Sin datos demográficos');
       return result.referenceText.isNotEmpty ? '$message\n${result.referenceText}' : message;
     }
@@ -549,9 +552,11 @@ class ParameterCard extends StatelessWidget {
     return general.length == 1 ? general.first : null;
   }
 
-  String _getAlertExplanation(String? resolvedAlert, OrderResultsViewController? activeController) {
-    final resolution = activeController?.findReferenceResolutionForPatient(result);
-    final ref = activeController != null ? resolution?.value : _fallbackGeneralReference();
+  String _getAlertExplanation(
+    String? resolvedAlert,
+    ClinicalEvaluationResult? evaluation,
+  ) {
+    final ref = evaluation?.reference ?? (evaluation == null ? _fallbackGeneralReference() : null);
 
     if (resolvedAlert == 'HIGH' || resolvedAlert == 'H') {
       if (ref != null) {

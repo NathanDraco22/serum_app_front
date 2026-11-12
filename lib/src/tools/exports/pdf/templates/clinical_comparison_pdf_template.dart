@@ -24,6 +24,8 @@ class ClinicalComparisonPdfRow {
   final int? comparisonAgeInDays;
   final String baseGender;
   final String comparisonGender;
+  final ClinicalEvaluationResult? baseEvaluation;
+  final ClinicalEvaluationResult? comparisonEvaluation;
 
   ClinicalComparisonPdfRow({
     required this.key,
@@ -40,23 +42,30 @@ class ClinicalComparisonPdfRow {
     this.comparisonAgeInDays,
     this.baseGender = '',
     this.comparisonGender = '',
+    this.baseEvaluation,
+    this.comparisonEvaluation,
   });
 
-  ReferenceValue? get baseReference => ReferenceValueResolver.resolve(
-    values: baseReferenceValues,
-    ageInDays: baseAgeInDays,
-    gender: baseGender,
-  );
+  ReferenceValue? get baseReference =>
+      baseEvaluation?.reference ??
+      ReferenceValueResolver.resolve(
+        values: baseReferenceValues,
+        ageInDays: baseAgeInDays,
+        gender: baseGender,
+      );
 
-  ReferenceValue? get comparisonReference => ReferenceValueResolver.resolve(
-    values: comparisonReferenceValues,
-    ageInDays: comparisonAgeInDays,
-    gender: comparisonGender,
-  );
+  ReferenceValue? get comparisonReference =>
+      comparisonEvaluation?.reference ??
+      ReferenceValueResolver.resolve(
+        values: comparisonReferenceValues,
+        ageInDays: comparisonAgeInDays,
+        gender: comparisonGender,
+      );
 
-  bool get hasBaseDemographics => baseAgeInDays != null;
+  bool get hasBaseDemographics => baseEvaluation?.hasDemographics ?? baseAgeInDays != null;
 
-  bool get hasComparisonDemographics => comparisonAgeInDays != null;
+  bool get hasComparisonDemographics =>
+      comparisonEvaluation?.hasDemographics ?? comparisonAgeInDays != null;
 
   double? get baseNumeric => baseResult?.resultValue != null
       ? ThousandsSeparatorInputFormatter.tryParseDouble(baseResult!.resultValue!)
@@ -77,10 +86,22 @@ class ClinicalComparisonPdfRow {
   }
 
   /// Alerta recalculada del resultado base usando su propio rango.
-  String? get baseAlert => _evaluateAlert(baseResult, baseReference);
+  String? get baseAlert {
+    if (baseEvaluation != null) {
+      return _formatAlert(baseEvaluation!.alertFlag);
+    }
+    return _evaluateAlert(baseResult, baseReference);
+  }
 
   /// Alerta recalculada del resultado comparativo usando su propio rango.
-  String? get comparisonAlert => _evaluateAlert(comparisonResult, comparisonReference);
+  String? get comparisonAlert {
+    if (comparisonEvaluation != null) {
+      return _formatAlert(comparisonEvaluation!.alertFlag);
+    }
+    return _evaluateAlert(comparisonResult, comparisonReference);
+  }
+
+  static String? _formatAlert(String? flag) => flag == 'ABNORMAL' ? '*' : flag;
 
   String? _evaluateAlert(OrderTestResult? result, ReferenceValue? reference) {
     if (result == null) return null;
@@ -92,7 +113,7 @@ class ClinicalComparisonPdfRow {
       reference: result.dataType == 'numeric' ? reference : null,
     );
 
-    return flag == 'ABNORMAL' ? '*' : flag;
+    return _formatAlert(flag);
   }
 }
 
@@ -136,22 +157,27 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
     final Map<String, ClinicalComparisonPdfRow> map = {};
     final basePatient = base.patientInfo;
     final comparisonPatient = comparison.patientInfo;
-    final baseAgeInDays = basePatient != null
-        ? ReferenceValueResolver.tryAgeInDaysAt(
-            dateOfBirthMs: basePatient.dateOfBirth,
-            referenceDateMs: base.createdAt,
-            fallbackAgeYears: basePatient.explicitAge,
-          )
-        : null;
-    final comparisonAgeInDays = comparisonPatient != null
-        ? ReferenceValueResolver.tryAgeInDaysAt(
-            dateOfBirthMs: comparisonPatient.dateOfBirth,
-            referenceDateMs: comparison.createdAt,
-            fallbackAgeYears: comparisonPatient.explicitAge,
-          )
-        : null;
     final baseGender = basePatient?.gender ?? '';
     final comparisonGender = comparisonPatient?.gender ?? '';
+
+    ClinicalEvaluationResult evaluate(
+      OrderTestResult? result,
+      PatientInfo? patient,
+      int referenceDateMs,
+    ) {
+      return const ClinicalEvaluationService().evaluate(
+        ClinicalEvaluationInput(
+          dateOfBirthMs: patient?.dateOfBirth ?? 0,
+          explicitAgeYears: patient?.explicitAge,
+          referenceDateMs: referenceDateMs,
+          gender: patient?.gender ?? '',
+          dataType: result?.dataType ?? 'numeric',
+          resultValue: result?.resultValue,
+          expectedQualitativeValue: result?.expectedQualitativeValue,
+          referenceValues: result?.referenceValues ?? const [],
+        ),
+      );
+    }
 
     String resolveKey(OrderTestResult r) {
       final canonical = ClinicalFormulasRegistry.resolveCanonicalKey(
@@ -178,10 +204,9 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
         baseResult: r,
         baseReferenceValues: r.referenceValues,
         expectedQualitativeValue: r.expectedQualitativeValue,
-        baseAgeInDays: baseAgeInDays,
-        comparisonAgeInDays: comparisonAgeInDays,
         baseGender: baseGender,
         comparisonGender: comparisonGender,
+        baseEvaluation: evaluate(r, basePatient, base.createdAt),
       );
     }
 
@@ -207,10 +232,10 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
           baseReferenceValues: existing.baseReferenceValues,
           comparisonReferenceValues: r.referenceValues,
           expectedQualitativeValue: existing.expectedQualitativeValue ?? r.expectedQualitativeValue,
-          baseAgeInDays: baseAgeInDays,
-          comparisonAgeInDays: comparisonAgeInDays,
           baseGender: baseGender,
           comparisonGender: comparisonGender,
+          baseEvaluation: existing.baseEvaluation,
+          comparisonEvaluation: evaluate(r, comparisonPatient, comparison.createdAt),
         );
       } else {
         map[key] = ClinicalComparisonPdfRow(
@@ -222,10 +247,9 @@ class ClinicalComparisonPdfTemplate implements PdfTemplate {
           comparisonResult: r,
           comparisonReferenceValues: r.referenceValues,
           expectedQualitativeValue: r.expectedQualitativeValue,
-          baseAgeInDays: baseAgeInDays,
-          comparisonAgeInDays: comparisonAgeInDays,
           baseGender: baseGender,
           comparisonGender: comparisonGender,
+          comparisonEvaluation: evaluate(r, comparisonPatient, comparison.createdAt),
         );
       }
     }

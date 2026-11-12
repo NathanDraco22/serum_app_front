@@ -250,56 +250,51 @@ class OrderResultsViewController extends ChangeNotifier {
     );
   }
 
+  /// Evalúa clínicamente un resultado con el pipeline compartido de negocio.
+  ClinicalEvaluationResult evaluateResult(
+    OrderTestResult result, {
+    String? resultValue,
+  }) {
+    final patient = order.patientInfo;
+    return const ClinicalEvaluationService().evaluate(
+      ClinicalEvaluationInput(
+        dateOfBirthMs: patient?.dateOfBirth ?? 0,
+        explicitAgeYears: patient?.explicitAge,
+        referenceDateMs: order.createdAt,
+        gender: patient?.gender ?? '',
+        dataType: result.dataType,
+        resultValue: resultValue ?? getLiveResultValue(result),
+        expectedQualitativeValue: result.expectedQualitativeValue,
+        referenceValues: result.referenceValues,
+      ),
+    );
+  }
+
+  /// Obtiene el valor capturado en vivo para un resultado.
+  String? getLiveResultValue(OrderTestResult result) {
+    if (result.dataType == 'qualitative' || result.dataType == 'boolean') {
+      return _qualitativeValues[result.labTestId];
+    }
+    return _controllers[result.labTestId]?.text.trim();
+  }
+
   /// Resuelve el rango de referencia aplicable según edad y género.
   ReferenceResolution findReferenceResolutionForPatient(OrderTestResult r) {
-    if (r.referenceValues.isEmpty) return const ReferenceResolution.none();
-
-    final patientInfo = order.patientInfo;
-    return ReferenceValueResolver.resolveWithMetadata(
-      values: r.referenceValues,
-      ageInDays: patientAgeInDays,
-      gender: patientInfo?.gender ?? '',
-    );
+    return evaluateResult(r).referenceResolution;
   }
 
   /// Busca el valor de referencia apropiado según la demografía del paciente.
   ReferenceValue? findReferenceValueForPatient(OrderTestResult r) {
-    return findReferenceResolutionForPatient(r).value;
+    return evaluateResult(r).referenceResolution.value;
   }
 
   /// Evalúa el flag de alerta médica de un resultado en tiempo real (H, L, ABNORMAL o null).
   String? getAlertFlag(OrderTestResult r) {
-    if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
-      final val = _qualitativeValues[r.labTestId];
-      if (val != null &&
-          r.expectedQualitativeValue != null &&
-          r.expectedQualitativeValue!.isNotEmpty &&
-          val != r.expectedQualitativeValue) {
-        return 'ABNORMAL';
-      }
-      return null;
-    } else if (r.dataType == 'numeric') {
-      final text = _controllers[r.labTestId]?.text.trim() ?? '';
-      if (text.isEmpty) return null;
-      final valDouble = ThousandsSeparatorInputFormatter.tryParseDouble(text);
-      if (valDouble == null) return null;
-
-      final ref = findReferenceValueForPatient(r);
-      if (ref != null) {
-        return ClinicalFormulasRegistry.evaluateAlertFlag(
-          value: valDouble,
-          minValue: ref.minValue,
-          maxValue: ref.maxValue,
-        );
-      }
-      return null;
-    }
-    return null;
+    return evaluateResult(r).alertFlag;
   }
 
   bool isAlert(OrderTestResult r) {
-    final alert = getAlertFlag(r);
-    return alert == 'H' || alert == 'HIGH' || alert == 'L' || alert == 'LOW' || alert == 'ABNORMAL';
+    return evaluateResult(r).hasAlert;
   }
 
   // ---------------------------------------------------------------------------
@@ -914,34 +909,14 @@ class OrderResultsViewController extends ChangeNotifier {
   List<OrderTestResult> generateUpdatedResults() {
     return _results.map((r) {
       String? val;
-      String? alert;
 
       if (r.dataType == 'qualitative' || r.dataType == 'boolean') {
         val = _qualitativeValues[r.labTestId];
-        if (r.expectedQualitativeValue != null &&
-            r.expectedQualitativeValue!.isNotEmpty &&
-            val != r.expectedQualitativeValue) {
-          alert = 'ABNORMAL';
-        }
       } else {
         val = _controllers[r.labTestId]?.text.trim();
-        if (r.dataType == 'numeric' &&
-            val != null &&
-            val.isNotEmpty &&
-            r.referenceValues.isNotEmpty) {
-          final valDouble = ThousandsSeparatorInputFormatter.tryParseDouble(val);
-          if (valDouble != null) {
-            final ref = findReferenceValueForPatient(r);
-            if (ref != null) {
-              alert = ClinicalFormulasRegistry.evaluateAlertFlag(
-                value: valDouble,
-                minValue: ref.minValue,
-                maxValue: ref.maxValue,
-              );
-            }
-          }
-        }
       }
+
+      final alert = evaluateResult(r, resultValue: val).alertFlag;
 
       return OrderTestResult(
         labTestId: r.labTestId,

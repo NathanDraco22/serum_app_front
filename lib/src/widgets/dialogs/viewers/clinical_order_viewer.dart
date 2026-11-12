@@ -417,6 +417,21 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     return gender;
   }
 
+  ClinicalEvaluationResult _evaluate(OrderTestResult r) {
+    return const ClinicalEvaluationService().evaluate(
+      ClinicalEvaluationInput(
+        dateOfBirthMs: patientInfo.dateOfBirth,
+        explicitAgeYears: patientInfo.explicitAge,
+        referenceDateMs: order.createdAt,
+        gender: patientInfo.gender,
+        dataType: r.dataType,
+        resultValue: r.resultValue,
+        expectedQualitativeValue: r.expectedQualitativeValue,
+        referenceValues: r.referenceValues,
+      ),
+    );
+  }
+
   String _finalizationLabel(OrderInDb order) {
     final name = order.finalizedBy?.name.trim();
     if (order.finalizedAt == null) {
@@ -440,7 +455,6 @@ class ClinicalOrderViewerContent extends StatelessWidget {
       referenceDateMs: order.createdAt,
       fallbackAgeYears: patientInfo.explicitAge,
     );
-    final hasDemographics = patientInfo.dateOfBirth > 0 || patientInfo.explicitAge != null;
     final genderStr = _formatGender(patientInfo.gender);
     final patientAgeLabel = patientAgeInDays != null
         ? ReferenceValueResolver.formatAgeDays(patientAgeInDays)
@@ -767,18 +781,9 @@ class ClinicalOrderViewerContent extends StatelessWidget {
             TableRow buildTableRow(OrderTestResult r, bool hasGroupHeader) {
               final isNumeric = r.dataType == 'numeric';
 
-              final resolvedRef = ReferenceValueResolver.resolve(
-                values: r.referenceValues,
-                ageInDays: patientAgeInDays,
-                gender: patientInfo.gender,
-              );
-
-              final computedFlag = ClinicalAlertEvaluator.evaluateResult(
-                dataType: r.dataType,
-                resultValue: r.resultValue,
-                expectedQualitativeValue: r.expectedQualitativeValue,
-                reference: isNumeric ? resolvedRef : null,
-              );
+              final evaluation = _evaluate(r);
+              final resolvedRef = evaluation.reference;
+              final computedFlag = evaluation.alertFlag;
               final alertFlag = computedFlag == 'ABNORMAL' ? '*' : computedFlag;
               final hasAlert = alertFlag != null;
 
@@ -786,7 +791,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
               String referenceText = '—';
               if (isNumeric) {
                 if (resolvedRef == null) {
-                  final message = hasDemographics
+                  final message = evaluation.hasDemographics
                       ? 'Sin rango para esta edad/género'
                       : 'Sin datos demográficos';
                   referenceText = customReference.isNotEmpty

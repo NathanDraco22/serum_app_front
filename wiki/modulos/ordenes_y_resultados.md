@@ -15,7 +15,7 @@ El módulo `order` (`lib/src/modules/order/`) es el núcleo operativo y clínico
 - **Controladores y Mediadores (`lib/src/modules/order/controllers/`)**:
   - `CreateOrderViewController`: Controlador `ChangeNotifier` (estándar OKF) que concentra el estado en memoria de la pantalla de creación (paciente, médico, ítems, servicios, descuentos, niveles de precios, notas), getters derivados de cálculos financieros y la generación del DTO inmutable `CreateOrder`.
   - `CreateOrderMediator`: `InheritedWidget` mudo (`updateShouldNotify: false`) que expone el controlador hacia los árboles de widgets sin redibujados globales involuntarios.
-  - `OrderResultsViewController`: Controlador `ChangeNotifier` (estándar OKF v0.2) que administra el ciclo de vida de los controladores de texto, integración reactiva del motor de fórmulas de Wintrobe, diferencial leucocitario al 100%, alertas demográficas H/L y generación del DTO inmutable `UpdateOrder`.
+  - `OrderResultsViewController`: Controlador `ChangeNotifier` (estándar OKF v0.2) que administra el ciclo de vida de los controladores de texto, integración reactiva del motor de fórmulas de Wintrobe, diferencial leucocitario al 100%, evaluación clínica compartida de rangos y alertas, y generación del DTO inmutable `UpdateOrder`.
   - `OrderResultsMediator`: `InheritedWidget` mudo (`updateShouldNotify: false`) para la captura de resultados clínicos sin prop-drilling en subwidgets.
 - **Pantallas**:
   - `OrderScreen` (`view/order_screen.dart`): Tablero principal de seguimiento y listado de órdenes clínicas.
@@ -110,20 +110,18 @@ Orquestado bajo el patrón **ViewController + Mediator (OKF v0.2)**, el diálogo
 #### 3. Control Clínico, Flags H/L y Transparencia
 - **Badge `"Auto ⚡"`**: Los campos autocalculados despliegan una insignia distintiva con un tooltip que expone la fórmula matemática utilizada.
 - **Sobreescritura Manual Respetada**: Si el laboratorio cuenta con analizadores hematológicos automatizados (Sysmex/Mindray) o mide parámetros por separado, el usuario puede teclear sobre cualquier campo autocalculado; el sistema respetará su captura manual.
-- **Indicadores Fuera de Rango (Flags H / L)**: Cada resultado numérico se valida contra los límites normales (`minValue` y `maxValue` para la demografía del paciente):
-  - $\text{Resultado} > \text{maxValue} \to$ Flag **`H`** (`ALTO ▲ (H)`).
-  - $\text{Resultado} < \text{minValue} \to$ Flag **`L`** (`BAJO ▼ (L)`).
-  - Dentro de rango normal $\to$ Sin flag (`null` / badge verde `NORMAL`).
-  - Pruebas cualitativas que difieren del esperado $\to$ Flag **`ABNORMAL`** (`ANORMAL`).
-- **Resolución demográfica centralizada (`ReferenceValueResolver`)**:
+- **Evaluación clínica centralizada (`ClinicalEvaluationService` + `ReferenceValueResolver`)**:
+  - `OrderResultsViewController`, `ParameterCard`, el visor clínico (`ClinicalOrderViewer`) y las plantillas PDF (`ClinicalOrderPdfTemplate`, `ClinicalComparisonPdfTemplate`) consumen el pipeline de `serum_business` (`lib/src/core/evaluation/`). El controller ya no reimplementa los flags `H`/`L`/`ABNORMAL` ni usa `ClinicalFormulasRegistry.evaluateAlertFlag` para alertas: delega en `ClinicalEvaluationService.evaluate`.
+  - El pipeline compone `ReferenceValueResolver` y `ClinicalAlertEvaluator`: resuelve la demografía, obtiene el rango aplicable y evalúa el valor capturado.
   - La edad se calcula en **días exactos** desde `dateOfBirth`; para órdenes históricas se usa `order.createdAt` como fecha de referencia. Si no hay fecha de nacimiento, se usa `explicitAge * 365`.
   - Solo se evalúan las dimensiones marcadas en cada `ReferenceValue`: `useAge` y `useGender`. Si `useAge = false` se ignora la edad; si `useGender = false` se ignora el género.
   - Si varios rangos coinciden, gana el más específico (ambos flags > solo edad > solo género > rango general), con desempate por género exacto, mayor `minAgeDays` y rango más angosto.
-  - Si no hay rango aplicable, la tarjeta muestra **“Sin rango para esta edad/género”** y el badge pasa a **`SIN RANGO`**; no se calcula `H`/`L`.
-  - El mismo resolvedor se usa en el visor clínico, los PDFs y la app móvil para evitar inconsistencias entre pantalla e impresión.
-   - El visor y los PDFs recalculan la alerta con `ClinicalAlertEvaluator` a partir del valor actual y del rango resuelto; ignoran el `alertFlag` guardado y normalizan `NORMAL` como ausencia de alerta.
-   - Para pacientes con `dateOfBirth > 0` o `explicitAge != null`, la edad exacta en días se usa incluso cuando es `0` (recién nacidos). El respaldo `patientAge * 365` solo aplica cuando no existe ningún dato demográfico. La UI muestra `0 días` cuando corresponde.
-   - En resultados numéricos sin rango aplicable, la etiqueta principal es `Sin rango para esta edad/género`; si existe `referenceText`, se conserva como segunda línea explicativa en visor y PDF individual, sin sustituir la advertencia.
+  - Si no hay rango aplicable, la tarjeta muestra **“Sin rango para esta edad/género”** o **“Sin datos demográficos”** si falta la edad/fecha, y el badge pasa a **`SIN RANGO`**; no se calcula `H`/`L`.
+  - El pipeline devuelve estados semánticos (`pending`, `normal`, `high`, `low`, `abnormal`, `noReference`, `noDemographics`, `notEvaluable`) sin textos de presentación; cada UI los mapea a sus propios badges y etiquetas (`ALTO ▲ (H)`, `BAJO ▼ (L)`, `NORMAL`, `ANORMAL`, `SIN RANGO`, `PENDIENTE`).
+  - El mismo servicio se usa en el visor clínico, los PDFs y la app móvil para evitar inconsistencias entre pantalla e impresión.
+  - El pipeline **ignora el `alertFlag` persistido** en la orden y recalcula la alerta con el valor actual y el rango resuelto; `NORMAL` se normaliza como ausencia de alerta.
+  - Para pacientes con `dateOfBirth > 0` o `explicitAge != null`, la edad exacta en días se usa incluso cuando es `0` (recién nacidos). El respaldo `patientAge * 365` solo aplica cuando no hay fecha de nacimiento pero sí edad explícita. La UI muestra `0 días` cuando corresponde.
+  - En resultados numéricos sin rango aplicable, la etiqueta principal es `Sin rango para esta edad/género` o `Sin datos demográficos` según haya o no datos de edad; si existe `referenceText`, se conserva como segunda línea explicativa en visor y PDF individual, sin sustituir la advertencia.
 
 #### 4. Captura de Parámetros de Texto Libre y Atajos Rápidos
 - **Campo Multilínea Amplio**: Para análisis descriptivos (`dataType: 'text'`), `ParameterCard` despliega un `TextFormField` multilínea (`minLines: 3`, `maxLines: null`, `textInputAction: TextInputAction.newline`) que ocupa el ancho completo disponible si no hay escala referencial.
@@ -161,7 +159,7 @@ Cuando el bioanalista guarda el último resultado pendiente, la orden **no se ci
   - **Jerarquía Tipográfica Unificada (Texto Libre y Tabulares)**:
     - Los títulos del examen (`examTitle`) y las cabeceras de subgrupo (`groupTitle`) conservan tipografía destacada en negrita (`FontWeight.bold`).
     - Las etiquetas de parámetros de texto libre (`dataType: 'text'`) se renderizan con tipografía estándar (`FontWeight.normal`), alineadas visualmente con los parámetros tabulares normales para no confundirse con subtítulos o secciones mayores. El texto multilínea se encuadra en una caja clara con borde atenuado y criterio de referencia inferior en itálica discreta.
-  - Alertas clínicas discretas `H` / `L` en rojo al rebasar límites biológicos de referencia.
+  - Alertas clínicas discretas `H` / `L` en rojo, calculadas con `ClinicalEvaluationService`, al rebasar los límites biológicos de referencia.
   - **Firma y Sello de Validación Clínica**:
     - Disposición vertical secuencial: el sello del bioanalista representante se posiciona en el espacio superior a la línea de firma con una rotación realista de -5° (`-0.087 rad`), tolerando imágenes con fondo blanco o transparencia PNG sin tapar textos ni líneas.
     - Línea continua divisoria de firma inmediatamente bajo el sello.
