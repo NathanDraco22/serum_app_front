@@ -105,7 +105,8 @@ class LabTestReferenceValuesSection extends StatelessWidget {
                                       (val == null || val.trim().isEmpty)
                                   ? 'Requerido'
                                   : null,
-                              onChanged: (val) => controller.setUnitOfMeasure(val),
+                              onChanged: (val) =>
+                                  controller.updateUnitOfMeasureFromText(val),
                             ),
                             const SizedBox(height: 6),
                             SingleChildScrollView(

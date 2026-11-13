@@ -330,9 +330,26 @@ class LabTestFormViewController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sincroniza la unidad mientras el usuario escribe en el campo de texto.
+  ///
+  /// No reescribe [unitController]: asignar `.text` reconstruye el
+  /// [TextEditingValue] con una selección inválida y borra la composición del
+  /// IME, lo que provoca que el texto se reemplace en cada pulsación.
+  void updateUnitOfMeasureFromText(String value) {
+    if (_unitOfMeasure == value) return;
+    _unitOfMeasure = value;
+    notifyListeners();
+  }
+
+  /// Aplica una unidad desde los chips de acceso rápido del formulario.
   void setUnitOfMeasure(String value) {
     _unitOfMeasure = value;
-    unitController.text = value;
+    if (unitController.text != value) {
+      unitController.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
     notifyListeners();
   }
 

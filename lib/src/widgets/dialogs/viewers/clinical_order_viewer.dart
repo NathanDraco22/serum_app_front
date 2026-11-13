@@ -445,6 +445,40 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     return 'Finalizada — $formatted';
   }
 
+  /// Construye el indicador de alerta con la letra y un triángulo direccional.
+  ///
+  /// `H` se acompaña de un triángulo hacia arriba y `L` de uno hacia abajo,
+  /// ambos en rojo. `ABNORMAL` conserva el asterisco sin triángulo.
+  Widget _buildAlertFlag(String flag) {
+    const alertColor = Color(0xFFD32F2F);
+    final isHigh = flag == 'H';
+    final isLow = flag == 'L';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          flag,
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.bold,
+            color: alertColor,
+          ),
+        ),
+        if (isHigh || isLow) ...[
+          const SizedBox(width: 1),
+          Icon(
+            isHigh ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+            key: ValueKey('clinical-alert-arrow-$flag'),
+            size: 18,
+            color: alertColor,
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final orderDate = DateTime.fromMillisecondsSinceEpoch(order.createdAt);
@@ -863,20 +897,18 @@ class ClinicalOrderViewerContent extends StatelessWidget {
                         ),
                         if (hasAlert) ...[
                           const SizedBox(width: 8),
-                          Text(
-                            alertFlag,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFD32F2F),
-                            ),
-                          ),
+                          _buildAlertFlag(alertFlag),
                         ],
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.only(
+                      left: 8,
+                      top: 4,
+                      bottom: 4,
+                      right: 2,
+                    ),
                     child: Text(
                       r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
                       style: TextStyle(

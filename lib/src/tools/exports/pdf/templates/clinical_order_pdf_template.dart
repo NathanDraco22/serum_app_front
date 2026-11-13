@@ -169,6 +169,52 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     return flag == 'ABNORMAL' ? '*' : flag;
   }
 
+  /// Construye el indicador de alerta con la letra y un triángulo vectorial.
+  ///
+  /// La fuente OpenSans usada por el PDF no incluye los glifos `▲`/`▼`, por lo
+  /// que el triángulo se dibuja con [pw.Polygon] para garantizar su impresión.
+  pw.Widget _buildPdfAlertFlag(String flag) {
+    final alertColor = PdfColor.fromHex('#D32F2F');
+    final isHigh = flag == 'H';
+    final isLow = flag == 'L';
+
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        pw.Text(
+          flag,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            color: alertColor,
+          ),
+        ),
+        if (isHigh || isLow) ...[
+          pw.SizedBox(width: 2),
+          pw.SizedBox(
+            width: 6,
+            height: 6,
+            child: pw.Polygon(
+              points: isHigh
+                  ? const [
+                      PdfPoint(3, 0),
+                      PdfPoint(6, 6),
+                      PdfPoint(0, 6),
+                    ]
+                  : const [
+                      PdfPoint(3, 6),
+                      PdfPoint(6, 0),
+                      PdfPoint(0, 0),
+                    ],
+              fillColor: alertColor,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Future<pw.Document> buildDocument() async {
     await PdfFontHelper.ensureInitialized();
@@ -532,7 +578,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
             ),
           ),
 
-          // Resultado con letra H / L en rojo
+          // Resultado con letra H / L y triángulo direccional en rojo
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
             child: pw.Row(
@@ -554,14 +600,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
                 ),
                 if (hasAlert) ...[
                   pw.SizedBox(width: 4),
-                  pw.Text(
-                    alertFlag,
-                    style: pw.TextStyle(
-                      fontSize: 10,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColor.fromHex('#D32F2F'),
-                    ),
-                  ),
+                  _buildPdfAlertFlag(alertFlag),
                 ],
               ],
             ),
@@ -569,7 +608,12 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
 
           // Unidad de medida
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 3.0, horizontal: 2),
+            padding: const pw.EdgeInsets.only(
+              left: 8,
+              top: 3.0,
+              bottom: 3.0,
+              right: 2,
+            ),
             child: pw.Text(
               r.unitOfMeasure.isNotEmpty ? r.unitOfMeasure : '',
               style: const pw.TextStyle(

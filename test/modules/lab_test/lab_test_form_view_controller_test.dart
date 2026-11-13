@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_business/serum_business.dart';
 import 'package:serum_app_front/src/modules/lab_test/controllers/lab_test_form_view_controller.dart';
@@ -347,6 +348,40 @@ void main() {
 
       controller.setExpectedQualitativeValue('No Reactivo');
       expect(controller.expectedQualitativeValue, 'No Reactivo');
+
+      controller.dispose();
+    });
+
+    test('La escritura de la unidad conserva la selección del campo', () {
+      final controller = LabTestFormViewController();
+      controller.unitController.value = const TextEditingValue(
+        text: 'mg',
+        selection: TextSelection.collapsed(offset: 1),
+      );
+
+      controller.updateUnitOfMeasureFromText('mg');
+
+      expect(controller.unitOfMeasure, 'mg');
+      expect(controller.unitController.text, 'mg');
+      expect(
+        controller.unitController.selection,
+        const TextSelection.collapsed(offset: 1),
+      );
+
+      controller.dispose();
+    });
+
+    test('Los chips de unidad actualizan el texto y colocan el cursor al final', () {
+      final controller = LabTestFormViewController();
+
+      controller.setUnitOfMeasure('g/dL');
+
+      expect(controller.unitOfMeasure, 'g/dL');
+      expect(controller.unitController.text, 'g/dL');
+      expect(
+        controller.unitController.selection,
+        const TextSelection.collapsed(offset: 4),
+      );
 
       controller.dispose();
     });

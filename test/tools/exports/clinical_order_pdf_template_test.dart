@@ -212,6 +212,25 @@ void main() {
           ),
           OrderTestResult(
             labTestId: 'lt-bh',
+            parameterName: 'Hemoglobina',
+            medicalClassification: 'SERIE ROJA',
+            dataType: 'numeric',
+            unitOfMeasure: 'g/dL',
+            referenceValues: [
+              ReferenceValue(
+                patientType: 'general',
+                gender: 'f',
+                minAgeDays: 0,
+                maxAgeDays: 36500,
+                minValue: 12.0,
+                maxValue: 16.0,
+              ),
+            ],
+            resultValue: '10.0',
+            alertFlag: 'LOW', // Dispara 'L'
+          ),
+          OrderTestResult(
+            labTestId: 'lt-bh',
             parameterName: 'Linfocitos',
             medicalClassification: 'DIFERENCIAL',
             dataType: 'numeric',

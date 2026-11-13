@@ -171,6 +171,52 @@ void main() {
     expect(find.text('Configurando Parámetro Clínico Individual'), findsOneWidget);
   });
 
+  testWidgets('El campo Unidad de Medida permite escribir libremente y conserva el cursor', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(buildTestWidget());
+    await tester.pumpAndSettle();
+
+    final controller =
+        tester.widget<LabTestFormMediator>(find.byType(LabTestFormMediator)).viewController;
+    final unitField = find.byWidgetPredicate(
+      (widget) => widget is TextFormField && widget.controller == controller.unitController,
+    );
+    expect(unitField, findsOneWidget);
+
+    await tester.ensureVisible(unitField);
+    await tester.pumpAndSettle();
+    await tester.enterText(unitField, 'UI/L');
+    await tester.pump();
+
+    expect(controller.unitOfMeasure, 'UI/L');
+    expect(controller.unitController.text, 'UI/L');
+    expect(
+      controller.unitController.selection,
+      const TextSelection.collapsed(offset: 4),
+    );
+
+    final chip = find.widgetWithText(ActionChip, 'g/dL');
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
+    await tester.pump();
+
+    expect(controller.unitOfMeasure, 'g/dL');
+    expect(controller.unitController.text, 'g/dL');
+    expect(
+      controller.unitController.selection,
+      const TextSelection.collapsed(offset: 4),
+    );
+  });
+
   testWidgets(
     'Conmutar modalidad a Pack actualiza Mediator y despliega LabTestPackChildrenSection',
     (tester) async {

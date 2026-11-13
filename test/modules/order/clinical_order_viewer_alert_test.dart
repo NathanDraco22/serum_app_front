@@ -94,6 +94,52 @@ void main() {
     );
   }
 
+  testWidgets('Muestra H con triángulo hacia arriba separado de la unidad', (
+    tester,
+  ) async {
+    final order = buildOrder(
+      savedAlertFlag: 'HIGH',
+      resultValue: '150',
+      referenceValues: [reference()],
+    );
+
+    await pumpViewer(tester, order);
+    await tester.pumpAndSettle();
+
+    expect(find.text('H'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('clinical-alert-arrow-H')),
+      findsOneWidget,
+    );
+
+    final arrowRect = tester.getRect(
+      find.byKey(const ValueKey('clinical-alert-arrow-H')),
+    );
+    final unitRect = tester.getRect(find.text('mg/dL'));
+    expect(unitRect.left - arrowRect.right, greaterThanOrEqualTo(6.0));
+  });
+
+  testWidgets('Muestra L con triángulo hacia abajo', (tester) async {
+    final order = buildOrder(
+      savedAlertFlag: 'LOW',
+      resultValue: '40',
+      referenceValues: [reference()],
+    );
+
+    await pumpViewer(tester, order);
+    await tester.pumpAndSettle();
+
+    expect(find.text('L'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('clinical-alert-arrow-L')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('clinical-alert-arrow-H')),
+      findsNothing,
+    );
+  });
+
   testWidgets('No muestra H/L guardados cuando el resolvedor no encuentra rango', (tester) async {
     final order = buildOrder(
       savedAlertFlag: 'HIGH',
