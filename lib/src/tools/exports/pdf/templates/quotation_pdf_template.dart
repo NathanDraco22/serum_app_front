@@ -19,7 +19,7 @@ class SingleQuotationTemplate implements PdfTemplate {
         doctorInfo = doctorInfo ?? quotation.doctorInfo;
 
   int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
+    if (birthDateMs == 0) return 0;
     final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
     final today = DateTime.now();
     int age = today.year - birthDate.year;
@@ -209,7 +209,7 @@ class SingleQuotationTemplate implements PdfTemplate {
                 ),
                 pw.SizedBox(height: 4),
                 _buildInfoLine('Nombre:', displayName, isBold: true),
-                if (client != null && (client.age > 0 || client.dateOfBirth > 0))
+                if (client != null && (client.age > 0 || client.dateOfBirth != 0))
                   _buildInfoLine(
                     'Edad / Sexo:',
                     '${client.age > 0 ? client.age : _calculateAge(client.dateOfBirth)} años | ${_formatGender(client.gender)}',

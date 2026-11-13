@@ -260,7 +260,7 @@ class QuotationViewerContent extends StatelessWidget {
   final DoctorInfo? doctorInfo;
 
   int _calculateAge(int birthDateMs) {
-    if (birthDateMs <= 0) return 0;
+    if (birthDateMs == 0) return 0;
     final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
     final today = DateTime.now();
     int age = today.year - birthDate.year;
@@ -436,7 +436,7 @@ class QuotationViewerContent extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     _buildRowText('Nombre:', clientDisplayName, isBold: true),
-                    if (clientInfo != null && (clientInfo!.age > 0 || clientInfo!.dateOfBirth > 0))
+                    if (clientInfo != null && (clientInfo!.age > 0 || clientInfo!.dateOfBirth != 0))
                       _buildRowText(
                         'Edad / Sexo:',
                         '${clientInfo!.age > 0 ? clientInfo!.age : _calculateAge(clientInfo!.dateOfBirth)} años | ${_formatGender(clientInfo!.gender)}',

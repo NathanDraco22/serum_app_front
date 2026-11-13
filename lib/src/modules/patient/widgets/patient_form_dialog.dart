@@ -53,7 +53,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
 
       _email = widget.patient!.email;
       _cardId = widget.patient!.cardId;
-      _dateOfBirth = widget.patient!.dateOfBirth > 0
+      _dateOfBirth = widget.patient!.dateOfBirth != 0
           ? DateTime.fromMillisecondsSinceEpoch(widget.patient!.dateOfBirth)
           : null;
       final ageVal = widget.patient!.age;
@@ -83,7 +83,7 @@ class _PatientFormDialogState extends State<PatientFormDialog> {
   }
 
   int _calculateAge(int timestamp) {
-    if (timestamp <= 0) return 0;
+    if (timestamp == 0) return 0;
     final birth = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final today = DateTime.now();
     int age = today.year - birth.year;

@@ -212,5 +212,63 @@ void main() {
       final ageField = tester.widget<TextFormField>(ageFinder);
       expect(ageField.controller?.text, equals('42'));
     });
+
+    testWidgets('Soporta paciente de 57 años con fecha de nacimiento pre-1970 (timestamp negativo)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+
+      final nameFinder = find.widgetWithText(TextFormField, 'Nombre Completo *');
+      await tester.enterText(nameFinder, 'Paciente 57 Años');
+
+      final phoneFinder = find.widgetWithText(TextFormField, 'Teléfono *');
+      await tester.enterText(phoneFinder, '8888-5757');
+
+      final ageFinder = find.widgetWithText(TextFormField, 'Edad (años) *');
+      await tester.enterText(ageFinder, '57');
+      await tester.pumpAndSettle();
+
+      final expectedYear = DateTime.now().year - 57;
+      expect(find.textContaining('$expectedYear'), findsOneWidget);
+
+      final submitButton = find.widgetWithText(ElevatedButton, 'Registrar');
+      await tester.tap(submitButton);
+      await tester.pumpAndSettle();
+
+      expect(mockWritePatientCubit.lastCreatedPatient, isNotNull);
+      final created = mockWritePatientCubit.lastCreatedPatient!;
+      expect(created.name, equals('Paciente 57 Años'));
+      expect(created.age, equals(57));
+      // Timestamp pre-1970 es negativo
+      expect(created.dateOfBirth < 0, isTrue);
+      final birth = DateTime.fromMillisecondsSinceEpoch(created.dateOfBirth);
+      expect(birth.year, equals(expectedYear));
+    });
+
+    testWidgets('Modo edición pre-llena correctamente la edad de un paciente nacido antes de 1970', (
+      tester,
+    ) async {
+      final now = DateTime.now();
+      final birthDate = DateTime(now.year - 57, now.month, now.day);
+
+      final existingPatient = PatientInDb(
+        id: 'pat-57',
+        name: 'Don Carlos',
+        dateOfBirth: birthDate.millisecondsSinceEpoch,
+        gender: 'M',
+        phone: '8888-0057',
+        originBranch: 'branch-central',
+        createdAt: 1700000000000,
+      );
+      expect(existingPatient.dateOfBirth < 0, isTrue);
+
+      await tester.pumpWidget(createWidgetUnderTest(patient: existingPatient));
+      await tester.pumpAndSettle();
+
+      final ageFinder = find.widgetWithText(TextFormField, 'Edad (años) *');
+      final ageField = tester.widget<TextFormField>(ageFinder);
+      expect(ageField.controller?.text, equals('57'));
+    });
   });
 }

@@ -87,7 +87,7 @@ class SingleClinicalOrderTemplate implements PdfTemplate {
     required PatientInfo? patient,
     required int? exactAgeInDays,
   }) {
-    final hasAgeData = patient != null && (patient.dateOfBirth > 0 || patient.explicitAge != null);
+    final hasAgeData = patient != null && (patient.dateOfBirth != 0 || patient.explicitAge != null);
     return hasAgeData ? exactAgeInDays : null;
   }
 

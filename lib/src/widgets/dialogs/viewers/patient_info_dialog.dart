@@ -33,7 +33,7 @@ class PatientDisplayData {
       phone: info.phone.isNotEmpty ? info.phone : null,
       email: info.email != null && info.email!.isNotEmpty ? info.email : null,
       cardId: info.cardId != null && info.cardId!.isNotEmpty ? info.cardId : null,
-      dateOfBirth: info.dateOfBirth > 0 ? info.dateOfBirth : null,
+      dateOfBirth: info.dateOfBirth != 0 ? info.dateOfBirth : null,
       gender: info.gender,
       address: info.address.isNotEmpty ? info.address : null,
       age: info.age > 0 ? info.age : null,
@@ -47,7 +47,7 @@ class PatientDisplayData {
       phone: patient.phone.isNotEmpty ? patient.phone : null,
       email: patient.email != null && patient.email!.isNotEmpty ? patient.email : null,
       cardId: patient.cardId != null && patient.cardId!.isNotEmpty ? patient.cardId : null,
-      dateOfBirth: patient.dateOfBirth > 0 ? patient.dateOfBirth : null,
+      dateOfBirth: patient.dateOfBirth != 0 ? patient.dateOfBirth : null,
       gender: patient.gender,
       address: patient.address != null && patient.address!.isNotEmpty ? patient.address : null,
       age: patient.age > 0 ? patient.age : null,
@@ -72,7 +72,7 @@ class PatientDisplayData {
         cardId: info.cardId != null && info.cardId!.isNotEmpty
             ? info.cardId
             : fallbackPatient?.cardId,
-        dateOfBirth: info.dateOfBirth > 0
+        dateOfBirth: info.dateOfBirth != 0
             ? info.dateOfBirth
             : fallbackPatient?.dateOfBirth,
         gender: info.gender.isNotEmpty
@@ -187,7 +187,7 @@ class _PatientInfoDialogState extends State<PatientInfoDialog> {
   }
 
   int _calculateAge(int? birthDateMs) {
-    if (birthDateMs == null || birthDateMs <= 0) return 0;
+    if (birthDateMs == null || birthDateMs == 0) return 0;
     final birthDate = DateTime.fromMillisecondsSinceEpoch(birthDateMs);
     final today = DateTime.now();
     int age = today.year - birthDate.year;
@@ -199,7 +199,7 @@ class _PatientInfoDialogState extends State<PatientInfoDialog> {
   }
 
   String _formatBirthDate(int? timestamp) {
-    if (timestamp == null || timestamp <= 0) return 'No registrada';
+    if (timestamp == null || timestamp == 0) return 'No registrada';
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }

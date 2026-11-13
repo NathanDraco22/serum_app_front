@@ -25,7 +25,7 @@ class PatientHistoryHeader extends StatelessWidget {
   });
 
   String _calculateAge(int timestamp) {
-    if (timestamp <= 0) return 'Edad N/D';
+    if (timestamp == 0) return 'Edad N/D';
     final birth = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
     int age = now.year - birth.year;

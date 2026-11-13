@@ -24,7 +24,7 @@ class ClinicalComparisonHeader extends StatelessWidget {
   }
 
   int _calculateAge(int timestamp) {
-    if (timestamp <= 0) return 0;
+    if (timestamp == 0) return 0;
     final birth = DateTime.fromMillisecondsSinceEpoch(timestamp);
     final now = DateTime.now();
     int age = now.year - birth.year;

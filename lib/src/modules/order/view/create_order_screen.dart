@@ -272,7 +272,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
     final patient = viewController.selectedPatient;
     if (patient == null) return false;
 
-    final hasDemographics = patient.dateOfBirth > 0 || patient.explicitAge != null;
+    final hasDemographics = patient.dateOfBirth != 0 || patient.explicitAge != null;
     if (hasDemographics) return true;
 
     final shouldEdit = await showDialog<bool>(
@@ -310,7 +310,7 @@ class _CreateOrderContentState extends State<_CreateOrderContent> {
 
     if (updated is PatientInDb && mounted) {
       viewController.updateSelectedPatientData(updated);
-      return updated.dateOfBirth > 0 || updated.explicitAge != null;
+      return updated.dateOfBirth != 0 || updated.explicitAge != null;
     }
     return false;
   }
