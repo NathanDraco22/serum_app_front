@@ -221,226 +221,17 @@ class LabTestDetailDialog extends StatelessWidget {
   }
 
   Widget _buildIndividualContent(BuildContext context) {
-    final theme = Theme.of(context);
-
-    String typeLabel;
-    switch (labTest.dataType) {
-      case 'qualitative':
-      case 'boolean':
-        typeLabel = 'Cualitativo (Opciones Múltiples, Positivo/Negativo)';
-        break;
-      case 'text':
-        typeLabel = 'Texto Libre / Descriptivo';
-        break;
-      case 'numeric':
-      default:
-        typeLabel = 'Numérico (con Rangos y Unidades)';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _InfoTile(
-                label: 'Tipo de Resultado',
-                value: typeLabel,
-                icon: Icons.biotech,
-              ),
-            ),
-            if (labTest.dataType == 'numeric' && labTest.unitOfMeasure.isNotEmpty) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: _InfoTile(
-                  label: 'Unidad de Medida',
-                  value: labTest.unitOfMeasure,
-                  icon: Icons.straighten,
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        if (labTest.dataType == 'numeric') ...[
-          Text(
-            'Valores y Rangos de Referencia',
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          if (labTest.referenceValues.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Text(
-                  'No se han configurado valores de referencia específicos para esta prueba.',
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            Table(
-              border: TableBorder.all(
-                color: theme.colorScheme.outlineVariant,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              columnWidths: const {
-                0: FlexColumnWidth(1.2),
-                1: FlexColumnWidth(1.2),
-                2: FlexColumnWidth(1.5),
-              },
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHigh),
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text(
-                        'Género',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text(
-                        'Rango Edad',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text(
-                        'Rango Normal',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-                ...labTest.referenceValues.map((ref) {
-                  final g = ref.gender.toLowerCase();
-                  final genderLabel = !ref.useGender
-                      ? 'Ambos'
-                      : (g == 'male' || g == 'm')
-                      ? 'Masculino'
-                      : (g == 'female' || g == 'f')
-                      ? 'Femenino'
-                      : 'Ambos';
-                  final ageLabel = ReferenceValueResolver.formatAgeRange(
-                    ref.minAgeDays,
-                    ref.maxAgeDays,
-                    useAge: ref.useAge,
-                  );
-
-                  return TableRow(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(genderLabel, style: const TextStyle(fontSize: 12)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(ageLabel, style: const TextStyle(fontSize: 12)),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          '${ref.minValue} - ${ref.maxValue} ${labTest.unitOfMeasure}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-              ],
-            ),
-        ],
-
-        if (labTest.dataType == 'qualitative' || labTest.dataType == 'boolean') ...[
-          Text(
-            'Configuración Cualitativa',
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Opciones posibles: ',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    Text(
-                      labTest.qualitativeOptions.isNotEmpty
-                          ? labTest.qualitativeOptions.join(', ')
-                          : 'Negativo, Positivo',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Text(
-                      'Valor Normal Esperado: ',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                    Text(
-                      labTest.expectedQualitativeValue ?? 'No definido',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        if (labTest.referenceText.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            'Escala / Notas de Referencia',
-            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-            ),
-            child: Text(
-              labTest.referenceText,
-              style: const TextStyle(fontSize: 12, height: 1.4),
-            ),
-          ),
-        ],
-      ],
-    );
+    return _ClinicalDetailsSection(labTest: labTest, isCompact: false);
   }
 
   Widget _buildPackContent(BuildContext context) {
     final theme = Theme.of(context);
 
-    final childTests = allLabTests.where((t) => labTest.childTestIds.contains(t.id)).toList();
+    // Respetar estrictamente el orden de los childTestIds configurados en el perfil
+    final childTests = labTest.childTestIds
+        .map((id) => allLabTests.cast<LabTestInDb?>().firstWhere((t) => t?.id == id, orElse: () => null))
+        .whereType<LabTestInDb>()
+        .toList();
 
     final individualSumCents = childTests.fold<int>(0, (sum, t) => sum + t.salePrice);
     final individualSum = individualSumCents / 100.0;
@@ -450,13 +241,17 @@ class LabTestDetailDialog extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 6,
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Análisis Incluidos (${labTest.childTestIds.length})',
+                  'Análisis Incluidos (${childTests.isNotEmpty ? childTests.length : labTest.childTestIds.length})',
                   style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 8),
@@ -528,33 +323,480 @@ class LabTestDetailDialog extends StatelessWidget {
               separatorBuilder: (context, index) =>
                   Divider(height: 1, color: theme.colorScheme.outlineVariant),
               itemBuilder: (context, index) {
-                final test = childTests[index];
-                final price = NumberFormatter.convertToMoneyLike(test.salePrice);
-
-                return ListTile(
-                  dense: true,
-                  leading: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text('${index + 1}', style: const TextStyle(fontSize: 11)),
-                  ),
-                  title: Text(test.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text(
-                    '${test.commercialCategory}${test.unitOfMeasure.isNotEmpty ? " • ${test.unitOfMeasure}" : ""}',
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  trailing: Text(
-                    price,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
+                return _ChildTestExpansionTile(
+                  key: ValueKey('child_tile_${childTests[index].id}'),
+                  index: index,
+                  test: childTests[index],
                 );
               },
             ),
           ),
       ],
+    );
+  }
+}
+
+class _ChildTestExpansionTile extends StatefulWidget {
+  final int index;
+  final LabTestInDb test;
+
+  const _ChildTestExpansionTile({
+    super.key,
+    required this.index,
+    required this.test,
+  });
+
+  @override
+  State<_ChildTestExpansionTile> createState() => _ChildTestExpansionTileState();
+}
+
+class _ChildTestExpansionTileState extends State<_ChildTestExpansionTile> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final test = widget.test;
+    final price = NumberFormatter.convertToMoneyLike(test.salePrice);
+
+    return Theme(
+      data: theme.copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: ValueKey('pack_child_test_${test.id}'),
+        onExpansionChanged: (expanded) {
+          setState(() => _isExpanded = expanded);
+        },
+        dense: true,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        backgroundColor: theme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.6),
+        collapsedBackgroundColor: Colors.transparent,
+        leading: CircleAvatar(
+          radius: 14,
+          backgroundColor: theme.colorScheme.primaryContainer,
+          child: Text(
+            '${widget.index + 1}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                test.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            if (test.code != null && test.code!.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  test.code!,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+            if (test.isProfileParameter) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'PARÁMETRO',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(
+          [
+            if (test.commercialCategory.isNotEmpty) test.commercialCategory,
+            if (test.subclassification.isNotEmpty) test.subclassification,
+            if (test.dataType == 'numeric' && test.unitOfMeasure.isNotEmpty)
+              test.unitOfMeasure
+            else if (test.dataType == 'qualitative' || test.dataType == 'boolean')
+              'Cualitativo'
+            else if (test.dataType == 'text')
+              'Texto Libre',
+          ].join(' • '),
+          style: TextStyle(
+            fontSize: 11,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              price,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            AnimatedRotation(
+              turns: _isExpanded ? 0.5 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: _ClinicalDetailsSection(
+              labTest: test,
+              isCompact: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClinicalDetailsSection extends StatelessWidget {
+  final LabTestInDb labTest;
+  final bool isCompact;
+
+  const _ClinicalDetailsSection({
+    required this.labTest,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    String typeLabel;
+    switch (labTest.dataType) {
+      case 'qualitative':
+      case 'boolean':
+        typeLabel = isCompact
+            ? 'Cualitativo'
+            : 'Cualitativo (Opciones Múltiples, Positivo/Negativo)';
+        break;
+      case 'text':
+        typeLabel = isCompact ? 'Texto Libre' : 'Texto Libre / Descriptivo';
+        break;
+      case 'numeric':
+      default:
+        typeLabel = isCompact ? 'Numérico' : 'Numérico (con Rangos y Unidades)';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isCompact) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              _MetaChip(
+                icon: Icons.biotech,
+                label: typeLabel,
+              ),
+              if (labTest.dataType == 'numeric' && labTest.unitOfMeasure.isNotEmpty)
+                _MetaChip(
+                  icon: Icons.straighten,
+                  label: 'Unidad: ${labTest.unitOfMeasure}',
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: _InfoTile(
+                  label: 'Tipo de Resultado',
+                  value: typeLabel,
+                  icon: Icons.biotech,
+                ),
+              ),
+              if (labTest.dataType == 'numeric' && labTest.unitOfMeasure.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _InfoTile(
+                    label: 'Unidad de Medida',
+                    value: labTest.unitOfMeasure,
+                    icon: Icons.straighten,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 20),
+        ],
+
+        if (labTest.dataType == 'numeric') ...[
+          Text(
+            'Valores y Rangos de Referencia',
+            style: isCompact
+                ? theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  )
+                : theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          if (labTest.referenceValues.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(isCompact ? 12 : 16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: Text(
+                  'No se han configurado valores de referencia específicos para esta prueba.',
+                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 12),
+                ),
+              ),
+            )
+          else
+            Table(
+              border: TableBorder.all(
+                color: theme.colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              columnWidths: const {
+                0: FlexColumnWidth(1.2),
+                1: FlexColumnWidth(1.2),
+                2: FlexColumnWidth(1.5),
+              },
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHigh),
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Género',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Rango Edad',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        'Rango Normal',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                ...labTest.referenceValues.map((ref) {
+                  final g = ref.gender.toLowerCase();
+                  final genderLabel = !ref.useGender
+                      ? 'Ambos'
+                      : (g == 'male' || g == 'm')
+                          ? 'Masculino'
+                          : (g == 'female' || g == 'f')
+                              ? 'Femenino'
+                              : 'Ambos';
+                  final ageLabel = ReferenceValueResolver.formatAgeRange(
+                    ref.minAgeDays,
+                    ref.maxAgeDays,
+                    useAge: ref.useAge,
+                  );
+
+                  return TableRow(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(genderLabel, style: const TextStyle(fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(ageLabel, style: const TextStyle(fontSize: 12)),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          '${ref.minValue} - ${ref.maxValue} ${labTest.unitOfMeasure}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+        ],
+
+        if (labTest.dataType == 'qualitative' || labTest.dataType == 'boolean') ...[
+          if (labTest.dataType != 'numeric') const SizedBox(height: 4),
+          Text(
+            'Configuración Cualitativa',
+            style: isCompact
+                ? theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  )
+                : theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      'Opciones posibles: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    Expanded(
+                      child: Text(
+                        labTest.qualitativeOptions.isNotEmpty
+                            ? labTest.qualitativeOptions.join(', ')
+                            : 'Negativo, Positivo',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Text(
+                      'Valor Normal Esperado: ',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    Text(
+                      labTest.expectedQualitativeValue ?? 'No definido',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        if (labTest.referenceText.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Escala / Notas de Referencia',
+            style: isCompact
+                ? theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  )
+                : theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Text(
+              labTest.referenceText,
+              style: const TextStyle(fontSize: 12, height: 1.4),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.primary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
