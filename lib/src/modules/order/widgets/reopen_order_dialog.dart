@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:serum_business/serum_business.dart';
 
 /// Diálogo para reabrir una orden finalizada solicitando el motivo clínico.

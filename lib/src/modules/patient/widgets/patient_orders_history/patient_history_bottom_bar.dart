@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Barra inferior flotante cuando se activa el Modo Comparar en el historial de órdenes.
 class PatientHistoryBottomBar extends StatelessWidget {

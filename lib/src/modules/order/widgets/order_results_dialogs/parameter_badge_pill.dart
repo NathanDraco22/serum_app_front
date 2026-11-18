@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Pill visual reutilizable para estados de alerta médica ('ALTO ▲', 'BAJO ▼', 'NORMAL', 'PENDIENTE', etc.).
 class ParameterBadgePill extends StatelessWidget {

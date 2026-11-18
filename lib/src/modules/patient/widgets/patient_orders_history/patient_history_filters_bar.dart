@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Barra de búsqueda y chips de filtro por estado clínico en el historial de órdenes.
 class PatientHistoryFiltersBar extends StatelessWidget {

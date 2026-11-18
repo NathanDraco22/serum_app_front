@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Diálogo reutilizable de confirmación para acciones críticas o destructivas
 /// que exige un tiempo de espera preventivo (por defecto 5 segundos) antes de

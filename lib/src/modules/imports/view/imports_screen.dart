@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:serum_business/serum_business.dart';
@@ -8,6 +8,7 @@ import '../../../cubits/imports_cubit/imports_state.dart';
 import '../../../widgets/gates/permission_gate.dart';
 import '../widgets/branch_prices_import_card.dart';
 import '../widgets/catalog_update_card.dart';
+import '../widgets/new_lab_tests_json_card.dart';
 
 class ImportsScreen extends StatelessWidget {
   final ImportsCubit? cubit;
@@ -255,7 +256,14 @@ class _ImportsScaffold extends StatelessWidget {
 
                               const SizedBox(height: 24),
 
-                              // 2. Tarjeta: Sincronización y Actualización Incremental
+                              // 2. Tarjeta: Importación de Pruebas Nuevas (JSON)
+                              NewLabTestsJsonCard(
+                                isLoading: isLoading,
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // 3. Tarjeta: Sincronización y Actualización Incremental
                               CatalogUpdateCard(
                                 isLoading: isLoading,
                               ),
@@ -680,6 +688,24 @@ class _ImportsScaffold extends StatelessWidget {
                 );
               },
             ),
+            if (result.skippedCodes.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Omitidas por ya existir (${result.skippedCodes.length}): ${result.skippedCodes.join(', ')}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.teal.shade900,
+                ),
+              ),
+            ],
+            if (result.errors.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Errores (${result.errors.length}): ${result.errors.join(' | ')}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
           ],
         ),
       ),

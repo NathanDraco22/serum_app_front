@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:serum_app_front/src/widgets/dialogs/viewers/clinical_order_viewer.dart';
 import 'package:serum_business/serum_business.dart';

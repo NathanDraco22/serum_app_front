@@ -379,8 +379,13 @@ A continuación se detalla la responsabilidad operativa, interfaz gráfica, cubi
 ## 💎 4. Convenciones Críticas de Datos y UI en Flutter
 
 1. **Montos Siempre en Centavos**: Todos los precios y saldos son enteros (`int`). La UI los formatea con `NumberFormatter` (`convertToMoneyLike`, `currencySymbol`, `currencyFormat`). La moneda global la resuelve `AppSettingsCubit` mediante un callback registrado en `NumberFormatter`; el selector está en **Administración ➔ Configuración del Sistema**. Ver [Formatter Global con Resolver Inyectado](/wiki/convenciones/global-formatter-resolver.md).
-2. **Timestamps en Milisegundos**: Las fechas de creación y actualización son enteros Unix en milisegundos (`DateTime.fromMillisecondsSinceEpoch(ms)`).
+2. **Timestamps en Milisegundos**: Las fechas de creación y actualización son enteros Unix en milisegundos (`DateTime.fromMillisecondsSinceEpoch(ms)`). Las fechas de nacimiento anteriores al 1 de enero de 1970 son enteros negativos. La presencia de fecha se evalúa siempre con `dateOfBirth != 0` (NUNCA `> 0` ni `<= 0`). Límite mínimo permitido: año 1900 (`-2_208_988_800_000` ms).
 3. **Manejo Seguro de Contexto Asíncrono**: En todas las operaciones asíncronas de diálogos y pantallas, validar siempre `if (!context.mounted) return;` antes de usar `context` tras un `await`.
 4. **Listados con `Refreshing`**: Las búsquedas o recargas no borran la lista previa; emiten el estado `Refreshing` mostrando un `LinearProgressIndicator` superior para máxima fluidez.
 5. **No Reglas de Negocio en `widgets/` o `tools/`**: La validación de negocio reside en los Cubits y Repositorios; los widgets solo se encargan de la presentación y captura de eventos.
 6. **Diálogo de Confirmación Reutilizable con Temporizador (`ConfirmDeleteDialog`)**: Ubicado en `lib/src/widgets/dialogs/confirm_delete_dialog.dart`, previene eliminaciones accidentales forzando un período de cuenta regresiva de 5 segundos con barra de progreso y bloqueo reactivo de botón antes de permitir eliminar Médicos, Pacientes, Pruebas de Laboratorio, Usuarios, Roles, Sucursales o Llaves API.
+7. **Compilación Oficial Web para Producción (WebAssembly / WASM)**: Todo despliegue o release de la aplicación web debe compilarse con el comando:
+   ```powershell
+   flutter build web --release --wasm --dart-define-from-file secrets.json
+   ```
+   Esto asegura la compilación binaria WASM (`main.dart.wasm`) y la inyección hermética de las variables de producción.

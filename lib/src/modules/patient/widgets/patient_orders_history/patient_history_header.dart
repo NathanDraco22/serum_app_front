@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:serum_business/serum_business.dart';
 
 /// Cabecera con datos demográficos del paciente, KPIs de órdenes y banner de biometrías.

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../../tools/exports/pdf/templates/clinical_comparison_pdf_template.dart';
 import 'clinical_comparison_table_row.dart';

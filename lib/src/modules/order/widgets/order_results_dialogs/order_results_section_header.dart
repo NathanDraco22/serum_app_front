@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Pequeño separador visual para estructurar perfiles clínicos en la captura de resultados.
 ///

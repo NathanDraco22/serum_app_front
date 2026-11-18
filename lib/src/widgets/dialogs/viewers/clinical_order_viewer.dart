@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:printing/printing.dart';
@@ -7,12 +7,16 @@ import 'package:serum_business/serum_business.dart';
 
 import '../../../../config/service_locator.dart';
 import '../../../cubits/app_session_cubit/app_session_cubit.dart';
+import '../../../tools/exports/pdf/pdf_template.dart';
+import '../../../tools/exports/pdf/templates/atopica_30i_helper.dart';
+import '../../../tools/exports/pdf/templates/atopica_30i_pdf_template.dart';
 import '../../../tools/exports/pdf/templates/clinical_order_pdf_template.dart';
 import '../../../tools/exports/pdf/templates/clinical_order_study_group.dart';
 import '../../../tools/exports/pdf_export_tool.dart';
 import '../../../tools/formatters/thousands_separator_input_formatter.dart';
 import '../../common/app_cached_image.dart';
 import 'order_envelope_viewer.dart';
+import 'widgets/atopica_30i_special_view.dart';
 
 Future<void> showClinicalOrderViewerDialog(
   BuildContext context,
@@ -95,6 +99,8 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
   late PatientInfo? _patientInfo;
   late DoctorInfo? _doctorInfo;
   late BioanalystInfo? _selectedSigner;
+  late List<SpecialReportFormat> _availableFormats;
+  late SpecialReportFormat _selectedFormat;
 
   @override
   void initState() {
@@ -102,6 +108,8 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
     _patientInfo = widget.patientInfo ?? widget.order.patientInfo;
     _doctorInfo = widget.doctorInfo ?? widget.order.doctorInfo;
     _selectedSigner = widget.branch.bioanalyst;
+    _availableFormats = SpecialReportRegistry.resolveAvailableFormats(widget.order);
+    _selectedFormat = _availableFormats.first;
 
     // Solo si se trata de una orden previa que no guardó snapshots, resolver en background sin trabar la UI
     if (_patientInfo == null ||
@@ -156,27 +164,34 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
     }
   }
 
-  Future<void> _exportPdf(BuildContext context) async {
-    final template = SingleClinicalOrderTemplate(
+  PdfTemplate _buildActiveTemplate() {
+    if (_selectedFormat.id == SpecialReportFormat.atopica30i.id) {
+      return Atopica30iPdfTemplate(
+        order: widget.order,
+        branch: widget.branch,
+        patientInfo: _patientInfo,
+        doctorInfo: _doctorInfo,
+        signer: _selectedSigner,
+      );
+    }
+    return SingleClinicalOrderTemplate(
       order: widget.order,
       branch: widget.branch,
       patientInfo: _patientInfo,
       doctorInfo: _doctorInfo,
       signer: _selectedSigner,
     );
+  }
+
+  Future<void> _exportPdf(BuildContext context) async {
+    final template = _buildActiveTemplate();
     final fileName =
         'orden_clinica_${widget.order.id.length > 8 ? widget.order.id.substring(widget.order.id.length - 8) : widget.order.id}.pdf';
     await PdfExportTool.export(template, fileName: fileName);
   }
 
   Future<void> _printDocument(BuildContext context) async {
-    final template = SingleClinicalOrderTemplate(
-      order: widget.order,
-      branch: widget.branch,
-      patientInfo: _patientInfo,
-      doctorInfo: _doctorInfo,
-      signer: _selectedSigner,
-    );
+    final template = _buildActiveTemplate();
     final doc = await template.buildDocument();
     await Printing.layoutPdf(
       onLayout: (_) => doc.save(),
@@ -185,13 +200,7 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
   }
 
   Future<void> _shareDocument(BuildContext context) async {
-    final template = SingleClinicalOrderTemplate(
-      order: widget.order,
-      branch: widget.branch,
-      patientInfo: _patientInfo,
-      doctorInfo: _doctorInfo,
-      signer: _selectedSigner,
-    );
+    final template = _buildActiveTemplate();
     final doc = await template.buildDocument();
     final fileName =
         'orden_clinica_${widget.order.id.length > 8 ? widget.order.id.substring(widget.order.id.length - 8) : widget.order.id}.pdf';
@@ -224,6 +233,58 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
       appBar: AppBar(
         title: Text('Informe Clínico - Folio #$shortId'),
         actions: [
+          if (_availableFormats.length > 1) ...[
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.4),
+                ),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<SpecialReportFormat>(
+                  value: _selectedFormat,
+                  isDense: true,
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                  onChanged: (format) {
+                    if (format == null) return;
+                    setState(() {
+                      _selectedFormat = format;
+                    });
+                  },
+                  items: _availableFormats.map((f) {
+                    return DropdownMenuItem<SpecialReportFormat>(
+                      value: f,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            f.isSpecial ? Icons.auto_awesome_outlined : Icons.list_alt_outlined,
+                            size: 16,
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(f.label),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
           if (hasAuxBio) ...[
             PopupMenuButton<BioanalystInfo>(
               tooltip: 'Seleccionar Bioanalista Firmante',
@@ -381,6 +442,7 @@ class _ClinicalOrderViewerState extends State<ClinicalOrderViewer> {
                         patientInfo: resolvedPatient,
                         doctorInfo: _doctorInfo,
                         signer: _selectedSigner,
+                        selectedFormat: _selectedFormat,
                       ),
                     ),
                   ],
@@ -402,6 +464,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
     required this.patientInfo,
     this.doctorInfo,
     this.signer,
+    this.selectedFormat = SpecialReportFormat.standard,
   });
 
   final OrderInDb order;
@@ -409,6 +472,7 @@ class ClinicalOrderViewerContent extends StatelessWidget {
   final PatientInfo patientInfo;
   final DoctorInfo? doctorInfo;
   final BioanalystInfo? signer;
+  final SpecialReportFormat selectedFormat;
 
   String _formatGender(String gender) {
     final g = gender.trim().toLowerCase();
@@ -807,10 +871,22 @@ class ClinicalOrderViewerContent extends StatelessWidget {
         const SizedBox(height: 16),
 
         // 4. Encabezado de Área Clínica y Resultados Agrupados por Estudio
-        Builder(
-          builder: (context) {
-            final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(order);
-            final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
+        if (selectedFormat.id == SpecialReportFormat.atopica30i.id) ...[
+          Atopica30iSpecialView(order: order),
+          if (Atopica30iHelper.splitResults(order).others.isNotEmpty) ...[
+            const SizedBox(height: 20),
+          ],
+        ],
+        if (selectedFormat.id != SpecialReportFormat.atopica30i.id ||
+            Atopica30iHelper.splitResults(order).others.isNotEmpty)
+          Builder(
+            builder: (context) {
+              final effectiveOrder =
+                  selectedFormat.id == SpecialReportFormat.atopica30i.id
+                  ? Atopica30iHelper.filterOrder(order, Atopica30iHelper.splitResults(order).others)
+                  : order;
+              final studyGroups = ClinicalOrderGrouper.groupResultsByStudy(effectiveOrder);
+              final overallArea = ClinicalOrderGrouper.determineOverallClinicalArea(studyGroups);
 
             TableRow buildTableRow(OrderTestResult r, bool hasGroupHeader) {
               final isNumeric = r.dataType == 'numeric';

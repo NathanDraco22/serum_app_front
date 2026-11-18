@@ -234,3 +234,27 @@ uv run ty check
 ```powershell
 flutter analyze
 ```
+
+---
+
+## 🚀 7. Compilación Oficial para Producción (Web Release con WebAssembly)
+
+Para compilar la aplicación Web en modo de producción, **siempre** debe usarse el flag de WebAssembly (`--wasm`) y cargar las variables de entorno/secretos desde `secrets.json`:
+
+```powershell
+flutter build web --release --wasm --dart-define-from-file secrets.json
+```
+
+- **WASM (`--wasm`)**: Compila a binarios WebAssembly (`main.dart.wasm`) para un rendimiento superior de renderizado y cálculo a 60 FPS.
+- **`--dart-define-from-file secrets.json`**: Inyecta de forma segura los endpoints, llaves y configuraciones de entorno de producción.
+- **Salida**: Los artefactos finales se generan en `serum_app_front/build/web/`.
+
+---
+
+## 📅 8. Manejo de Fechas Demográficas (Soporte Pre-1970)
+
+- Las fechas en el sistema son enteros Unix en milisegundos (`int`).
+- Las fechas anteriores al 1 de enero de 1970 corresponden a **enteros negativos** (ej. personas nacidas antes de 1970, mayores de 56 años).
+- El valor para representar "sin fecha" es `0` (o `null`).
+- **Regla estricta**: Al verificar si un paciente tiene fecha de nacimiento registrada, debe evaluarse siempre `dateOfBirth != 0` (NUNCA `dateOfBirth > 0` ni `dateOfBirth <= 0`, para evitar invalidar o poner en 0 años a pacientes de la tercera edad).
+- **Límite inferior**: Se aceptan fechas de nacimiento a partir del año 1900 (`-2_208_988_800_000` ms).

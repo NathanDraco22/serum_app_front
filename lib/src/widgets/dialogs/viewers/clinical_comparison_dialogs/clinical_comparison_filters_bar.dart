@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Barra de filtros y buscador en vivo para la comparativa de exámenes.
 class ClinicalComparisonFiltersBar extends StatelessWidget {

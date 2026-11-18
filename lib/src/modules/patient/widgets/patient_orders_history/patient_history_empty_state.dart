@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Estado vacío para el historial de órdenes de un paciente.
 class PatientHistoryEmptyState extends StatelessWidget {

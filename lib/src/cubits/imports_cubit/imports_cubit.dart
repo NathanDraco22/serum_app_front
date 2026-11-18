@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:serum_business/serum_business.dart';
 
@@ -30,6 +32,30 @@ class ImportsCubit extends Cubit<ImportsState> {
     emit(const ImportsLoading(message: 'Importando pruebas de laboratorio por defecto...'));
     try {
       final result = await importsRepository.importLabTests();
+      if (isClosed) return result;
+      emit(ImportsSuccess(result));
+      return result;
+    } catch (e) {
+      if (isClosed) return null;
+      emit(ImportsFailure(e.toString()));
+      return null;
+    }
+  }
+
+  Future<ImportCatalogResult?> importNewLabTestsFile({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    emit(
+      ImportsLoading(
+        message: 'Importando pruebas nuevas desde "$fileName" (sin sobrescribir existentes)...',
+      ),
+    );
+    try {
+      final result = await importsRepository.importNewLabTestsFile(
+        bytes: bytes,
+        fileName: fileName,
+      );
       if (isClosed) return result;
       emit(ImportsSuccess(result));
       return result;
