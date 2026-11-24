@@ -140,7 +140,7 @@ class LabTestFormViewController extends ChangeNotifier {
       _salePrice = 0.0;
       _salePrice2 = 0.0;
       _isPack = false;
-      _useChildTestsPriceSum = true;
+      _useChildTestsPriceSum = false;
       _childTestIds = [];
       _dataType = 'numeric';
       _unitOfMeasure = 'mg/dL';

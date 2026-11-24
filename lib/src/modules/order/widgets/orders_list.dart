@@ -101,9 +101,6 @@ class OrdersList extends StatelessWidget {
         final totalPrice = order.totalPrice > 0 ? order.totalPrice : order.salePriceApplied;
         final isFullyPaid = order.isFullyPaid;
         final hasResults = order.hasAllResults;
-        final hasAnyResult = order.results.any(
-          (r) => r.resultValue != null && r.resultValue!.trim().isNotEmpty,
-        );
         final isInReview = order.isInReview;
         final isCompleted = order.isCompleted;
         final canReopen = isCompleted &&
@@ -114,11 +111,8 @@ class OrdersList extends StatelessWidget {
         final showPayButton =
             !isFullyPaid &&
             order.status != 'cancelled';
-        final canDelete = (order.status == 'pending' || isBlocked) &&
-            order.status != 'completed' &&
-            !isInReview &&
-            order.paidAmount == 0 &&
-            !hasAnyResult;
+        final canDelete =
+            order.paidAmount == 0 && order.status != 'cancelled' && !order.isDeleted;
         final canEditOrder = order.paidAmount == 0 &&
             !isCompleted &&
             !isInReview &&

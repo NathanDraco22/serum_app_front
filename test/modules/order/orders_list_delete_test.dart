@@ -165,4 +165,103 @@ void main() {
     expect(fakeOrdersDataSource.lastDeletedId, equals('ORD-999'));
     expect(find.byType(ConfirmDeleteDialog), findsNothing);
   });
+
+  testWidgets('muestra el icono de borrar aunque la orden tenga resultados, esté en revisión, completada o bloqueada si paidAmount == 0', (tester) async {
+    tester.view.physicalSize = const Size(1280, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final withResults = OrderInDb(
+      id: 'ORD-RES',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'pending',
+      createdAt: 1700000000000,
+      results: [
+        OrderTestResult(
+          labTestId: 't-1',
+          parameterName: 'Glucosa',
+          dataType: 'numeric',
+          resultValue: '95',
+        ),
+      ],
+    );
+    final inReview = OrderInDb(
+      id: 'ORD-REV',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'in_review',
+      createdAt: 1700000000000,
+    );
+    final completed = OrderInDb(
+      id: 'ORD-COMP',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'completed',
+      createdAt: 1700000000000,
+    );
+    final blocked = OrderInDb(
+      id: 'ORD-BLK',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'pending',
+      isBlocked: true,
+      createdAt: 1700000000000,
+    );
+
+    await tester.pumpWidget(
+      buildTestWidget(orders: [withResults, inReview, completed, blocked]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Eliminar Orden'), findsNWidgets(4));
+  });
+
+  testWidgets('oculta el icono de borrar cuando la orden tiene abono o está cancelada', (tester) async {
+    final withPartialPayment = OrderInDb(
+      id: 'ORD-PAID',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 5000,
+      status: 'pending',
+      createdAt: 1700000000000,
+    );
+    final cancelled = OrderInDb(
+      id: 'ORD-CANC',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'cancelled',
+      isBlocked: true,
+      createdAt: 1700000000000,
+    );
+    final softDeleted = OrderInDb(
+      id: 'ORD-DEL',
+      patientId: 'PAT-1',
+      branchId: 'branch-1',
+      totalPrice: 10000,
+      paidAmount: 0,
+      status: 'pending',
+      isDeleted: true,
+      createdAt: 1700000000000,
+    );
+
+    await tester.pumpWidget(
+      buildTestWidget(orders: [withPartialPayment, cancelled, softDeleted]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Eliminar Orden'), findsNothing);
+  });
 }

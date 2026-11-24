@@ -14,7 +14,7 @@ void main() {
       expect(controller.commercialCategory, 'Hematología');
       expect(controller.subclassification, 'General');
       expect(controller.isPack, isFalse);
-      expect(controller.useChildTestsPriceSum, isTrue);
+      expect(controller.useChildTestsPriceSum, isFalse);
       expect(controller.salePrice, 0.0);
       expect(controller.salePrice2, 0.0);
       expect(controller.priceInCents, 0);
@@ -125,12 +125,19 @@ void main() {
         ),
       ];
 
-      // Activar modo pack y asignar análisis hijos
+      // Activar modo pack: por defecto la suma automática inicia apagada (tarifa fija)
       controller.setIsPack(true, availableTests);
       expect(controller.isPack, isTrue);
+      expect(controller.useChildTestsPriceSum, isFalse);
 
+      // Al agregar análisis con suma automática apagada, no sobrescribe el precio manual
       controller.addChildTestId('child-1', availableTests);
       expect(controller.childTestIds, ['child-1']);
+      expect(controller.salePrice, 0.0);
+
+      // Activar suma automática y verificar cálculo y recálculo reactivo
+      controller.setUseChildTestsPriceSum(true, availableTests);
+      expect(controller.useChildTestsPriceSum, isTrue);
       expect(controller.salePrice, 10.0);
       expect(controller.priceController.text, '10.00');
 

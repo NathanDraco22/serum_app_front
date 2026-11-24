@@ -33,7 +33,7 @@ El módulo `lab_test` (`lib/src/modules/lab_test/`) gestiona el catálogo unific
 ## 2. Funcionalidades Detalladas
 
 ### A. Soporte para Packs Comerciales y Creación Rápida de Parámetros
-- Al marcar `isPack = true`, la interfaz habilita el selector `PackTestSelector` y el interruptor **"Usar la sumatoria de los precios de las pruebas que contiene"** (`useChildTestsPriceSum`, activo por defecto).
+- Al marcar `isPack = true`, la interfaz habilita el selector `PackTestSelector` y el interruptor **"Usar la sumatoria de los precios de las pruebas que contiene"** (`useChildTestsPriceSum`, apagado por defecto para priorizar tarifa fija personalizada).
 - **Sumatoria Automática (`useChildTestsPriceSum = true`)**: El precio de venta del pack se sincroniza reactivamente con la suma de precios de las pruebas seleccionadas, manteniendo el campo de texto en solo lectura.
 - **Tarifa Fija Personalizada (`useChildTestsPriceSum = false`)**: Se habilita la captura manual del precio, aplicando validación estricta de que el valor sea mayor a 0 ($> 0$).
 - **Creación Directa de Parámetros en el Perfil**:

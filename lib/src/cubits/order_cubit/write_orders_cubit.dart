@@ -18,6 +18,12 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
       return 'No se puede cambiar el paciente porque la orden ya tiene '
           'resultados capturados.';
     }
+    if (message.contains('ORDER_HAS_PAYMENTS')) {
+      return 'No se puede eliminar la orden porque ya tiene pagos o recibos registrados.';
+    }
+    if (message.contains('ORDER_CANNOT_BE_DELETED')) {
+      return 'Esta orden ya se encuentra cancelada o no puede eliminarse.';
+    }
     return message;
   }
 
@@ -55,7 +61,7 @@ class WriteOrderCubit extends Cubit<WriteOrderState> {
         emit(WriteOrderError('Not found'));
       }
     } catch (e) {
-      emit(WriteOrderError(e.toString()));
+      emit(WriteOrderError(_humanizeError(e)));
     }
   }
 

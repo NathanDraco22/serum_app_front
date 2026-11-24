@@ -194,7 +194,7 @@ Para facilitar acuerdos comerciales en ventanilla sin perder el control de audit
 - **Badges de Auditoría**: Despliega el badge ámbar `BLOQUEADA (REQ. AUTORIZACIÓN)` o, tras autorizarse, el badge verde `AUTORIZADO: <Nombre del Supervisor>`.
 - **Acciones Protegidas**:
   - El botón de **Pagar** (`Icons.payments_outlined`) y el de **Capturar Resultados** (`Icons.assignment_outlined`) se deshabilitan preventivamente en color atenuado. Al hacer clic, muestran un SnackBar explicativo recordando que la orden requiere desbloqueo previo.
-  - El botón de **Eliminar** se mantiene activo siempre y cuando `paidAmount == 0`, permitiendo desechar órdenes bloqueadas emitidas por error.
+  - El botón de **Eliminar** (`Icons.delete_outline`) aparece siempre que la orden no tenga abonos (`paidAmount == 0`) ni esté cancelada (`status != 'cancelled'` y `!isDeleted`), independientemente de si tiene resultados capturados o está bloqueada.
 
 #### 4. Flujo de Desbloqueo y Autorización (`Icons.lock_open`)
 Al pulsar el botón de candado abierto, la interfaz se adapta dinámicamente según el usuario en sesión:
