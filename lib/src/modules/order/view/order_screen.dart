@@ -238,8 +238,16 @@ class _BodyState extends State<_Body> {
             const SnackBar(content: Text('Orden reabierta para corrección')),
           );
         } else if (state is OrderDeleted) {
+          final hasReason = state.item.cancellationReason != null &&
+              state.item.cancellationReason!.trim().isNotEmpty;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Orden eliminada con éxito')),
+            SnackBar(
+              content: Text(
+                hasReason
+                    ? 'Orden anulada y pagos revertidos con éxito'
+                    : 'Orden eliminada con éxito',
+              ),
+            ),
           );
         } else if (state is OrderPaid) {
           ScaffoldMessenger.of(context).showSnackBar(

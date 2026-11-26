@@ -25,6 +25,8 @@ class CashShiftTransactionsList extends StatelessWidget {
         return 'Apertura';
       case 'payment':
         return 'Cobro';
+      case 'payment_reversal':
+        return 'Reversión de cobro';
       case 'income':
         return 'Ingreso';
       case 'withdrawal':

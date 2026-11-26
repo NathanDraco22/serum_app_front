@@ -5,6 +5,7 @@ import 'package:serum_app_front/src/cubits/app_session_cubit/app_session_cubit.d
 import 'package:serum_app_front/src/cubits/order_cubit/read_orders_cubit.dart';
 import 'package:serum_app_front/src/cubits/order_cubit/write_orders_cubit.dart';
 import 'package:serum_app_front/src/cubits/patient_cubit/read_patients_cubit.dart';
+import 'package:serum_app_front/src/modules/order/widgets/cancel_order_dialog.dart';
 import 'package:serum_app_front/src/modules/order/widgets/orders_list.dart';
 import 'package:serum_app_front/src/widgets/dialogs/confirm_delete_dialog.dart';
 import 'package:serum_business/serum_business.dart';
@@ -12,6 +13,7 @@ import 'package:serum_business/serum_business.dart';
 class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
   final Map<String, Map<String, dynamic>> _storage = {};
   String? lastDeletedId;
+  String? lastDeletedReason;
 
   void setOrder(String id, Map<String, dynamic> data) {
     _storage[id] = data;
@@ -36,6 +38,7 @@ class _FakeOrdersDataSource extends Fake implements OrdersDataSource {
     String? reason,
   }) async {
     lastDeletedId = orderId;
+    lastDeletedReason = reason;
     return _storage.remove(orderId);
   }
 }
@@ -226,7 +229,7 @@ void main() {
     expect(find.byTooltip('Eliminar Orden'), findsNWidgets(4));
   });
 
-  testWidgets('oculta el icono de borrar cuando la orden tiene abono o está cancelada', (tester) async {
+  testWidgets('permite anular orden con abono solicitando motivo obligatorio en CancelOrderDialog', (tester) async {
     final withPartialPayment = OrderInDb(
       id: 'ORD-PAID',
       patientId: 'PAT-1',
@@ -236,6 +239,29 @@ void main() {
       status: 'pending',
       createdAt: 1700000000000,
     );
+    fakeOrdersDataSource.setOrder(withPartialPayment.id, withPartialPayment.toJson());
+
+    await tester.pumpWidget(buildTestWidget(orders: [withPartialPayment]));
+    await tester.pumpAndSettle();
+
+    final cancelButton = find.byTooltip('Anular Orden y Revertir Pagos');
+    expect(cancelButton, findsOneWidget);
+
+    await tester.tap(cancelButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CancelOrderDialog), findsOneWidget);
+    expect(find.text('Anular Orden y Revertir Pagos'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Paciente desistió');
+    await tester.tap(find.text('Anular Orden'));
+    await tester.pumpAndSettle();
+
+    expect(fakeOrdersDataSource.lastDeletedId, equals('ORD-PAID'));
+    expect(fakeOrdersDataSource.lastDeletedReason, equals('Paciente desistió'));
+  });
+
+  testWidgets('oculta el icono de borrar cuando la orden está cancelada o eliminada', (tester) async {
     final cancelled = OrderInDb(
       id: 'ORD-CANC',
       patientId: 'PAT-1',
@@ -258,10 +284,11 @@ void main() {
     );
 
     await tester.pumpWidget(
-      buildTestWidget(orders: [withPartialPayment, cancelled, softDeleted]),
+      buildTestWidget(orders: [cancelled, softDeleted]),
     );
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Eliminar Orden'), findsNothing);
+    expect(find.byTooltip('Anular Orden y Revertir Pagos'), findsNothing);
   });
 }

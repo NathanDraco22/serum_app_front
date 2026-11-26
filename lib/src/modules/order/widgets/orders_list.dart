@@ -12,6 +12,7 @@ import '../../../widgets/dialogs/confirm_delete_dialog.dart';
 import '../../../widgets/dialogs/selectors/doctor_selection_dialog.dart';
 import 'supervisor_auth_dialog.dart';
 import 'reopen_order_dialog.dart';
+import 'cancel_order_dialog.dart';
 
 class OrdersList extends StatelessWidget {
   final List<OrderInDb> orders;
@@ -112,7 +113,7 @@ class OrdersList extends StatelessWidget {
             !isFullyPaid &&
             order.status != 'cancelled';
         final canDelete =
-            order.paidAmount == 0 && order.status != 'cancelled' && !order.isDeleted;
+            order.status != 'cancelled' && !order.isDeleted;
         final canEditOrder = order.paidAmount == 0 &&
             !isCompleted &&
             !isInReview &&
@@ -777,8 +778,31 @@ class OrdersList extends StatelessWidget {
                   const SizedBox(width: 4),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Eliminar Orden',
+                    tooltip: order.paidAmount > 0
+                        ? 'Anular Orden y Revertir Pagos'
+                        : 'Eliminar Orden',
                     onPressed: () async {
+                      if (order.paidAmount > 0) {
+                        final reason = await CancelOrderDialog.show(
+                          context,
+                          order: order,
+                          patientName: patientName,
+                        );
+                        if (reason != null &&
+                            reason.isNotEmpty &&
+                            context.mounted) {
+                          context
+                              .read<WriteOrderCubit>()
+                              .delete(order.id, reason: reason)
+                              .then((_) {
+                            if (context.mounted) {
+                              context.read<ReadOrderCubit>().getAll();
+                            }
+                          });
+                        }
+                        return;
+                      }
+
                       final confirmed = await ConfirmDeleteDialog.show(
                         context,
                         title: 'Eliminar Orden',
